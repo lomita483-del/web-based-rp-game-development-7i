@@ -405,7 +405,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
 
   if (kind === 'square') {
     return (
-      <group position={[x, 0, z - 13]}>
+      <group position={[x, 0, z]}>
         <mesh position={[0, 0.35, 0]} receiveShadow><boxGeometry args={[12, 0.7, 10]} /><meshStandardMaterial color="#6b7073" roughness={0.75} /></mesh>
         <mesh position={[0, 21, 0]} castShadow receiveShadow><boxGeometry args={[8.2, 41, 7]} /><meshStandardMaterial map={facadeTexture} color="#8e999c" metalness={0.24} roughness={0.38} /></mesh>
         <mesh position={[0, 42, 0]} castShadow><boxGeometry args={[8.7, 1, 7.5]} /><meshStandardMaterial color="#263b48" metalness={0.52} roughness={0.3} /></mesh>
@@ -704,7 +704,7 @@ function HumanoidModel({
   const rightLeg = useRef<Group>(null!)
 
   useFrame((state) => {
-    const isMoving = Boolean(keysRef?.current.size) && !paused
+    const isMoving = (walking || Boolean(keysRef?.current.size)) && !paused
     const stride = isMoving ? Math.sin(state.clock.elapsedTime * 10) * 0.44 : 0
     const idle = Math.sin(state.clock.elapsedTime * 1.5) * 0.035
     leftArm.current.rotation.x = isMoving ? stride : idle
@@ -886,7 +886,8 @@ function PlayerController({
 
       if (direction.lengthSq() > 0) {
         direction.normalize()
-        const speed = inVehicle ? 10 : 5.2
+        const running = !inVehicle && (keys.has('shift') || keys.has('shiftleft') || keys.has('shiftright'))
+        const speed = inVehicle ? 10 : running ? 8.8 : 5.2
         const radius = inVehicle ? 0.75 : 0.42
         const nextX = position.x + direction.x * speed * step
         const nextZ = position.z + direction.z * speed * step
@@ -1032,10 +1033,13 @@ function CityScene({ waypoint, remotePlayers }: Pick<CityWorldProps, 'waypoint' 
       })}
       {treePositions.map((position, index) => <StreetTree key={`tree-${index}`} position={position} scale={index % 3 === 0 ? 0.92 : 0.84} />)}
       {lampPositions.map((position, index) => <StreetLamp key={`lamp-${index}`} position={position} lit={index < 5} />)}
-      <TrafficVehicle position={[-78, 0, 18]} color="#d2a342" speed={3.4} minibus />
-      <TrafficVehicle position={[-34, 0, -18]} color="#5a6870" speed={2.2} />
-      <TrafficVehicle position={[8, 0, 42]} color="#823f3c" speed={2.8} minibus />
-      <TrafficVehicle position={[-18, 0, -66]} color="#c0b18f" speed={2.5} />
+      {Array.from({ length: 16 }, (_, index) => {
+        const lanes = [-72, -60, -48, -36, -24, -12, 0, 12, 24, 36, 48, 60, 72]
+        const laneZ = lanes[index % lanes.length]
+        const startX = -82 + ((index * 29) % 164)
+        const colors = ['#d2a342', '#5a6870', '#823f3c', '#c0b18f', '#d6d1c4', '#435a68', '#ad713e']
+        return <TrafficVehicle key={`traffic-${index}`} position={[startX, 0, laneZ]} color={colors[index % colors.length]} speed={1.8 + (index % 5) * 0.65} minibus={index % 4 === 0} />
+      })}
       {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
       {Array.from({ length: 10 }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
       {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
