@@ -35,9 +35,12 @@ import {
   type LocationId,
   type PlayerState,
 } from './game-data'
+import { OnlinePanel } from './online-panel'
+import type { GameUser, OnlinePlayer, SaveStatus } from '@/lib/game/types'
 
 type HudProps = {
   player: PlayerState
+  isOnline: boolean
   gameMinutes: number
   playerPosition: { x: number; z: number }
   nearbyCharacter: (typeof CITY_CHARACTERS)[number] | null
@@ -66,6 +69,7 @@ function mapPoint(position: { x: number; z: number }) {
 
 export function GameHud({
   player,
+  isOnline,
   gameMinutes,
   playerPosition,
   nearbyCharacter,
@@ -99,7 +103,7 @@ export function GameHud({
 
         <div className="world-status">
           <span className="status-live-dot" />
-          <span>SOLO SESSION</span>
+          <span>{isOnline ? 'LIVE CITY' : 'SOLO SESSION'}</span>
           <span className="status-separator">/</span>
           <span className="world-district">{currentDistrict}</span>
         </div>
@@ -266,13 +270,20 @@ type GamePanelsProps = {
   onBuyFood: () => void
   onEatFood: () => void
   onSetWaypoint: (locationId: LocationId) => void
+  user: GameUser | null
+  sessionLoading: boolean
+  players: OnlinePlayer[]
+  presenceError: boolean
+  saveStatus: SaveStatus
+  onAuthenticated: () => Promise<void>
+  onSignOut: () => Promise<void>
 }
 
 const PANEL_META: Record<Exclude<GamePanel, 'none'>, { title: string; eyebrow: string; icon: LucideIcon }> = {
   map: { title: 'City map', eyebrow: 'EKO / WAYFINDING', icon: Map },
   jobs: { title: 'Work board', eyebrow: 'NIGHT SHIFT / AVAILABLE', icon: BriefcaseBusiness },
   inventory: { title: 'Your bag', eyebrow: 'PLAYER / LOADOUT', icon: Package },
-  online: { title: 'Shared world', eyebrow: 'MULTIPLAYER / SETUP', icon: UsersRound },
+  online: { title: 'Shared world', eyebrow: 'LIVE ROOM / EKO MAINLAND', icon: UsersRound },
 }
 
 export function GamePanels({
@@ -286,6 +297,13 @@ export function GamePanels({
   onBuyFood,
   onEatFood,
   onSetWaypoint,
+  user,
+  sessionLoading,
+  players,
+  presenceError,
+  saveStatus,
+  onAuthenticated,
+  onSignOut,
 }: GamePanelsProps) {
   const meta = PANEL_META[panel]
   const Icon = meta.icon
@@ -326,7 +344,17 @@ export function GamePanels({
           {panel === 'map' && <MapPanel waypoint={waypoint} playerPosition={playerPosition} onSetWaypoint={onSetWaypoint} />}
           {panel === 'jobs' && <JobsPanel player={player} onAcceptDelivery={onAcceptDelivery} onSetWaypoint={onSetWaypoint} />}
           {panel === 'inventory' && <InventoryPanel player={player} onBuyFood={onBuyFood} onEatFood={onEatFood} />}
-          {panel === 'online' && <OnlinePanel />}
+          {panel === 'online' && (
+            <OnlinePanel
+              user={user}
+              sessionLoading={sessionLoading}
+              players={players}
+              presenceError={presenceError}
+              saveStatus={saveStatus}
+              onAuthenticated={onAuthenticated}
+              onSignOut={onSignOut}
+            />
+          )}
         </div>
       </section>
     </div>
@@ -451,25 +479,6 @@ function InventoryPanel({
         <div><span>PALM & PEPPER</span><strong>Suya wrap · ₦90</strong><small>Small bite, useful boost.</small></div>
         <button type="button" onClick={onBuyFood}>BUY</button>
       </div>
-    </div>
-  )
-}
-
-function OnlinePanel() {
-  return (
-    <div className="online-panel-content">
-      <div className="online-status-card">
-        <div className="online-orbit"><UsersRound aria-hidden="true" /></div>
-        <span className="online-status-label">SOLO WORLD ACTIVE</span>
-        <h3>Your city is warming up.</h3>
-        <p>NPCs, story missions, jobs, and the open city are ready to play. Shared lobbies, player accounts, and cloud saves are still being connected.</p>
-        <div className="online-setup-steps">
-          <div className="setup-step is-ready"><span><Check aria-hidden="true" /></span><div><strong>City world</strong><small>Playable now with local NPCs</small></div></div>
-          <div className="setup-step"><span>02</span><div><strong>Player accounts</strong><small>Secure sign-in and saved state</small></div></div>
-          <div className="setup-step"><span>03</span><div><strong>Live city rooms</strong><small>Shared presence and roleplay</small></div></div>
-        </div>
-      </div>
-      <div className="online-footnote"><Radio aria-hidden="true" /><span>Online mode will never show simulated players. The shared room will appear here once the backend is provisioned.</span></div>
     </div>
   )
 }

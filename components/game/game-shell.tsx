@@ -2,6 +2,21 @@
 
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import useSWR from 'swr'
+import useSWRMutation from 'swr/mutation'
+import { authClient } from '@/lib/auth-client'
+import { gameFetcher, gameMutation } from '@/lib/game/client-api'
+import type {
+  GamePosition,
+  GameSaveAck,
+  GameSavePayload,
+  GameSaveResponse,
+  GameSessionResponse,
+  PresenceMutation,
+  PresenceResponse,
+  PresenceUpdate,
+  SaveStatus,
+} from '@/lib/game/types'
 import {
   CITY_CHARACTERS,
   STARTING_PLAYER,
@@ -12,6 +27,7 @@ import {
   type CharacterId,
   type GamePanel,
   type LocationId,
+  type PlayerState,
 } from './game-data'
 import { GameHud, GamePanels, NpcDialogue } from './game-hud'
 
@@ -22,12 +38,35 @@ const CityWorld = dynamic(() => import('./city-world').then((module) => module.C
 
 const MOVEMENT_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'])
 
-type Position = { x: number; z: number }
+type Position = GamePosition
 type ToastState = { id: number; text: string } | null
+
+const fetchGameSave = ([url]: readonly [string, string]) => gameFetcher<GameSaveResponse>(url)
+const fetchPresence = ([url]: readonly [string, string]) => gameFetcher<PresenceResponse>(url)
+
+function createGameSavePayload(player: PlayerState, position: Position, gameMinutes: number): GameSavePayload {
+  return {
+    playerState: {
+      cash: player.cash,
+      reputation: player.reputation,
+      level: player.level,
+      energy: player.energy,
+      hunger: player.hunger,
+      stage: player.stage,
+      inventory: player.inventory.map((item) => ({ ...item })),
+      ownsScooter: player.ownsScooter,
+      inVehicle: player.inVehicle,
+      completedRuns: player.completedRuns,
+    },
+    position,
+    gameMinutes,
+  }
+}
 
 export default function GameShell() {
   const [player, dispatch] = useReducer(playerReducer, STARTING_PLAYER)
   const [playerPosition, setPlayerPosition] = useState<Position>({ x: -6, z: 4 })
+  const [spawnPosition, setSpawnPosition] = useState<Position>({ x: -6, z: 4 })
   const [gameMinutes, setGameMinutes] = useState(21 * 60 + 42)
   const [activePanel, setActivePanel] = useState<GamePanel>('none')
   const [activeCharacter, setActiveCharacter] = useState<CharacterId | null>(null)
@@ -35,6 +74,179 @@ export default function GameShell() {
   const [toast, setToast] = useState<ToastState>(null)
   const keysRef = useRef(new Set<string>())
   const toastId = useRef(0)
+  const { data: sessionResponse, isLoading: sessionLoading, mutate: refreshSession } = useSWR<GameSessionResponse>(
+    '/api/game/session',
+    gameFetcher,
+    { revalidateOnFocus: true, revalidateOnReconnect: true },
+  )
+  const currentUser = sessionResponse?.user ?? null
+  const currentUserId = currentUser?.id ?? null
+  const saveKey = currentUserId ? (['/api/game/save', currentUserId] as const) : null
+  const {
+    data: savedGame,
+    error: saveLoadError,
+    isLoading: saveLoading,
+  } = useSWR(saveKey, fetchGameSave, { revalidateOnFocus: false, revalidateOnReconnect: true })
+  const presenceKey = currentUserId ? (['/api/game/presence', currentUserId] as const) : null
+  const {
+    data: presenceResponse,
+    error: presenceLoadError,
+  } = useSWR(presenceKey, fetchPresence, {
+    refreshInterval: 3_000,
+    dedupingInterval: 2_000,
+    revalidateOnFocus: true,
+  })
+  const { trigger: writeGameSave, isMutating: isSaving } = useSWRMutation<
+    GameSaveAck,
+    Error,
+    string,
+    GameSavePayload
+  >('/api/game/save', gameMutation)
+  const { trigger: changePresence } = useSWRMutation<
+    { online: boolean },
+    Error,
+    string,
+    PresenceMutation
+  >('/api/game/presence', gameMutation)
+  const [saveReadyUserId, setSaveReadyUserId] = useState<string | null>(null)
+  const [saveWriteFailed, setSaveWriteFailed] = useState(false)
+  const [presenceWriteFailed, setPresenceWriteFailed] = useState(false)
+  const hydratedUserIdRef = useRef<string | null>(null)
+  const lastAccountUserIdRef = useRef<string | null>(null)
+  const saveInFlightRef = useRef(false)
+  const lastSavedPayloadRef = useRef('')
+  const latestSavePayloadRef = useRef<GameSavePayload>(
+    createGameSavePayload(STARTING_PLAYER, { x: -6, z: 4 }, 21 * 60 + 42),
+  )
+  const latestPresenceRef = useRef<PresenceUpdate>({ x: -6, z: 4, inVehicle: false })
+
+  useEffect(() => {
+    if (!currentUserId) {
+      hydratedUserIdRef.current = null
+      setSaveReadyUserId(null)
+      setSaveWriteFailed(false)
+      setPresenceWriteFailed(false)
+      return
+    }
+    if (saveLoadError || saveLoading || !savedGame || hydratedUserIdRef.current === currentUserId) return
+
+    const previousAccountId = lastAccountUserIdRef.current
+    if (savedGame.save) {
+      const restoredPosition = { ...savedGame.save.position }
+      const restoredPlayer = { ...savedGame.save.playerState, name: currentUser?.name ?? STARTING_PLAYER.name }
+      dispatch({ type: 'restore', player: restoredPlayer })
+      setPlayerPosition(restoredPosition)
+      setSpawnPosition(restoredPosition)
+      setGameMinutes(savedGame.save.gameMinutes)
+      lastSavedPayloadRef.current = JSON.stringify(
+        createGameSavePayload(restoredPlayer, restoredPosition, savedGame.save.gameMinutes),
+      )
+    } else if (previousAccountId && previousAccountId !== currentUserId) {
+      const resetPosition = { x: -6, z: 4 }
+      const resetPlayer = { ...STARTING_PLAYER, name: currentUser?.name ?? STARTING_PLAYER.name }
+      dispatch({ type: 'restore', player: resetPlayer })
+      setPlayerPosition(resetPosition)
+      setSpawnPosition(resetPosition)
+      setGameMinutes(21 * 60 + 42)
+      setPinnedWaypoint(null)
+      lastSavedPayloadRef.current = ''
+    } else {
+      dispatch({ type: 'rename', name: currentUser?.name ?? STARTING_PLAYER.name })
+      lastSavedPayloadRef.current = ''
+    }
+
+    hydratedUserIdRef.current = currentUserId
+    lastAccountUserIdRef.current = currentUserId
+    setSaveWriteFailed(false)
+    setSaveReadyUserId(currentUserId)
+  }, [currentUser?.name, currentUserId, saveLoadError, saveLoading, savedGame])
+
+  useEffect(() => {
+    latestSavePayloadRef.current = createGameSavePayload(player, playerPosition, gameMinutes)
+  }, [gameMinutes, player, playerPosition])
+
+  useEffect(() => {
+    latestPresenceRef.current = { ...playerPosition, inVehicle: player.inVehicle }
+  }, [player.inVehicle, playerPosition])
+
+  const saveCurrentGame = useCallback(async () => {
+    if (!currentUserId || saveReadyUserId !== currentUserId || saveInFlightRef.current) return
+    const payload = latestSavePayloadRef.current
+    const serializedPayload = JSON.stringify(payload)
+    if (serializedPayload === lastSavedPayloadRef.current) return
+
+    saveInFlightRef.current = true
+    try {
+      await writeGameSave(payload)
+      lastSavedPayloadRef.current = serializedPayload
+      setSaveWriteFailed(false)
+    } catch {
+      setSaveWriteFailed(true)
+    } finally {
+      saveInFlightRef.current = false
+    }
+  }, [currentUserId, saveReadyUserId, writeGameSave])
+
+  useEffect(() => {
+    if (!currentUserId || saveReadyUserId !== currentUserId) return
+    void saveCurrentGame()
+    const interval = window.setInterval(() => void saveCurrentGame(), 15_000)
+    return () => window.clearInterval(interval)
+  }, [currentUserId, saveCurrentGame, saveReadyUserId])
+
+  useEffect(() => {
+    if (!currentUserId || saveReadyUserId !== currentUserId) return
+    const timeout = window.setTimeout(() => void saveCurrentGame(), 900)
+    return () => window.clearTimeout(timeout)
+  }, [currentUserId, gameMinutes, player, saveCurrentGame, saveReadyUserId])
+
+  const publishCurrentPresence = useCallback(async () => {
+    if (!currentUserId) return
+    try {
+      await changePresence(latestPresenceRef.current)
+      setPresenceWriteFailed(false)
+    } catch {
+      setPresenceWriteFailed(true)
+    }
+  }, [changePresence, currentUserId])
+
+  useEffect(() => {
+    if (!currentUserId) return
+    void publishCurrentPresence()
+    const interval = window.setInterval(() => void publishCurrentPresence(), 3_000)
+    return () => window.clearInterval(interval)
+  }, [currentUserId, publishCurrentPresence])
+
+  const onlinePlayers = presenceResponse?.players ?? []
+  const remotePlayers = useMemo(
+    () => onlinePlayers.filter((onlinePlayer) => onlinePlayer.userId !== currentUserId),
+    [currentUserId, onlinePlayers],
+  )
+  const saveStatus: SaveStatus = !currentUser
+    ? 'local'
+    : saveLoadError || saveWriteFailed
+      ? 'error'
+      : saveLoading || saveReadyUserId !== currentUserId
+        ? 'loading'
+        : isSaving
+          ? 'saving'
+          : 'saved'
+
+  const handleAuthenticated = useCallback(async () => {
+    await refreshSession()
+  }, [refreshSession])
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await changePresence({ method: 'DELETE' })
+    } catch {
+      setPresenceWriteFailed(true)
+    }
+
+    const result = await authClient.signOut()
+    if (result.error) throw new Error('Sign-out failed')
+    await refreshSession()
+  }, [changePresence, refreshSession])
 
   const nearbyCharacter = useMemo(() => {
     const closest = CITY_CHARACTERS
@@ -297,10 +509,13 @@ export default function GameShell() {
         inVehicle={player.inVehicle}
         paused={paused}
         waypoint={waypoint}
+        spawnPosition={spawnPosition}
+        remotePlayers={remotePlayers}
       />
       <div className="world-vignette" aria-hidden="true" />
       <GameHud
         player={player}
+        isOnline={Boolean(currentUser)}
         gameMinutes={gameMinutes}
         playerPosition={playerPosition}
         nearbyCharacter={nearbyCharacter}
@@ -324,6 +539,13 @@ export default function GameShell() {
           onBuyFood={buyFood}
           onEatFood={eatFood}
           onSetWaypoint={setWaypoint}
+          user={currentUser}
+          sessionLoading={sessionLoading}
+          players={onlinePlayers}
+          presenceError={Boolean(currentUser && (presenceLoadError || presenceWriteFailed))}
+          saveStatus={saveStatus}
+          onAuthenticated={handleAuthenticated}
+          onSignOut={handleSignOut}
         />
       )}
       {activeCharacter && (

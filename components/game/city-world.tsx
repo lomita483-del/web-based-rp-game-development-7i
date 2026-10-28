@@ -1,10 +1,10 @@
 'use client'
 
-import { Stars } from '@react-three/drei'
+import { Html, Stars } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useRef, type MutableRefObject } from 'react'
+import { useEffect, useRef, type MutableRefObject } from 'react'
 import { MathUtils, type Group, type PerspectiveCamera, Vector3 } from 'three'
-import { CITY_CHARACTERS, WORLD_LOCATIONS, type LocationId } from './game-data'
+import { CITY_CHARACTERS, WORLD_LOCATIONS, type LocationId, type RemotePlayer } from './game-data'
 
 type PlayerPosition = { x: number; z: number }
 
@@ -14,6 +14,8 @@ type CityWorldProps = {
   inVehicle: boolean
   paused: boolean
   waypoint: LocationId | null
+  spawnPosition: PlayerPosition
+  remotePlayers: RemotePlayer[]
 }
 
 const BUILDINGS = [
@@ -455,7 +457,8 @@ function PlayerController({
   onPlayerPosition,
   inVehicle,
   paused,
-}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'paused'>) {
+  spawnPosition,
+}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'paused' | 'spawnPosition'>) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
   const cameraTarget = useRef(new Vector3())
@@ -464,6 +467,12 @@ function PlayerController({
   const publishTimer = useRef(0)
   const onPositionRef = useRef(onPlayerPosition)
   onPositionRef.current = onPlayerPosition
+
+  useEffect(() => {
+    playerRef.current?.position.set(spawnPosition.x, 0, spawnPosition.z)
+    publishTimer.current = 0
+    onPositionRef.current(spawnPosition)
+  }, [spawnPosition.x, spawnPosition.z])
 
   useFrame((_, delta) => {
     if (!playerRef.current) return
@@ -519,8 +528,36 @@ function PlayerController({
   })
 
   return (
-    <group ref={playerRef} position={[-6, 0, 4]}>
+    <group ref={playerRef} position={[spawnPosition.x, 0, spawnPosition.z]}>
       {inVehicle ? <ScooterModel /> : <AvatarModel />}
+    </group>
+  )
+}
+
+function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
+  const palette = ['#d5e982', '#e8c279', '#df9c6d', '#7fb7a0', '#b8a3d9'] as const
+  const paletteIndex = [...player.userId].reduce((hash, character) => (hash * 31 + character.charCodeAt(0)) >>> 0, 7) % palette.length
+  const color = palette[paletteIndex]
+
+  return (
+    <group position={[player.x, 0, player.z]}>
+      {player.inVehicle && (
+        <mesh position={[0, 0.24, 0]} castShadow>
+          <boxGeometry args={[0.68, 0.2, 1.1]} />
+          <meshStandardMaterial color="#c78a4b" metalness={0.2} roughness={0.58} />
+        </mesh>
+      )}
+      <mesh position={[0, 0.86, 0]} castShadow>
+        <capsuleGeometry args={[0.3, 0.72, 4, 10]} />
+        <meshStandardMaterial color={color} roughness={0.72} />
+      </mesh>
+      <mesh position={[0, 1.7, 0]} castShadow>
+        <sphereGeometry args={[0.24, 14, 10]} />
+        <meshStandardMaterial color="#c99770" roughness={0.76} />
+      </mesh>
+      <Html position={[0, 2.25, 0]} center distanceFactor={10} sprite>
+        <span className="world-player-tag" aria-hidden="true">{player.displayName}</span>
+      </Html>
     </group>
   )
 }
@@ -531,6 +568,8 @@ function CityScene({
   inVehicle,
   paused,
   waypoint,
+  spawnPosition,
+  remotePlayers,
 }: CityWorldProps) {
   const palmPositions: [number, number, number][] = [
     [-9, 0, -7],
@@ -604,12 +643,16 @@ function CityScene({
       {CITY_CHARACTERS.map((character) => (
         <CharacterActor key={character.id} character={character} />
       ))}
+      {remotePlayers.map((player) => (
+        <RemotePlayerAvatar key={player.userId} player={player} />
+      ))}
       <LandmarkMarkers waypoint={waypoint} />
       <PlayerController
         keysRef={keysRef}
         onPlayerPosition={onPlayerPosition}
         inVehicle={inVehicle}
         paused={paused}
+        spawnPosition={spawnPosition}
       />
     </>
   )

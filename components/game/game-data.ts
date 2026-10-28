@@ -149,6 +149,14 @@ export type PlayerState = {
   completedRuns: number
 }
 
+export type RemotePlayer = {
+  userId: string
+  displayName: string
+  x: number
+  z: number
+  inVehicle: boolean
+}
+
 export const STARTING_PLAYER: PlayerState = {
   name: 'Kola',
   cash: 1850,
@@ -177,6 +185,8 @@ export const STARTING_PLAYER: PlayerState = {
 }
 
 export type PlayerAction =
+  | { type: 'restore'; player: PlayerState }
+  | { type: 'rename'; name: string }
   | { type: 'meet-bisi' }
   | { type: 'accept-delivery' }
   | { type: 'complete-delivery' }
@@ -211,6 +221,10 @@ function updateInventory(
 
 export function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
   switch (action.type) {
+    case 'restore':
+      return action.player
+    case 'rename':
+      return { ...state, name: action.name }
     case 'meet-bisi': {
       if (state.stage !== 'meet-bisi') return state
       const reputation = state.reputation + 12
