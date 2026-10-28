@@ -31,6 +31,7 @@ type CityWorldProps = {
   activeInterior: InteriorDefinition | null
   paused: boolean
   waypoint: LocationId | null
+  autoWalkTarget: LocationId | null
   spawnPosition: PlayerPosition
   remotePlayers: RemotePlayer[]
 }
@@ -843,7 +844,9 @@ function PlayerController({
   spawnPosition,
   activeInterior,
   cameraLookRef,
-}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & { cameraLookRef: MutableRefObject<CameraLook> }) {
+  autoWalkTarget,
+
+}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & { cameraLookRef: MutableRefObject<CameraLook>; autoWalkTarget: LocationId | null }) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
   const cameraTarget = useRef(new Vector3())
@@ -872,6 +875,14 @@ function PlayerController({
       if (keys.has('s') || keys.has('arrowdown')) direction.z += 1
       if (keys.has('a') || keys.has('arrowleft')) direction.x -= 1
       if (keys.has('d') || keys.has('arrowright')) direction.x += 1
+      if (direction.lengthSq() === 0 && autoWalkTarget) {
+        const destination = WORLD_LOCATIONS.find((location) => location.id === autoWalkTarget)
+        if (destination) {
+          const dx = destination.x - position.x
+          const dz = destination.z - position.z
+          if (Math.hypot(dx, dz) > 2.1) direction.set(dx, 0, dz)
+        }
+      }
 
       if (direction.lengthSq() > 0) {
         direction.normalize()
@@ -1129,6 +1140,7 @@ export function CityWorld(props: CityWorldProps) {
           spawnPosition={props.spawnPosition}
           activeInterior={props.activeInterior}
           cameraLookRef={cameraLookRef}
+          autoWalkTarget={props.autoWalkTarget}
         />
       </Canvas>
     </div>
