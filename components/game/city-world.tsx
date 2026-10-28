@@ -1,9 +1,9 @@
 'use client'
 
-import { Html, Stars } from '@react-three/drei'
+import { Stars, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useRef, type MutableRefObject } from 'react'
-import { MathUtils, type Group, type PerspectiveCamera, Vector3 } from 'three'
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
+import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type PerspectiveCamera, type Texture, Vector3 } from 'three'
 import { CITY_CHARACTERS, WORLD_LOCATIONS, type LocationId, type RemotePlayer } from './game-data'
 
 type PlayerPosition = { x: number; z: number }
@@ -26,6 +26,15 @@ type BuildingSpec = {
   height: number
   color: string
   accent: string
+}
+
+function cloneTiledTexture(source: Texture, repeatX: number, repeatY: number) {
+  const texture = source.clone()
+  texture.colorSpace = SRGBColorSpace
+  texture.wrapS = RepeatWrapping
+  texture.wrapT = RepeatWrapping
+  texture.repeat.set(repeatX, repeatY)
+  return texture
 }
 
 const ROAD_LINES = [-66, -42, -18, 18, 42, 66]
@@ -53,7 +62,7 @@ const BUILDINGS: BuildingSpec[] = [
   { x: -70, z: 22, width: 9, depth: 9, height: 13, color: '#8e8072', accent: '#d3aa67' },
 ]
 
-function Building({ x, z, width, depth, height, color, accent }: BuildingSpec) {
+function Building({ x, z, width, depth, height, color, accent, facadeTexture }: BuildingSpec & { facadeTexture: Texture }) {
   const floors = Math.max(2, Math.floor(height / 3))
   const columns = Math.max(3, Math.floor(width / 2.4))
   const windowWidth = Math.min(0.86, width / (columns * 1.65))
@@ -66,7 +75,7 @@ function Building({ x, z, width, depth, height, color, accent }: BuildingSpec) {
       </mesh>
       <mesh position={[0, height / 2 + 0.38, 0]} castShadow receiveShadow>
         <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={color} roughness={0.83} metalness={0.04} />
+        <meshStandardMaterial map={facadeTexture} color={color} roughness={0.91} metalness={0.02} />
       </mesh>
       <mesh position={[0, height + 0.48, 0]} castShadow>
         <boxGeometry args={[width + 0.65, 0.28, depth + 0.65]} />
@@ -144,7 +153,15 @@ function Crosswalk({ x, z }: { x: number; z: number }) {
   )
 }
 
-function RoadGrid() {
+function RoadGrid({
+  pavementTexture,
+  horizontalRoadTexture,
+  verticalRoadTexture,
+}: {
+  pavementTexture: Texture
+  horizontalRoadTexture: Texture
+  verticalRoadTexture: Texture
+}) {
   const dashPositions = Array.from({ length: 19 }, (_, index) => -86 + index * 9.5)
   const coreIntersections = [-42, -18, 18, 42]
 
@@ -152,7 +169,7 @@ function RoadGrid() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.22, 0]} receiveShadow>
         <planeGeometry args={[180, 180]} />
-        <meshStandardMaterial color="#77736b" roughness={1} />
+        <meshStandardMaterial map={pavementTexture} color="#c1b8a9" roughness={1} />
       </mesh>
       {ROAD_LINES.map((offset) => {
         const width = Math.abs(offset) <= 42 ? 10 : 7
@@ -161,13 +178,13 @@ function RoadGrid() {
           <group key={`road-${offset}`}>
             <mesh position={[0, -0.08, offset]} receiveShadow>
               <boxGeometry args={[180, 0.16, width]} />
-              <meshStandardMaterial color="#30353b" roughness={0.96} />
+              <meshStandardMaterial map={horizontalRoadTexture} color="#ded8cd" roughness={0.96} />
             </mesh>
             {[-1, 1].map((side) => (
               <group key={`sidewalk-h-${side}`}>
                 <mesh position={[0, 0.015, offset + side * (width / 2 + 1.15)]} receiveShadow>
                   <boxGeometry args={[180, 0.2, 1.9]} />
-                  <meshStandardMaterial color="#a19a8c" roughness={0.92} />
+                  <meshStandardMaterial map={pavementTexture} color="#ded5c7" roughness={0.92} />
                 </mesh>
                 <mesh position={[0, 0.11, offset + side * (width / 2 + 0.16)]}>
                   <boxGeometry args={[180, 0.28, 0.22]} />
@@ -191,13 +208,13 @@ function RoadGrid() {
           <group key={`road-v-${offset}`}>
             <mesh position={[offset, -0.075, 0]} receiveShadow>
               <boxGeometry args={[width, 0.16, 180]} />
-              <meshStandardMaterial color="#30353b" roughness={0.96} />
+              <meshStandardMaterial map={verticalRoadTexture} color="#ded8cd" roughness={0.96} />
             </mesh>
             {[-1, 1].map((side) => (
               <group key={`sidewalk-v-${side}`}>
                 <mesh position={[offset + side * (width / 2 + 1.15), 0.016, 0]} receiveShadow>
                   <boxGeometry args={[1.9, 0.2, 180]} />
-                  <meshStandardMaterial color="#a19a8c" roughness={0.92} />
+                  <meshStandardMaterial map={pavementTexture} color="#ded5c7" roughness={0.92} />
                 </mesh>
                 <mesh position={[offset + side * (width / 2 + 0.16), 0.11, 0]}>
                   <boxGeometry args={[0.22, 0.28, 180]} />
@@ -332,7 +349,7 @@ function LagoonBridge() {
   )
 }
 
-function CivicBuilding({ location }: { location: (typeof WORLD_LOCATIONS)[number] }) {
+function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LOCATIONS)[number]; facadeTexture: Texture }) {
   const { x, z, kind } = location
   if (kind === 'bridge') return null
 
@@ -431,6 +448,24 @@ function CivicBuilding({ location }: { location: (typeof WORLD_LOCATIONS)[number
     )
   }
 
+  if (kind === 'event-center') {
+    return (
+      <group position={[x, 0, z]}>
+        <mesh position={[0, 0.3, 0]} castShadow receiveShadow><boxGeometry args={[22, 0.6, 16]} /><meshStandardMaterial color="#626564" roughness={0.92} /></mesh>
+        <mesh position={[0, 4.25, 0]} castShadow receiveShadow><boxGeometry args={[20, 8, 14]} /><meshStandardMaterial map={facadeTexture} color="#c6c1b6" roughness={0.82} /></mesh>
+        <mesh position={[0, 4.2, 7.08]}><boxGeometry args={[15, 3.5, 0.12]} /><meshStandardMaterial color="#49636d" metalness={0.3} roughness={0.28} /></mesh>
+        {Array.from({ length: 7 }, (_, index) => <mesh key={`event-mullion-${index}`} position={[-6.3 + index * 2.1, 4.2, 7.18]}><boxGeometry args={[0.07, 3.45, 0.1]} /><meshStandardMaterial color="#596469" metalness={0.42} roughness={0.38} /></mesh>)}
+        <mesh position={[0, 2.45, 8.3]} castShadow><boxGeometry args={[16, 0.28, 2.5]} /><meshStandardMaterial color="#b89157" metalness={0.12} roughness={0.58} /></mesh>
+        {[-6.5, 6.5].map((side) => <mesh key={`event-pillar-${side}`} position={[side, 1.48, 7.55]} castShadow><cylinderGeometry args={[0.16, 0.2, 2.95, 10]} /><meshStandardMaterial color="#b6b2a8" roughness={0.75} /></mesh>)}
+        <mesh position={[0, 0.2, 9.5]}><boxGeometry args={[7.2, 0.2, 1.4]} /><meshStandardMaterial color="#a7a397" roughness={0.88} /></mesh>
+        <mesh position={[0, 8.65, 7.2]}><boxGeometry args={[7.4, 0.82, 0.22]} /><meshStandardMaterial color="#343b40" metalness={0.15} roughness={0.56} /></mesh>
+        <group position={[0, 8.65, 7.34]}><WorldLabel text="EKO EVENTS" width={6.8} accentColor="#d9ad62" /></group>
+        <mesh position={[-5.5, 8.48, -2.6]} castShadow><boxGeometry args={[3.2, 1.2, 2.6]} /><meshStandardMaterial color="#737875" roughness={0.85} /></mesh>
+        <mesh position={[4.8, 8.5, -2]} castShadow><boxGeometry args={[2.5, 1.3, 2.2]} /><meshStandardMaterial color="#737875" roughness={0.85} /></mesh>
+      </group>
+    )
+  }
+
   const buildingColors: Record<string, { wall: string; trim: string; width: number; depth: number; height: number }> = {
     market: { wall: '#9e7453', trim: '#d49b55', width: 9, depth: 7, height: 4.4 },
     club: { wall: '#4b4650', trim: '#c96b53', width: 10, depth: 7, height: 6 },
@@ -453,7 +488,7 @@ function CivicBuilding({ location }: { location: (typeof WORLD_LOCATIONS)[number
   return (
     <group position={[x, 0, z]}>
       <mesh position={[0, 0.28, 0]} castShadow><boxGeometry args={[style.width + 0.8, 0.56, style.depth + 0.8]} /><meshStandardMaterial color="#68655f" roughness={0.94} /></mesh>
-      <mesh position={[0, style.height / 2 + 0.56, 0]} castShadow receiveShadow><boxGeometry args={[style.width, style.height, style.depth]} /><meshStandardMaterial color={style.wall} roughness={0.82} /></mesh>
+      <mesh position={[0, style.height / 2 + 0.56, 0]} castShadow receiveShadow><boxGeometry args={[style.width, style.height, style.depth]} /><meshStandardMaterial map={facadeTexture} color={style.wall} roughness={0.9} /></mesh>
       <mesh position={[0, style.height + 0.7, 0]} castShadow><boxGeometry args={[style.width + 0.6, 0.32, style.depth + 0.6]} /><meshStandardMaterial color={style.trim} roughness={0.78} /></mesh>
       <mesh position={[0, 0.86, style.depth / 2 + 0.07]}><boxGeometry args={[1.45, 1.52, 0.16]} /><meshStandardMaterial color="#35383a" roughness={0.5} /></mesh>
       {[-1, 1].map((side) => <mesh key={`column-${side}`} position={[side * style.width * 0.34, 1.8, style.depth / 2 + 0.12]} castShadow><cylinderGeometry args={[0.22, 0.28, 2.65, 8]} /><meshStandardMaterial color="#d0c6b4" roughness={0.72} /></mesh>)}
@@ -469,6 +504,40 @@ function CivicBuilding({ location }: { location: (typeof WORLD_LOCATIONS)[number
       {kind === 'market' && [-1, 1].map((side) => <mesh key={`awning-${side}`} position={[side * 2.8, 2.6, style.depth / 2 + 0.85]} rotation={[0.18, 0, side * 0.06]}><boxGeometry args={[3.4, 0.16, 1.9]} /><meshStandardMaterial color={side < 0 ? '#b65a48' : '#d1a24c'} roughness={0.8} /></mesh>)}
       {(kind === 'bungalow' || kind === 'estate') && <mesh position={[0, style.height + 1.4, 0]} rotation={[0, Math.PI / 4, 0]} castShadow><coneGeometry args={[style.width * 0.61, 2.2, 4]} /><meshStandardMaterial color="#67574a" roughness={0.95} /></mesh>}
     </group>
+  )
+}
+
+function WorldLabel({ text, width, accentColor }: { text: string; width: number; accentColor: string }) {
+  const texture = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 512
+    canvas.height = 128
+    const context = canvas.getContext('2d')
+    if (!context) return null
+
+    context.fillStyle = 'rgba(16, 23, 30, 0.94)'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.strokeStyle = accentColor
+    context.lineWidth = 4
+    context.strokeRect(3, 3, canvas.width - 6, canvas.height - 6)
+    context.fillStyle = '#f2e8d7'
+    context.font = '600 40px Arial, sans-serif'
+    context.textAlign = 'center'
+    context.textBaseline = 'middle'
+    context.fillText(text, canvas.width / 2, canvas.height / 2, canvas.width - 36)
+
+    const labelTexture = new CanvasTexture(canvas)
+    labelTexture.colorSpace = SRGBColorSpace
+    return labelTexture
+  }, [accentColor, text])
+
+  if (!texture) return null
+
+  return (
+    <mesh>
+      <planeGeometry args={[width, width / 4]} />
+      <meshBasicMaterial map={texture} transparent toneMapped={false} />
+    </mesh>
   )
 }
 
@@ -499,9 +568,9 @@ function LandmarkMarkers({ waypoint }: { waypoint: LocationId | null }) {
             <octahedronGeometry args={[0.34, 0]} />
             <meshStandardMaterial color="#ffe1a1" emissive="#bd8244" emissiveIntensity={1.5} />
           </mesh>
-          <Html position={[0, 6.3, 0]} center distanceFactor={18}>
-            <span className="world-landmark-tag">{target.name}</span>
-          </Html>
+          <group position={[0, 6.3, 0]}>
+            <WorldLabel text={target.name} width={5.2} accentColor="#d9ad62" />
+          </group>
         </group>
       )}
     </group>
@@ -555,23 +624,23 @@ function HumanoidModel({
         <meshStandardMaterial color={skinTone} roughness={0.92} />
       </mesh>
       <mesh position={[0, 1.86, 0]} castShadow>
-        <sphereGeometry args={[0.27, 16, 12]} />
+        <sphereGeometry args={[0.2, 18, 14]} />
         <meshStandardMaterial color={skinTone} roughness={0.82} />
       </mesh>
-      <mesh position={[0, 2.01, -0.035]}>
-        <sphereGeometry args={[0.28, 14, 9, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      <mesh position={[0, 1.99, -0.035]}>
+        <sphereGeometry args={[0.205, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial color={hairColor} roughness={0.96} />
       </mesh>
       {[-1, 1].map((side) => (
         <group key={`face-side-${side}`}>
-          <mesh position={[side * 0.275, 1.86, 0.015]}><sphereGeometry args={[0.055, 8, 7]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
-          <mesh position={[side * 0.1, 1.88, 0.23]}><sphereGeometry args={[0.027, 8, 6]} /><meshStandardMaterial color="#f0e8dc" roughness={0.5} /></mesh>
-          <mesh position={[side * 0.1, 1.88, 0.253]}><sphereGeometry args={[0.013, 6, 5]} /><meshStandardMaterial color="#211c19" roughness={0.5} /></mesh>
-          <mesh position={[side * 0.1, 1.94, 0.23]} rotation={[0, 0, side * -0.12]}><boxGeometry args={[0.1, 0.024, 0.03]} /><meshStandardMaterial color={hairColor} roughness={0.9} /></mesh>
+          <mesh position={[side * 0.205, 1.86, 0.01]}><sphereGeometry args={[0.038, 10, 8]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
+          <mesh position={[side * 0.072, 1.88, 0.17]}><sphereGeometry args={[0.019, 10, 8]} /><meshStandardMaterial color="#f0e8dc" roughness={0.5} /></mesh>
+          <mesh position={[side * 0.072, 1.88, 0.188]}><sphereGeometry args={[0.009, 8, 6]} /><meshStandardMaterial color="#211c19" roughness={0.5} /></mesh>
+          <mesh position={[side * 0.072, 1.93, 0.16]} rotation={[0, 0, side * -0.1]}><boxGeometry args={[0.08, 0.016, 0.02]} /><meshStandardMaterial color={hairColor} roughness={0.9} /></mesh>
         </group>
       ))}
-      <mesh position={[0, 1.82, 0.265]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.06, 0.16, 6]} /><meshStandardMaterial color={skinTone} roughness={0.88} /></mesh>
-      <mesh position={[0, 1.73, 0.235]}><boxGeometry args={[0.11, 0.018, 0.03]} /><meshStandardMaterial color="#57392f" roughness={0.82} /></mesh>
+      <mesh position={[0, 1.82, 0.194]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.035, 0.085, 6]} /><meshStandardMaterial color={skinTone} roughness={0.88} /></mesh>
+      <mesh position={[0, 1.73, 0.18]}><boxGeometry args={[0.075, 0.014, 0.018]} /><meshStandardMaterial color="#57392f" roughness={0.82} /></mesh>
       <group ref={leftArm} position={[-0.33, 1.28, 0]}>
         <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.09, 0.36, 5, 8]} /><meshStandardMaterial color={clothing} roughness={0.8} /></mesh>
         <mesh position={[0, -0.53, 0.02]}><sphereGeometry args={[0.085, 8, 7]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
@@ -727,14 +796,20 @@ function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
     <group position={[player.x, 0, player.z]}>
       {player.inVehicle && <group position={[0, 0, 0.2]} scale={0.72}><ScooterModel /></group>}
       <HumanoidModel skinTone="#87583f" hairColor="#211a17" clothing={color} accentColor="#d0a76b" />
-      <Html position={[0, 2.4, 0]} center distanceFactor={13} sprite>
-        <span className="world-player-tag">{player.displayName}</span>
-      </Html>
+      <group position={[0, 2.4, 0]}>
+        <WorldLabel text={player.displayName} width={3.6} accentColor="#c9a66b" />
+      </group>
     </group>
   )
 }
 
 function CityScene({ keysRef, onPlayerPosition, inVehicle, paused, waypoint, spawnPosition, remotePlayers }: CityWorldProps) {
+  const concreteSource = useTexture('/textures/lagos-concrete.png')
+  const asphaltSource = useTexture('/textures/eko-asphalt.png')
+  const facadeTexture = useMemo(() => cloneTiledTexture(concreteSource, 3, 3), [concreteSource])
+  const pavementTexture = useMemo(() => cloneTiledTexture(concreteSource, 18, 18), [concreteSource])
+  const horizontalRoadTexture = useMemo(() => cloneTiledTexture(asphaltSource, 18, 1), [asphaltSource])
+  const verticalRoadTexture = useMemo(() => cloneTiledTexture(asphaltSource, 1, 18), [asphaltSource])
   const treePositions: [number, number, number][] = [
     [-10, 0, -6], [10, 0, -6], [-10, 0, 8], [10, 0, 8],
     [-34, 0, -10], [34, 0, 10], [-34, 0, 35], [34, 0, 35],
@@ -757,11 +832,11 @@ function CityScene({ keysRef, onPlayerPosition, inVehicle, paused, waypoint, spa
       <directionalLight position={[28, 40, 12]} intensity={1.45} color="#e6d5bd" castShadow />
       <pointLight position={[-18, 14, 14]} intensity={0.48} color="#d3a66c" distance={42} />
       <Stars radius={160} depth={80} count={360} factor={2} saturation={0} fade speed={0.12} />
-      <RoadGrid />
+      <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
       <Flyover />
       <LagoonBridge />
-      {BUILDINGS.map((building) => <Building key={`${building.x}-${building.z}`} {...building} />)}
-      {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} />)}
+      {BUILDINGS.map((building) => <Building key={`${building.x}-${building.z}`} {...building} facadeTexture={facadeTexture} />)}
+      {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
       {treePositions.map((position, index) => <StreetTree key={`tree-${index}`} position={position} scale={index % 3 === 0 ? 1.06 : 0.88} />)}
       {lampPositions.map((position, index) => <StreetLamp key={`lamp-${index}`} position={position} lit={index < 5} />)}
       <TrafficVehicle position={[-78, 0, 18]} color="#d2a342" speed={3.4} minibus />

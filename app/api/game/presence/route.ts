@@ -9,7 +9,7 @@ import type { PresenceUpdate } from '@/lib/game/types'
 
 const ROOM_ID = 'eko-mainland'
 const ACTIVE_WINDOW_MS = 30_000
-const POSITION_LIMITS = { minX: -58, maxX: 58, minZ: -58, maxZ: 53 } as const
+const POSITION_LIMITS = { minX: -82, maxX: 82, minZ: -82, maxZ: 78 } as const
 
 export const runtime = 'nodejs'
 

@@ -197,6 +197,15 @@ export const WORLD_LOCATIONS = [
     kind: 'clubhouse',
     description: 'A community sports clubhouse for football, fitness, and local events.',
   },
+  {
+    id: 'event-center',
+    name: 'Eko Convention & Events Centre',
+    district: 'Victoria Island',
+    x: -4,
+    z: -32,
+    kind: 'event-center',
+    description: 'A waterfront convention hall hosting concerts, community fairs, and city meetings.',
+  },
 ] as const
 
 export type LocationId = (typeof WORLD_LOCATIONS)[number]['id']
@@ -359,6 +368,19 @@ export const CITY_CHARACTERS = [
     accentColor: '#d7ad67',
     intro: 'Local decisions are made by people who show up. Start at the ward polling unit.',
   },
+  {
+    id: 'moyo',
+    name: 'Moyo',
+    role: 'Events producer',
+    x: -4,
+    z: -23,
+    locationId: 'event-center',
+    color: '#574653',
+    skinTone: '#87583f',
+    hairColor: '#211a17',
+    accentColor: '#d2aa61',
+    intro: 'We are turning the hall around for a community night market. The floor crew board is open.',
+  },
 ] as const
 
 export type CharacterId = (typeof CITY_CHARACTERS)[number]['id']
@@ -424,6 +446,16 @@ export const CITY_JOBS = [
     pay: 500,
     reputation: 11,
     description: 'Prepare the pitch perimeter and stands for the next local fixture.',
+  },
+  {
+    id: 'event-crew',
+    title: 'Convention floor crew',
+    employer: 'Eko Convention & Events Centre',
+    locationId: 'event-center',
+    category: 'EVENTS & HOSPITALITY',
+    pay: 520,
+    reputation: 13,
+    description: 'Set up a night market expo, guide guests through the hall, and close out the venue.',
   },
 ] as const
 
@@ -725,7 +757,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       return { ...state, faction: action.factionId }
     case 'lease-home': {
       const home = CITY_HOMES.find((entry) => entry.id === action.homeId)
-      if (!home || state.cash < home.price) return state
+      if (!home || state.home || state.cash < home.price) return state
       return { ...state, cash: state.cash - home.price, home: home.id }
     }
     case 'register-voter': {

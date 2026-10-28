@@ -401,7 +401,7 @@ function MapPanel({
 
   return (
     <div className="map-panel-content">
-      <div className="map-world-summary"><span>METROPOLITAN DISTRICT</span><strong>22 places · island, mainland & beyond</strong></div>
+      <div className="map-world-summary"><span>METROPOLITAN DISTRICT</span><strong>{WORLD_LOCATIONS.length} places · island, mainland & beyond</strong></div>
       <div className="full-map" aria-label="Lagos metropolitan district map">
         <span className="full-map-water" aria-hidden="true" />
         {streets.map((street) => (
