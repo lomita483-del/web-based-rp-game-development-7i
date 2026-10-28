@@ -3845,3 +3845,64 @@ button:focus-visible {
   .travel-options-grid button > strong { font-size: 0.61rem; }
   .travel-options-grid button > small { font-size: 0.5rem; }
 }
+
+
+/* Circular thumbstick replaces the four separate movement arrows. */
+.touch-controls { display: none !important; }
+.movement-joystick {
+  position: absolute;
+  z-index: 30;
+  left: max(1.1rem, env(safe-area-inset-left));
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  width: clamp(7rem, 19vw, 8.8rem);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(236 219 181 / 32%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(40 54 57 / 78%), rgb(12 21 25 / 64%));
+  box-shadow: inset 0 0 0 7px rgb(255 255 255 / 3%), 0 8px 28px rgb(0 0 0 / 28%);
+  touch-action: none;
+  user-select: none;
+}
+.movement-joystick-ring {
+  position: absolute;
+  width: 58%;
+  height: 58%;
+  border: 1px solid rgb(222 190 126 / 25%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.movement-joystick-knob {
+  width: 38%;
+  height: 38%;
+  border: 1px solid rgb(242 216 164 / 72%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #b8a477, #655a42 75%);
+  box-shadow: 0 3px 10px rgb(0 0 0 / 45%), inset 0 1px 2px rgb(255 255 255 / 24%);
+  pointer-events: none;
+}
+.run-button {
+  position: absolute;
+  z-index: 30;
+  left: calc(max(1.1rem, env(safe-area-inset-left)) + clamp(7rem, 19vw, 8.8rem) + 0.6rem);
+  bottom: max(1.65rem, env(safe-area-inset-bottom));
+  min-width: 3.6rem;
+  min-height: 3.6rem;
+  border: 1px solid rgb(222 190 126 / 45%);
+  border-radius: 50%;
+  background: rgb(22 34 37 / 88%);
+  color: #f3dfb2;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  touch-action: none;
+}
+.run-button:active { background: #8b6b3e; color: white; }
+.map-panel-content { min-height: 0; }
+.travel-options { position: relative; z-index: 4; }
+.location-list { max-height: 15rem; overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 760px) {
+  .movement-joystick { width: 7rem; left: max(0.75rem, env(safe-area-inset-left)); bottom: max(0.9rem, env(safe-area-inset-bottom)); }
+  .run-button { left: calc(max(0.75rem, env(safe-area-inset-left)) + 7rem + 0.45rem); bottom: max(1.2rem, env(safe-area-inset-bottom)); min-width: 3.25rem; min-height: 3.25rem; }
+}
