@@ -2,7 +2,7 @@
 
 import { Stars, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
+import { useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react'
 import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type PerspectiveCamera, type Texture, Vector3 } from 'three'
 import {
   CITY_BUILDINGS,
@@ -998,13 +998,13 @@ export function CityWorld(props: CityWorldProps) {
   const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0 })
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
 
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     // Keep the left half free for movement controls and ignore mouse clicks on UI.
     if (event.button !== 0 || event.clientX < window.innerWidth * 0.42) return
     dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current
     if (!drag || drag.pointerId !== event.pointerId) return
     const dx = event.clientX - drag.x
@@ -1014,7 +1014,7 @@ export function CityWorld(props: CityWorldProps) {
     cameraLookRef.current.yaw = MathUtils.clamp(cameraLookRef.current.yaw - dx * 0.006, -Math.PI * 0.92, Math.PI * 0.92)
     cameraLookRef.current.pitch = MathUtils.clamp(cameraLookRef.current.pitch - dy * 0.004, -0.55, 0.55)
   }
-  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (dragRef.current?.pointerId !== event.pointerId) return
     dragRef.current = null
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
@@ -1031,10 +1031,11 @@ export function CityWorld(props: CityWorldProps) {
       style={{ touchAction: 'none' }}
     >
       <Canvas
-        dpr={[1, 1.35]}
-        shadows="basic"
-        camera={{ position: [-2, 16, 24], fov: 55, near: 0.1, far: 280 }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        // Cap pixel ratio to reduce fill-rate and GPU memory on mid-range phones.
+        dpr={[1, 1.1]}
+        shadows={false}
+        camera={{ position: [-2, 16, 24], fov: 55, near: 0.1, far: 220 }}
+        gl={{ antialias: false, powerPreference: 'low-power' }}
       >
         {props.activeInterior ? (
           <>
