@@ -417,7 +417,8 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
           </group>
         })}
         {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-platform-${i}`} position={[0, height, 0]}><cylinderGeometry args={[Math.max(1.2, 5.6 - i * 1.05), Math.max(1.2, 5.6 - i * 1.05), 0.24, 24]} /><meshStandardMaterial color="#596d60" metalness={0.55} roughness={0.45} /></mesh>)}
-        {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-ring-${i}`} position={[0, height, 0]}><torusGeometry args={[Math.max(1.2, 5.6 - i * 1.05), 0.12, 6, 24]} /><meshStandardMaterial color="#c5a36a" metalness={0.7} roughness={0.35} /></mesh>)}
+        {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-ring-${i}`} position={[0, height, 0]}><torusGeometry args={[Math.max(1.2, 5.6 - i * 1.05), 0.12, 6, 24]} /><meshStandardMaterial color="#d9b16b" emissive="#ffb64d" emissiveIntensity={0.8} metalness={0.7} roughness={0.35} /></mesh>)}
+        {[4.8, 9.2, 14.2, 19.5, 23.4].map((height, i) => <pointLight key={`tower-glow-${i}`} position={[0, height, 0]} color={i % 2 ? "#f6d99b" : "#ffd07a"} intensity={1.1} distance={15} />)
         <mesh position={[0, 23.4, 0]}><cylinderGeometry args={[0.08, 0.55, 7.8, 8]} /><meshStandardMaterial color="#6e806f" metalness={0.65} roughness={0.4} /></mesh>
         <mesh position={[0, 3.4, 3.62]}><boxGeometry args={[3.8, 1.25, 0.12]} /><meshStandardMaterial color="#17252c" /></mesh>
         <mesh position={[0, 3.4, 3.71]}><boxGeometry args={[3.2, 0.12, 0.04]} /><meshBasicMaterial color="#e4c58b" /></mesh>
@@ -1001,6 +1002,29 @@ function PassbyPedestrian({ index }: { index: number }) {
   </group>
 }
 
+function CitySignBoards({ night }: { night: boolean }) {
+  const signs = [
+    { x: -28, z: -20, text: 'EKO CIVIC SQUARE', color: '#132b3b' },
+    { x: 34, z: 20, text: 'VICTORIA ISLAND', color: '#174c48' },
+    { x: -58, z: 44, text: 'LAGOS BUSINESS DISTRICT', color: '#6a3b25' },
+  ]
+  return <>
+    {signs.map((sign, index) => <group key={sign.text} position={[sign.x, 0, sign.z]} rotation={[0, index === 1 ? -Math.PI / 2 : 0, 0]}>
+      <mesh position={[0, 3.4, 0]}><boxGeometry args={[0.22, 6.8, 0.22]} /><meshStandardMaterial color="#555b5c" metalness={0.5} /></mesh>
+      <mesh position={[0, 6.1, 0]}><boxGeometry args={[8.5, 1.8, 0.25]} /><meshStandardMaterial color={sign.color} emissive={sign.color} emissiveIntensity={night ? 0.35 : 0.05} /></mesh>
+      <mesh position={[0, 6.1, 0.15]}><planeGeometry args={[7.9, 1.25]} /><meshBasicMaterial color="#fff0c8" /></mesh>
+      <pointLight position={[0, 6.2, 1]} color="#ffda91" intensity={night ? 0.75 : 0.08} distance={12} />
+    </group>)}
+    <group position={[52, 0, -18]} rotation={[0, -0.22, 0]}>
+      <mesh position={[0, 7, 0]}><boxGeometry args={[0.45, 14, 0.45]} /><meshStandardMaterial color="#4a5054" metalness={0.7} /></mesh>
+      <mesh position={[0, 12, 0.3]}><boxGeometry args={[12, 7, 0.7]} /><meshStandardMaterial color="#101d28" emissive="#1b6b78" emissiveIntensity={night ? 1.1 : 0.4} metalness={0.3} /></mesh>
+      <mesh position={[0, 12, 0.68]}><planeGeometry args={[11.4, 6.4]} /><meshBasicMaterial color={night ? '#4de1df' : '#2b7d9d'} /></mesh>
+      <mesh position={[0, 12, 0.7]}><planeGeometry args={[10.6, 5.7]} /><meshBasicMaterial color={night ? '#f5d58a' : '#d5f1ff'} /></mesh>
+      {night && <pointLight position={[0, 12, 2]} color="#57dce8" intensity={2.2} distance={24} />}
+    </group>
+  </>
+}
+
 function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps, 'waypoint' | 'remotePlayers' | 'gameMinutes'>) {
   const hour = (gameMinutes / 60) % 24
   const night = hour < 5.5 || hour >= 19
@@ -1024,13 +1048,14 @@ function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps
 
   return (
     <>
-      <color attach="background" args={[night ? '#08111f' : dawn || dusk ? '#806b63' : '#8eb5c8']} />
-      <fog attach="fog" args={[night ? '#101c2b' : dawn || dusk ? '#b3a08d' : '#a8c4ca', 64, 210]} />
-      <ambientLight intensity={night ? 0.28 : dawn || dusk ? 0.62 : 0.9} color={night ? '#8198c7' : dawn || dusk ? '#f0b58a' : '#fff1dc'} />
-      <hemisphereLight args={[night ? '#33496e' : '#c4e2f0', '#38352f', night ? 0.35 : 0.92]} />
-      <directionalLight position={[28, 40, 12]} intensity={night ? 0.18 : dawn || dusk ? 0.72 : 1.45} color={night ? '#7f98cf' : dawn || dusk ? '#f3b78a' : '#fff0d2'} />
-      <pointLight position={[-18, 14, 14]} intensity={night ? 0.75 : 0.18} color="#d3a66c" distance={42} />
-      {night && <Stars radius={160} depth={80} count={360} factor={2} saturation={0} fade speed={0.12} />}
+      <color attach="background" args={[night ? '#172640' : dawn || dusk ? '#c58e79' : '#8ec9f0']} />
+      <fog attach="fog" args={[night ? '#263650' : dawn || dusk ? '#d7a18a' : '#a8d2df', 90, 245]} />
+      <ambientLight intensity={night ? 0.62 : dawn || dusk ? 0.72 : 1.0} color={night ? '#a6bce4' : dawn || dusk ? '#ffd0a3' : '#fff5df'} />
+      <hemisphereLight args={[night ? '#526c9b' : '#c4e8ff', night ? '#343b4b' : '#514b3d', night ? 0.65 : 1.0]} />
+      <directionalLight position={[28, 40, 12]} intensity={night ? 0.32 : dawn || dusk ? 0.82 : 1.8} color={night ? '#a0b9ef' : dawn || dusk ? '#ffd0a3' : '#fff4d6'} />
+      {!night && <group position={[45, 42, -75]}><mesh><sphereGeometry args={[5, 20, 16]} /><meshBasicMaterial color={dawn || dusk ? '#ffb56e' : '#fff0a3'} /></mesh><pointLight intensity={0.8} color="#ffe2a0" distance={100} /></group>}
+      {night && <Stars radius={180} depth={100} count={1600} factor={3.4} saturation={0.15} fade speed={0.22} />}
+      {night && <mesh position={[0, 78, -110]}><sphereGeometry args={[2.6, 16, 12]} /><meshBasicMaterial color="#fff3cc" /></mesh>}
       <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
       <Flyover />
       <LagoonBridge />
@@ -1045,6 +1070,23 @@ function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps
       })}
       {treePositions.map((position, index) => <StreetTree key={`tree-${index}`} position={position} scale={index % 3 === 0 ? 0.92 : 0.84} />)}
       {lampPositions.map((position, index) => <StreetLamp key={`lamp-${index}`} position={position} lit={night} />)}
+      {Array.from({ length: 30 }, (_, index) => {
+        const road = ROAD_LINES[index % ROAD_LINES.length]
+        const side = index % 2 === 0 ? -1 : 1
+        const roadWidth = Math.abs(road) <= 42 ? 7 : 5
+        const x = -78 + Math.floor(index / ROAD_LINES.length) * 29
+        const z = road + side * (roadWidth / 2 + 2.9)
+        return <StreetTree key={`avenue-tree-${index}`} position={[x, 0, z]} scale={0.7 + (index % 4) * 0.08} />
+      })}
+      {Array.from({ length: 20 }, (_, index) => {
+        const road = ROAD_LINES[index % ROAD_LINES.length]
+        const side = index % 2 === 0 ? -1 : 1
+        const roadWidth = Math.abs(road) <= 42 ? 7 : 5
+        const x = -80 + Math.floor(index / ROAD_LINES.length) * 39
+        const z = road + side * (roadWidth / 2 + 1.0)
+        return <StreetLamp key={`avenue-lamp-${index}`} position={[x, 0, z]} lit={night} />
+      })}
+      <CitySignBoards night={night} />
       {Array.from({ length: 24 }, (_, index) => {
         const roadZ = ROAD_LINES[index % ROAD_LINES.length]
         const roadWidth = Math.abs(roadZ) <= 42 ? 7 : 5
