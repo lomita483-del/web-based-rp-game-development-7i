@@ -21,6 +21,7 @@ import {
 import { InteriorScene } from './interior-scene'
 
 type PlayerPosition = { x: number; z: number }
+type CameraLook = { yaw: number; pitch: number }
 
 type CityWorldProps = {
   keysRef: MutableRefObject<Set<string>>
@@ -823,7 +824,8 @@ function PlayerController({
   paused,
   spawnPosition,
   activeInterior,
-}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'>) {
+  cameraLookRef,
+}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & { cameraLookRef: MutableRefObject<CameraLook> }) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
   const cameraTarget = useRef(new Vector3())
@@ -895,8 +897,19 @@ function PlayerController({
       ? tallViewport ? 12 : 9.5
       : tallViewport ? (inVehicle ? 16 : 17) : (inVehicle ? 8.5 : 9.5)
     const cameraDistance = inside ? (tallViewport ? 14 : 11) : (tallViewport ? 22 : 16)
-    cameraTarget.current.set(x, position.y + cameraHeight, z + cameraDistance)
-    cameraLookAt.current.set(x, position.y + (inside ? 1.6 : inVehicle ? 1.8 : 2), z - (inside ? 1.2 : 7))
+    const look = cameraLookRef.current
+    const yaw = look.yaw
+    const pitch = look.pitch
+    cameraTarget.current.set(
+      x + Math.sin(yaw) * cameraDistance,
+      position.y + cameraHeight + Math.sin(pitch) * cameraDistance * 0.38,
+      z + Math.cos(yaw) * cameraDistance,
+    )
+    cameraLookAt.current.set(
+      x - Math.sin(yaw) * 7,
+      position.y + (inside ? 1.6 : inVehicle ? 1.8 : 2) + Math.sin(pitch) * 5,
+      z - Math.cos(yaw) * (inside ? 1.2 : 7),
+    )
     camera.position.lerp(cameraTarget.current, 1 - Math.exp(-step * 3.8))
     camera.lookAt(cameraLookAt.current)
 
@@ -982,8 +995,41 @@ function CityScene({ waypoint, remotePlayers }: Pick<CityWorldProps, 'waypoint' 
 }
 
 export function CityWorld(props: CityWorldProps) {
+  const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0 })
+  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Keep the left half free for movement controls and ignore mouse clicks on UI.
+    if (event.button !== 0 || event.clientX < window.innerWidth * 0.42) return
+    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    const dx = event.clientX - drag.x
+    const dy = event.clientY - drag.y
+    drag.x = event.clientX
+    drag.y = event.clientY
+    cameraLookRef.current.yaw = MathUtils.clamp(cameraLookRef.current.yaw - dx * 0.006, -Math.PI * 0.92, Math.PI * 0.92)
+    cameraLookRef.current.pitch = MathUtils.clamp(cameraLookRef.current.pitch - dy * 0.004, -0.55, 0.55)
+  }
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId !== event.pointerId) return
+    dragRef.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+
   return (
-    <div className="world-canvas" aria-hidden="true">
+    <div
+      className="world-canvas"
+      aria-label="Game world. Drag the right side to look around."
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      style={{ touchAction: 'none' }}
+    >
       <Canvas
         dpr={[1, 1.35]}
         shadows="basic"
@@ -1007,6 +1053,7 @@ export function CityWorld(props: CityWorldProps) {
           paused={props.paused}
           spawnPosition={props.spawnPosition}
           activeInterior={props.activeInterior}
+          cameraLookRef={cameraLookRef}
         />
       </Canvas>
     </div>
