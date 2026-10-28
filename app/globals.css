@@ -3746,3 +3746,102 @@ button:focus-visible {
     width: 100%;
   }
 }
+
+
+/* Eko world-map upgrade: compact circular radar, detailed footprints and travel chooser. */
+.minimap-card {
+  top: 5.4rem;
+  right: 1rem;
+  bottom: auto;
+  left: auto;
+  width: 8.4rem;
+  padding: 0.35rem;
+  border-radius: 50%;
+  background: rgb(9 18 22 / 76%);
+  border-color: rgb(220 187 126 / 45%);
+}
+.minimap-heading,
+.minimap-footer { display: none; }
+.minimap {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border-color: rgb(220 187 126 / 40%);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.minimap:focus-visible { outline: 2px solid #e0b66e; outline-offset: 3px; }
+.minimap-water { border-radius: 50%; }
+.minimap-location { width: 0.28rem; height: 0.28rem; }
+.minimap-player { width: 0.48rem; height: 0.48rem; }
+.game-panel { width: min(54vw, 48rem); }
+.full-map-building {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgb(209 200 173 / 52%);
+  border-radius: 1px;
+  background: linear-gradient(135deg, #9d9b8b, #555f5c);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 45%);
+  pointer-events: auto;
+}
+.full-map-building span {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  display: none;
+  max-width: 7rem;
+  padding: 0.12rem 0.24rem;
+  transform: translateX(-50%);
+  border: 1px solid rgb(220 187 126 / 38%);
+  border-radius: 3px;
+  background: #172329;
+  color: #f1e4c8;
+  font-size: 0.42rem;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.full-map-building:hover span,
+.full-map-building:focus span { display: block; }
+.travel-options {
+  margin: 0.8rem 0 0.35rem;
+  padding: 0.9rem;
+  border: 1px solid rgb(220 187 126 / 25%);
+  border-radius: 0.9rem;
+  background: linear-gradient(145deg, rgb(28 44 47 / 96%), rgb(15 29 29 / 96%));
+}
+.travel-options-heading { display: grid; gap: 0.22rem; margin-bottom: 0.7rem; }
+.travel-options-heading > span { color: #d7b77a; font-size: 0.56rem; font-weight: 800; letter-spacing: 0.14em; }
+.travel-options-heading > strong { color: #f4ead8; font-size: 0.9rem; }
+.travel-options-heading > small { color: #9eada8; font-size: 0.66rem; }
+.travel-options-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
+.travel-options-grid button {
+  display: grid;
+  grid-template-columns: 1.7rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.08rem 0.45rem;
+  min-width: 0;
+  padding: 0.6rem;
+  text-align: left;
+  border: 1px solid rgb(226 224 204 / 12%);
+  border-radius: 0.65rem;
+  background: rgb(255 255 255 / 3%);
+  color: #f1e9d8;
+}
+.travel-options-grid button:hover,
+.travel-options-grid button:focus-visible { border-color: #d6ad69; background: rgb(214 173 105 / 10%); }
+.travel-options-grid button > span { grid-row: span 2; font-size: 1.1rem; }
+.travel-options-grid button > strong { font-size: 0.67rem; }
+.travel-options-grid button > small { color: #9aaba5; font-size: 0.56rem; }
+.location-row.is-selected { border-color: rgb(220 187 126 / 55%); background: rgb(220 187 126 / 8%); }
+@media (max-width: 760px) {
+  .minimap-card { top: 5rem; right: 0.55rem; width: 6.25rem; padding: 0.2rem; }
+  .game-panel { width: min(92vw, 32rem); }
+  .full-map-building span { max-width: 5.5rem; font-size: 0.36rem; }
+  .travel-options { padding: 0.65rem; }
+  .travel-options-grid button { padding: 0.48rem; grid-template-columns: 1.35rem minmax(0, 1fr); }
+  .travel-options-grid button > strong { font-size: 0.61rem; }
+  .travel-options-grid button > small { font-size: 0.5rem; }
+}
