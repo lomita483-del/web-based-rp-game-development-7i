@@ -34,6 +34,7 @@ type CityWorldProps = {
   autoWalkTarget: LocationId | null
   spawnPosition: PlayerPosition
   remotePlayers: RemotePlayer[]
+  gameMinutes: number
 }
 
 type BuildingSpec = CityBuilding
@@ -996,7 +997,11 @@ function PassbyPedestrian({ index }: { index: number }) {
   </group>
 }
 
-function CityScene({ waypoint, remotePlayers }: Pick<CityWorldProps, 'waypoint' | 'remotePlayers'>) {
+function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps, 'waypoint' | 'remotePlayers' | 'gameMinutes'>) {
+  const hour = (gameMinutes / 60) % 24
+  const night = hour < 5.5 || hour >= 19
+  const dawn = hour >= 5.5 && hour < 7.5
+  const dusk = hour >= 17.5 && hour < 19
   const concreteSource = useTexture('/textures/lagos-concrete.png')
   const asphaltSource = useTexture('/textures/eko-asphalt.png')
   const facadeTexture = useMemo(() => cloneTiledTexture(concreteSource, 3, 3), [concreteSource])
@@ -1015,13 +1020,13 @@ function CityScene({ waypoint, remotePlayers }: Pick<CityWorldProps, 'waypoint' 
 
   return (
     <>
-      <color attach="background" args={['#121a22']} />
-      <fog attach="fog" args={['#121a22', 64, 210]} />
-      <ambientLight intensity={0.72} color="#c1c8ca" />
-      <hemisphereLight args={['#a9b9ca', '#38352f', 0.92]} />
-      <directionalLight position={[28, 40, 12]} intensity={1.45} color="#e6d5bd" castShadow />
-      <pointLight position={[-18, 14, 14]} intensity={0.48} color="#d3a66c" distance={42} />
-      <Stars radius={160} depth={80} count={360} factor={2} saturation={0} fade speed={0.12} />
+      <color attach="background" args={[night ? '#08111f' : dawn || dusk ? '#806b63' : '#8eb5c8']} />
+      <fog attach="fog" args={[night ? '#101c2b' : dawn || dusk ? '#b3a08d' : '#a8c4ca', 64, 210]} />
+      <ambientLight intensity={night ? 0.28 : dawn || dusk ? 0.62 : 0.9} color={night ? '#8198c7' : dawn || dusk ? '#f0b58a' : '#fff1dc'} />
+      <hemisphereLight args={[night ? '#33496e' : '#c4e2f0', '#38352f', night ? 0.35 : 0.92]} />
+      <directionalLight position={[28, 40, 12]} intensity={night ? 0.18 : dawn || dusk ? 0.72 : 1.45} color={night ? '#7f98cf' : dawn || dusk ? '#f3b78a' : '#fff0d2'} />
+      <pointLight position={[-18, 14, 14]} intensity={night ? 0.75 : 0.18} color="#d3a66c" distance={42} />
+      {night && <Stars radius={160} depth={80} count={360} factor={2} saturation={0} fade speed={0.12} />}
       <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
       <Flyover />
       <LagoonBridge />
@@ -1035,7 +1040,7 @@ function CityScene({ waypoint, remotePlayers }: Pick<CityWorldProps, 'waypoint' 
         return position ? <EntryBeacon key={`entry-${location.id}`} position={position} label="ENTER" /> : null
       })}
       {treePositions.map((position, index) => <StreetTree key={`tree-${index}`} position={position} scale={index % 3 === 0 ? 0.92 : 0.84} />)}
-      {lampPositions.map((position, index) => <StreetLamp key={`lamp-${index}`} position={position} lit={index < 5} />)}
+      {lampPositions.map((position, index) => <StreetLamp key={`lamp-${index}`} position={position} lit={night} />)}
       {Array.from({ length: 16 }, (_, index) => {
         const lanes = [-72, -60, -48, -36, -24, -12, 0, 12, 24, 36, 48, 60, 72]
         const laneZ = lanes[index % lanes.length]
@@ -1133,7 +1138,7 @@ export function CityWorld(props: CityWorldProps) {
             {props.remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
           </>
         ) : (
-          <CityScene waypoint={props.waypoint} remotePlayers={props.remotePlayers} />
+          <CityScene waypoint={props.waypoint} remotePlayers={props.remotePlayers} gameMinutes={props.gameMinutes} />
         )}
         <PlayerController
           key={props.activeInterior?.id ?? 'city'}
