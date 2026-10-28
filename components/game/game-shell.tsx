@@ -663,6 +663,7 @@ export default function GameShell() {
         keysRef={keysRef}
         onPlayerPosition={handlePlayerPosition}
         inVehicle={player.inVehicle}
+        gender={player.gender}
         paused={paused}
         waypoint={waypoint}
         autoWalkTarget={autoWalkTarget}
