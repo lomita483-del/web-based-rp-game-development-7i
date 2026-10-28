@@ -244,6 +244,7 @@ export function GameHud({
         <span className="movement-joystick-ring" aria-hidden="true" />
         <span className="movement-joystick-knob" aria-hidden="true" />
       </div>
+      <button className="run-button" type="button" onPointerDown={(event) => { event.preventDefault(); onMoveKey('shift', true) }} onPointerUp={() => onMoveKey('shift', false)} onPointerCancel={() => onMoveKey('shift', false)} onLostPointerCapture={() => onMoveKey('shift', false)} aria-label="Run while moving">RUN</button>
 
       <div className="vitals-card" aria-label="Player condition">
         <div className="vital-row"><Zap aria-hidden="true" /><span>ENERGY</span><div><i style={{ width: `${player.energy}%` }} /></div><b>{player.energy}%</b></div>
