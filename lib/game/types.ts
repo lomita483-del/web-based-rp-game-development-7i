@@ -26,7 +26,7 @@ export type OnlinePlayer = {
 }
 
 export type PresenceResponse = { players: OnlinePlayer[] }
-export type PresenceUpdate = GamePosition & { inVehicle: boolean }
+export type PresenceUpdate = GamePosition & { inVehicle: boolean; roomId: string }
 export type PresenceMutation = PresenceUpdate | { method: 'DELETE' }
 
 export type RoleplayMessage = {

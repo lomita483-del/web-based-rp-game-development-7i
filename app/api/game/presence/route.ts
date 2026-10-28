@@ -4,12 +4,21 @@ import { db } from '@/lib/db'
 import { playerPresence } from '@/lib/db/schema'
 import { getAuthenticatedGameUser } from '@/lib/game/auth'
 import { PRIVATE_NO_STORE_HEADERS, readJsonBody } from '@/lib/game/http'
+import { isInteriorId } from '@/components/game/game-data'
 import { isRecord } from '@/lib/game/validation'
 import type { PresenceUpdate } from '@/lib/game/types'
 
-const ROOM_ID = 'eko-mainland'
+const DEFAULT_ROOM_ID = 'eko-mainland'
 const ACTIVE_WINDOW_MS = 30_000
 const POSITION_LIMITS = { minX: -82, maxX: 82, minZ: -82, maxZ: 78 } as const
+
+function parseRoomId(value: unknown): string | null {
+  if (value === undefined || value === null) return DEFAULT_ROOM_ID
+  if (typeof value !== 'string') return null
+  if (value === DEFAULT_ROOM_ID) return value
+  if (value.startsWith('interior:') && isInteriorId(value.slice('interior:'.length))) return value
+  return null
+}
 
 export const runtime = 'nodejs'
 
@@ -18,6 +27,11 @@ export async function GET(request: Request) {
     const user = await getAuthenticatedGameUser(request)
     if (!user) {
       return NextResponse.json({ error: 'Sign in to join the shared city.' }, { status: 401, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+
+    const roomId = parseRoomId(new URL(request.url).searchParams.get('roomId'))
+    if (!roomId) {
+      return NextResponse.json({ error: 'That shared-world room does not exist.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }
 
     const activeAfter = new Date(Date.now() - ACTIVE_WINDOW_MS)
@@ -31,7 +45,7 @@ export async function GET(request: Request) {
         updatedAt: playerPresence.updatedAt,
       })
       .from(playerPresence)
-      .where(and(eq(playerPresence.roomId, ROOM_ID), gt(playerPresence.updatedAt, activeAfter)))
+      .where(and(eq(playerPresence.roomId, roomId), gt(playerPresence.updatedAt, activeAfter)))
       .orderBy(desc(playerPresence.updatedAt))
       .limit(24)
 
@@ -62,6 +76,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The player position is not valid.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }
 
+    const roomId = parseRoomId(body.roomId)
+    if (!roomId) {
+      return NextResponse.json({ error: 'That shared-world room does not exist.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+
     if (!Number.isFinite(body.x) || !Number.isFinite(body.z)) {
       return NextResponse.json({ error: 'The player position is not valid.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }
@@ -70,6 +89,7 @@ export async function POST(request: Request) {
       x: Math.max(POSITION_LIMITS.minX, Math.min(POSITION_LIMITS.maxX, body.x)),
       z: Math.max(POSITION_LIMITS.minZ, Math.min(POSITION_LIMITS.maxZ, body.z)),
       inVehicle: body.inVehicle,
+      roomId,
     }
     const updatedAt = new Date()
 
@@ -77,7 +97,6 @@ export async function POST(request: Request) {
       .insert(playerPresence)
       .values({
         userId: user.id,
-        roomId: ROOM_ID,
         displayName: user.name,
         ...position,
         updatedAt,
@@ -85,7 +104,6 @@ export async function POST(request: Request) {
       .onConflictDoUpdate({
         target: playerPresence.userId,
         set: {
-          roomId: ROOM_ID,
           displayName: user.name,
           ...position,
           updatedAt,

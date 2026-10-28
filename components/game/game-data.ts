@@ -9,11 +9,20 @@ export const WORLD_LOCATIONS = [
     description: 'The city’s central plaza, framed by offices, cafés, and bus stops.',
   },
   {
+    id: 'bank',
+    name: 'Eko Cooperative Bank',
+    district: 'Victoria Island',
+    x: 30,
+    z: 0,
+    kind: 'bank',
+    description: 'A full-service branch with teller desks, account services, and a public ATM lobby.',
+  },
+  {
     id: 'market',
     name: 'Balogun Night Market',
     district: 'Lagos Island',
-    x: 20,
-    z: -18,
+    x: 30,
+    z: -30,
     kind: 'market',
     description: 'A crowded trading street where couriers and stall owners find work.',
   },
@@ -21,8 +30,8 @@ export const WORLD_LOCATIONS = [
     id: 'club',
     name: 'Afterglow Social Club',
     district: 'Yaba',
-    x: -20,
-    z: 22,
+    x: -30,
+    z: 30,
     kind: 'club',
     description: 'A live-music room and neighborhood clubhouse with a late crowd.',
   },
@@ -30,8 +39,8 @@ export const WORLD_LOCATIONS = [
     id: 'garage',
     name: 'Mainland Motors',
     district: 'Surulere',
-    x: 22,
-    z: 18,
+    x: 30,
+    z: 30,
     kind: 'garage',
     description: 'A working garage, scooter hire desk, and local transport hub.',
   },
@@ -39,8 +48,8 @@ export const WORLD_LOCATIONS = [
     id: 'hotel',
     name: 'Marina House',
     district: 'Victoria Island',
-    x: -24,
-    z: -20,
+    x: -30,
+    z: -30,
     kind: 'hotel',
     description: 'A modest city hotel with rooms above a busy waterfront road.',
   },
@@ -48,8 +57,8 @@ export const WORLD_LOCATIONS = [
     id: 'cafe',
     name: 'Palm & Pepper',
     district: 'Surulere',
-    x: 2,
-    z: 22,
+    x: 0,
+    z: 30,
     kind: 'cafe',
     description: 'Suya, cold drinks, and a familiar place to catch your breath.',
   },
@@ -66,8 +75,8 @@ export const WORLD_LOCATIONS = [
     id: 'police',
     name: 'Adekunle Police Division',
     district: 'Yaba',
-    x: -46,
-    z: -18,
+    x: -54,
+    z: 6,
     kind: 'police',
     description: 'A neighborhood station, community desk, and public-service workplace.',
   },
@@ -75,8 +84,8 @@ export const WORLD_LOCATIONS = [
     id: 'court',
     name: 'Lagos High Court',
     district: 'Ikeja',
-    x: -58,
-    z: -40,
+    x: -54,
+    z: -30,
     kind: 'court',
     description: 'The civic court and public records office for the district.',
   },
@@ -84,8 +93,8 @@ export const WORLD_LOCATIONS = [
     id: 'hospital',
     name: 'Mainland General Hospital',
     district: 'Ikeja',
-    x: -70,
-    z: -5,
+    x: -30,
+    z: -6,
     kind: 'hospital',
     description: 'A round-the-clock hospital with a busy emergency entrance.',
   },
@@ -93,8 +102,8 @@ export const WORLD_LOCATIONS = [
     id: 'university',
     name: 'University of Lagos',
     district: 'Akoka',
-    x: -52,
-    z: -60,
+    x: -54,
+    z: -54,
     kind: 'university',
     description: 'A large campus of lecture halls, libraries, and student housing.',
   },
@@ -102,8 +111,8 @@ export const WORLD_LOCATIONS = [
     id: 'school',
     name: 'Eko Secondary School',
     district: 'Mushin',
-    x: -12,
-    z: -62,
+    x: -30,
+    z: -54,
     kind: 'school',
     description: 'A neighborhood secondary school with evening study groups.',
   },
@@ -111,8 +120,8 @@ export const WORLD_LOCATIONS = [
     id: 'stadium',
     name: 'National City Stadium',
     district: 'Surulere',
-    x: 50,
-    z: -22,
+    x: 54,
+    z: -30,
     kind: 'stadium',
     description: 'A floodlit football ground with match-day and grounds-crew shifts.',
   },
@@ -120,8 +129,8 @@ export const WORLD_LOCATIONS = [
     id: 'government',
     name: 'State Government House',
     district: 'Alausa',
-    x: -52,
-    z: 42,
+    x: -54,
+    z: 30,
     kind: 'government',
     description: 'The seat of state administration and the district’s civic offices.',
   },
@@ -129,8 +138,8 @@ export const WORLD_LOCATIONS = [
     id: 'polling',
     name: 'Ward 08 Polling Unit',
     district: 'Alausa',
-    x: -22,
-    z: 50,
+    x: -30,
+    z: 54,
     kind: 'polling',
     description: 'Register as a voter and take part in the city’s local elections.',
   },
@@ -138,8 +147,8 @@ export const WORLD_LOCATIONS = [
     id: 'bungalow',
     name: 'Abule Egba Bungalows',
     district: 'Mainland Estates',
-    x: 22,
-    z: 50,
+    x: 30,
+    z: 54,
     kind: 'bungalow',
     description: 'Low-rise homes behind courtyard walls and roadside gardens.',
   },
@@ -147,8 +156,8 @@ export const WORLD_LOCATIONS = [
     id: 'estate',
     name: 'Lekki Garden Estate',
     district: 'Lekki',
-    x: 58,
-    z: 44,
+    x: 54,
+    z: 54,
     kind: 'estate',
     description: 'A gated residential estate with townhouses and a shared clubhouse.',
   },
@@ -156,8 +165,8 @@ export const WORLD_LOCATIONS = [
     id: 'village',
     name: 'Ibeju Farm Village',
     district: 'Ibeju-Lekki',
-    x: -62,
-    z: 58,
+    x: -54,
+    z: 54,
     kind: 'village',
     description: 'A close-knit village at the edge of the city’s agricultural belt.',
   },
@@ -165,8 +174,8 @@ export const WORLD_LOCATIONS = [
     id: 'farm',
     name: 'Epe Food Cooperative',
     district: 'Epe',
-    x: 14,
-    z: 66,
+    x: 0,
+    z: 54,
     kind: 'farm',
     description: 'Small farms and a produce cooperative supplying the city markets.',
   },
@@ -174,8 +183,8 @@ export const WORLD_LOCATIONS = [
     id: 'airport',
     name: 'Murtala Muhammed Airport',
     district: 'Ikeja',
-    x: 60,
-    z: -62,
+    x: 54,
+    z: -54,
     kind: 'airport',
     description: 'The international terminal and ground crew hiring office.',
   },
@@ -183,8 +192,8 @@ export const WORLD_LOCATIONS = [
     id: 'port',
     name: 'Apapa Shipping Port',
     district: 'Apapa',
-    x: 66,
-    z: 24,
+    x: 54,
+    z: 30,
     kind: 'port',
     description: 'A working container port with logistics and dockside shifts.',
   },
@@ -192,8 +201,8 @@ export const WORLD_LOCATIONS = [
     id: 'clubhouse',
     name: 'Mainland Athletic Club',
     district: 'Surulere',
-    x: -24,
-    z: -44,
+    x: -30,
+    z: 6,
     kind: 'clubhouse',
     description: 'A community sports clubhouse for football, fitness, and local events.',
   },
@@ -201,8 +210,8 @@ export const WORLD_LOCATIONS = [
     id: 'event-center',
     name: 'Eko Convention & Events Centre',
     district: 'Victoria Island',
-    x: -4,
-    z: -32,
+    x: 0,
+    z: -30,
     kind: 'event-center',
     description: 'A waterfront convention hall hosting concerts, community fairs, and city meetings.',
   },
@@ -210,6 +219,210 @@ export const WORLD_LOCATIONS = [
 
 export type LocationId = (typeof WORLD_LOCATIONS)[number]['id']
 export type WorldLocation = (typeof WORLD_LOCATIONS)[number]
+
+export const CITY_BUILDINGS = [
+  { id: 'canal-walkups', name: 'Canal Walk-ups', district: 'Lagos Island', x: -76, z: -76, width: 8, depth: 8, height: 12, color: '#817d75', accent: '#c89b62', interiorKind: 'apartment' },
+  { id: 'ikeja-quarters', name: 'Ikeja Staff Quarters', district: 'Ikeja', x: -54, z: -76, width: 9, depth: 8, height: 9, color: '#9b8c78', accent: '#c9845b', interiorKind: 'apartment' },
+  { id: 'yaba-service-flats', name: 'Yaba Service Flats', district: 'Yaba', x: -30, z: -76, width: 8, depth: 8, height: 10, color: '#767c7c', accent: '#d0a263', interiorKind: 'apartment' },
+  { id: 'cargo-annex', name: 'Airport Cargo Annex', district: 'Ikeja', x: 0, z: -76, width: 8, depth: 8, height: 11, color: '#777b78', accent: '#b5a06c', interiorKind: 'office' },
+  { id: 'oshodi-market-row', name: 'Oshodi Market Row', district: 'Oshodi', x: 30, z: -76, width: 8, depth: 8, height: 6, color: '#99775d', accent: '#d49c54', interiorKind: 'shop' },
+  { id: 'airport-staff-housing', name: 'Airport Staff Housing', district: 'Ikeja', x: -54, z: -6, width: 8, depth: 8, height: 9, color: '#8b8171', accent: '#d2a266', interiorKind: 'apartment' },
+  { id: 'northern-office-block', name: 'Northern Office Block', district: 'Ikeja', x: 76, z: -76, width: 8, depth: 8, height: 13, color: '#6f7a7f', accent: '#d6b373', interiorKind: 'office' },
+  { id: 'marina-apartments', name: 'Marina Apartments', district: 'Victoria Island', x: -76, z: -54, width: 8, depth: 8, height: 13, color: '#807d75', accent: '#d0a667', interiorKind: 'apartment' },
+  { id: 'ikeja-bungalow-court', name: 'Ikeja Bungalow Court', district: 'Ikeja', x: 76, z: -54, width: 8, depth: 8, height: 6, color: '#a39176', accent: '#c77954', interiorKind: 'house' },
+  { id: 'civic-records-annex', name: 'Civic Records Annex', district: 'Alausa', x: -76, z: -30, width: 8, depth: 8, height: 12, color: '#a49c8e', accent: '#b58c56', interiorKind: 'office' },
+  { id: 'island-retail-arcade', name: 'Island Retail Arcade', district: 'Lagos Island', x: 76, z: -30, width: 8, depth: 8, height: 7, color: '#9e7858', accent: '#d2a04e', interiorKind: 'shop' },
+  { id: 'mainland-walkups', name: 'Mainland Walk-ups', district: 'Surulere', x: -76, z: 0, width: 8, depth: 8, height: 11, color: '#8e8173', accent: '#c79062', interiorKind: 'apartment' },
+  { id: 'lekki-garden-duplex', name: 'Lekki Garden Duplex', district: 'Lekki', x: 76, z: 0, width: 8, depth: 8, height: 8, color: '#9a8e7d', accent: '#c97c59', interiorKind: 'house' },
+  { id: 'apapa-dock-apartments', name: 'Apapa Dock Apartments', district: 'Apapa', x: -76, z: 30, width: 8, depth: 8, height: 12, color: '#747c7d', accent: '#c59b65', interiorKind: 'apartment' },
+  { id: 'lekki-corner-shop', name: 'Lekki Corner Shop', district: 'Lekki', x: 76, z: 30, width: 8, depth: 8, height: 6, color: '#a17d5a', accent: '#d4a452', interiorKind: 'shop' },
+  { id: 'ibeju-farm-house', name: 'Ibeju Farm House', district: 'Ibeju-Lekki', x: -76, z: 54, width: 8, depth: 8, height: 6, color: '#a28d6d', accent: '#c77a52', interiorKind: 'house' },
+  { id: 'lekki-townhouse-row', name: 'Lekki Townhouse Row', district: 'Lekki', x: 76, z: 54, width: 8, depth: 8, height: 8, color: '#92887b', accent: '#c88962', interiorKind: 'house' },
+  { id: 'yaba-creative-studio', name: 'Yaba Creative Studio', district: 'Yaba', x: 0, z: -54, width: 8, depth: 8, height: 9, color: '#777b7a', accent: '#d1a266', interiorKind: 'office' },
+  { id: 'ikeja-market-arcade', name: 'Ikeja Market Arcade', district: 'Ikeja', x: 30, z: -54, width: 8, depth: 8, height: 6, color: '#987252', accent: '#d49a4d', interiorKind: 'shop' },
+  { id: 'waterfront-offices', name: 'Waterfront Offices', district: 'Apapa', x: 54, z: 0, width: 8, depth: 8, height: 12, color: '#6f7a80', accent: '#d2ad68', interiorKind: 'office' },
+] as const
+
+export type CityBuildingId = (typeof CITY_BUILDINGS)[number]['id']
+export type CityBuilding = (typeof CITY_BUILDINGS)[number]
+
+export const LOCATION_INTERIOR_KINDS = {
+  market: 'market',
+  club: 'club',
+  garage: 'garage',
+  hotel: 'hotel',
+  cafe: 'cafe',
+  bank: 'bank',
+  police: 'police',
+  court: 'court',
+  hospital: 'hospital',
+  university: 'university',
+  school: 'school',
+  stadium: 'stadium',
+  government: 'government',
+  polling: 'polling',
+  bungalow: 'bungalow',
+  estate: 'estate',
+  village: 'village',
+  farm: 'farm',
+  airport: 'airport',
+  port: 'port',
+  clubhouse: 'clubhouse',
+  'event-center': 'event-center',
+} as const
+
+export type InteriorLocationId = keyof typeof LOCATION_INTERIOR_KINDS
+export type GenericInteriorKind = 'apartment' | 'shop' | 'office' | 'house'
+export type InteriorKind = (typeof LOCATION_INTERIOR_KINDS)[InteriorLocationId] | GenericInteriorKind
+export type InteriorId = InteriorLocationId | CityBuildingId
+
+export type InteriorDefinition = {
+  id: InteriorId
+  name: string
+  district: string
+  kind: InteriorKind
+  actionLabel: string
+  actionPoint: { x: number; z: number }
+  exitPoint: { x: number; z: number }
+}
+
+const INTERIOR_ACTION_LABELS: Record<InteriorKind, string> = {
+  market: 'Work the market counter',
+  club: 'Check the event schedule',
+  garage: 'Visit the service desk',
+  hotel: 'Visit the reception desk',
+  cafe: 'Order from the counter',
+  bank: 'Use the teller terminal',
+  police: 'Check in at the public desk',
+  court: 'Review the public docket',
+  hospital: 'Visit the nurse station',
+  university: 'Attend a campus lecture',
+  school: 'Join the evening study room',
+  stadium: 'Check the grounds crew board',
+  government: 'Visit the public service desk',
+  polling: 'Register at the ward desk',
+  bungalow: 'Use your home services',
+  estate: 'Check in with estate services',
+  village: 'Visit the community hall',
+  farm: 'Visit the produce cooperative',
+  airport: 'Check the flight and crew board',
+  port: 'Visit the dispatch desk',
+  clubhouse: 'Check in for training',
+  'event-center': 'Check the event board',
+  apartment: 'Visit the residence desk',
+  shop: 'Open the shop counter',
+  office: 'Visit the reception desk',
+  house: 'Use your home services',
+}
+
+export const LOCATION_FOOTPRINTS: Partial<Record<LocationId, { width: number; depth: number; offsetX?: number; offsetZ?: number }>> = {
+  market: { width: 9, depth: 7 },
+  club: { width: 10, depth: 7 },
+  garage: { width: 10, depth: 8 },
+  hotel: { width: 10, depth: 8 },
+  cafe: { width: 8, depth: 7 },
+  bank: { width: 10, depth: 8 },
+  police: { width: 12, depth: 9 },
+  court: { width: 13, depth: 10 },
+  hospital: { width: 13, depth: 10 },
+  university: { width: 14, depth: 10 },
+  school: { width: 13, depth: 9 },
+  stadium: { width: 13, depth: 13 },
+  government: { width: 13, depth: 10 },
+  polling: { width: 8, depth: 6 },
+  bungalow: { width: 11, depth: 8 },
+  estate: { width: 12, depth: 9 },
+  village: { width: 5, depth: 5, offsetX: 1, offsetZ: -5 }
+  farm: { width: 6, depth: 4, offsetZ: -5.5 },
+  airport: { width: 14, depth: 8 },
+  port: { width: 13, depth: 10 },
+  clubhouse: { width: 10, depth: 8 },
+  'event-center': { width: 20, depth: 14 },
+}
+
+export const LOCATION_ENTRY_OFFSETS: Partial<Record<LocationId, { x: number; z: number }>> = {
+  market: { x: 0, z: 4.2 },
+  club: { x: 0, z: 4.2 },
+  garage: { x: 0, z: 4.8 },
+  hotel: { x: 0, z: 4.8 },
+  cafe: { x: 0, z: 4.2 },
+  bank: { x: 0, z: 4.8 },
+  police: { x: 0, z: 5.3 },
+  court: { x: 0, z: 5.8 },
+  hospital: { x: 0, z: 5.8 },
+  university: { x: 0, z: 5.8 },
+  school: { x: 0, z: 5.3 },
+  stadium: { x: 0, z: 7.6 },
+  government: { x: 0, z: 5.8 },
+  polling: { x: 0, z: 3.8 },
+  bungalow: { x: 0, z: 4.8 },
+  estate: { x: 0, z: 5.3 },
+  village: { x: 1, z: -2.8 },
+  farm: { x: 0, z: -2.5 },
+  airport: { x: 0, z: 5.2 },
+  port: { x: 0, z: 6 },
+  clubhouse: { x: 0, z: 4.8 },
+  'event-center': { x: 0, z: 9.3 },
+}
+
+export function getLocationEntrancePosition(locationId: LocationId) {
+  const location = WORLD_LOCATIONS.find((entry) => entry.id === locationId)
+  const offset = LOCATION_ENTRY_OFFSETS[locationId]
+  return location && offset ? { x: location.x + offset.x, z: location.z + offset.z } : null
+}
+
+export function getBuildingEntrancePosition(building: CityBuilding) {
+  return { x: building.x, z: building.z + building.depth / 2 + 1.1 }
+}
+
+export function isInteriorId(value: unknown): value is InteriorId {
+  return typeof value === 'string' && (
+    Object.prototype.hasOwnProperty.call(LOCATION_INTERIOR_KINDS, value) ||
+    CITY_BUILDINGS.some((building) => building.id === value)
+  )
+}
+
+export function getInteriorDefinition(id: string): InteriorDefinition | null {
+  const location = WORLD_LOCATIONS.find((entry) => entry.id === id)
+  if (location && Object.prototype.hasOwnProperty.call(LOCATION_INTERIOR_KINDS, id)) {
+    const kind = LOCATION_INTERIOR_KINDS[id as InteriorLocationId]
+    return {
+      id: id as InteriorId,
+      name: location.name,
+      district: location.district,
+      kind,
+      actionLabel: INTERIOR_ACTION_LABELS[kind],
+      actionPoint: { x: 0, z: -3.4 },
+      exitPoint: { x: 0, z: 6.2 },
+    }
+  }
+
+  const building = CITY_BUILDINGS.find((entry) => entry.id === id)
+  if (!building) return null
+  return {
+    id: building.id,
+    name: building.name,
+    district: building.district,
+    kind: building.interiorKind,
+    actionLabel: INTERIOR_ACTION_LABELS[building.interiorKind],
+    actionPoint: { x: 0, z: -3.4 },
+    exitPoint: { x: 0, z: 6.2 },
+  }
+}
+
+export const CITY_COLLISION_BLOCKS = [
+  ...CITY_BUILDINGS.map(({ id, x, z, width, depth }) => ({ id, x, z, width, depth })),
+  ...WORLD_LOCATIONS.flatMap((location) => {
+    const footprint = LOCATION_FOOTPRINTS[location.id]
+    return footprint ? [{
+      id: `landmark-${location.id}`,
+      x: location.x + (footprint.offsetX ?? 0),
+      z: location.z + (footprint.offsetZ ?? 0),
+      width: footprint.width,
+      depth: footprint.depth,
+    }] : []
+  }),
+]
 
 export const CITY_CHARACTERS = [
   {
@@ -229,8 +442,8 @@ export const CITY_CHARACTERS = [
     id: 'tunde',
     name: 'Tunde',
     role: 'Independent courier',
-    x: 18,
-    z: -16,
+    x: 28,
+    z: -27,
     locationId: 'market',
     color: '#315b72',
     skinTone: '#754c39',
@@ -242,8 +455,8 @@ export const CITY_CHARACTERS = [
     id: 'ada',
     name: 'Ada',
     role: 'Afterglow host',
-    x: -18,
-    z: 20,
+    x: -28,
+    z: 27,
     locationId: 'club',
     color: '#763f42',
     skinTone: '#9b6a4d',
@@ -255,8 +468,8 @@ export const CITY_CHARACTERS = [
     id: 'kunle',
     name: 'Kunle',
     role: 'Mechanic & rider',
-    x: 20,
-    z: 16,
+    x: 28,
+    z: 27,
     locationId: 'garage',
     color: '#3b5261',
     skinTone: '#684332',
@@ -269,7 +482,7 @@ export const CITY_CHARACTERS = [
     name: 'Sade',
     role: 'Palm & Pepper owner',
     x: 1,
-    z: 19,
+    z: 27,
     locationId: 'cafe',
     color: '#8b5535',
     skinTone: '#9c6849',
@@ -281,8 +494,8 @@ export const CITY_CHARACTERS = [
     id: 'chika',
     name: 'Chika',
     role: 'Community police officer',
-    x: -44,
-    z: -16,
+    x: -52,
+    z: 7,
     locationId: 'police',
     color: '#273f58',
     skinTone: '#80533f',
@@ -294,8 +507,8 @@ export const CITY_CHARACTERS = [
     id: 'amina',
     name: 'Amina',
     role: 'Hospital nurse',
-    x: -68,
-    z: -3,
+    x: -28,
+    z: -4,
     locationId: 'hospital',
     color: '#e1ddd1',
     skinTone: '#98654a',
@@ -307,8 +520,8 @@ export const CITY_CHARACTERS = [
     id: 'wale',
     name: 'Wale',
     role: 'Stadium groundskeeper',
-    x: 48,
-    z: -20,
+    x: 52,
+    z: -28,
     locationId: 'stadium',
     color: '#364a43',
     skinTone: '#87583f',
@@ -320,8 +533,8 @@ export const CITY_CHARACTERS = [
     id: 'tobi',
     name: 'Tobi',
     role: 'University teaching assistant',
-    x: -50,
-    z: -58,
+    x: -52,
+    z: -52,
     locationId: 'university',
     color: '#725044',
     skinTone: '#87583f',
@@ -333,8 +546,8 @@ export const CITY_CHARACTERS = [
     id: 'iyabo',
     name: 'Iyabo',
     role: 'Farmer & cooperative lead',
-    x: 12,
-    z: 64,
+    x: 1,
+    z: 52,
     locationId: 'farm',
     color: '#694c38',
     skinTone: '#925d43',
@@ -346,8 +559,8 @@ export const CITY_CHARACTERS = [
     id: 'emeka',
     name: 'Emeka',
     role: 'Port dispatch coordinator',
-    x: 64,
-    z: 22,
+    x: 52,
+    z: 27,
     locationId: 'port',
     color: '#39525c',
     skinTone: '#76503b',
@@ -359,8 +572,8 @@ export const CITY_CHARACTERS = [
     id: 'kemi',
     name: 'Kemi',
     role: 'Civic information officer',
-    x: -50,
-    z: 40,
+    x: -52,
+    z: 27,
     locationId: 'government',
     color: '#614b51',
     skinTone: '#9a694d',
@@ -372,7 +585,7 @@ export const CITY_CHARACTERS = [
     id: 'moyo',
     name: 'Moyo',
     role: 'Events producer',
-    x: -4,
+    x: 0,
     z: -23,
     locationId: 'event-center',
     color: '#574653',
@@ -396,6 +609,7 @@ export const CITY_JOBS = [
     pay: 360,
     reputation: 8,
     description: 'Help stall owners move produce and close up before the morning rush.',
+    tasks: ['Unload produce crates', 'Restock the evening stalls', 'Log the market closeout'],
   },
   {
     id: 'clinic-porter',
@@ -406,6 +620,7 @@ export const CITY_JOBS = [
     pay: 480,
     reputation: 12,
     description: 'Support the night team with supply runs and patient check-ins.',
+    tasks: ['Check the supply cart', 'Deliver ward supplies', 'Update the shift handover']
   },
   {
     id: 'farmhand',
@@ -416,6 +631,7 @@ export const CITY_JOBS = [
     pay: 540,
     reputation: 14,
     description: 'Harvest and pack a market order with the local growers.',
+    tasks: ['Sort the fresh produce', 'Pack the market order', 'Load the cooperative van']
   },
   {
     id: 'port-clerk',
@@ -426,6 +642,7 @@ export const CITY_JOBS = [
     pay: 620,
     reputation: 15,
     description: 'Check a cargo manifest and guide a shipment to the right yard.',
+    tasks: ['Review the cargo manifest', 'Check container seals', 'Send dispatch clearance']
   },
   {
     id: 'community-patrol',
@@ -436,6 +653,7 @@ export const CITY_JOBS = [
     pay: 460,
     reputation: 16,
     description: 'Join a supervised neighborhood walk and log street-light issues.',
+    tasks: ['Check in with the desk officer', 'Walk the marked route', 'Log a street-light issue']
   },
   {
     id: 'stadium-crew',
@@ -446,6 +664,7 @@ export const CITY_JOBS = [
     pay: 500,
     reputation: 11,
     description: 'Prepare the pitch perimeter and stands for the next local fixture.',
+    tasks: ['Inspect the pitch perimeter', 'Clear the supporter stands', 'Sign the match-day checklist']
   },
   {
     id: 'event-crew',
@@ -456,6 +675,40 @@ export const CITY_JOBS = [
     pay: 520,
     reputation: 13,
     description: 'Set up a night market expo, guide guests through the hall, and close out the venue.',
+    tasks: ['Set up the market stalls', 'Guide evening guests', 'Complete the venue closeout'],
+  },
+  {
+    id: 'bank-assistant',
+    title: 'Customer service associate',
+    employer: 'Eko Cooperative Bank',
+    locationId: 'bank',
+    category: 'FINANCE & PUBLIC SERVICE',
+    pay: 700,
+    reputation: 18,
+    description: 'Help the branch team prepare accounts and close a clean evening ledger.',
+    tasks: ['Prepare the teller counter', 'Assist with customer requests', 'Reconcile the branch ledger'],
+  },
+  {
+    id: 'campus-assistant',
+    title: 'Campus research assistant',
+    employer: 'University of Lagos',
+    locationId: 'university',
+    category: 'EDUCATION',
+    pay: 560,
+    reputation: 16,
+    description: 'Support a seminar, organize course materials, and help the lecturer close attendance.',
+    tasks: ['Collect lecture materials', 'Assist the seminar group', 'Submit the attendance record'],
+  },
+  {
+    id: 'airport-ground-crew',
+    title: 'Airport ground crew',
+    employer: 'Murtala Muhammed Airport',
+    locationId: 'airport',
+    category: 'AVIATION & LOGISTICS',
+    pay: 640,
+    reputation: 14,
+    description: 'Complete a safe gate turnaround and prepare the aircraft for its next departure.',
+    tasks: ['Check the gate equipment', 'Guide baggage carts', 'Confirm the turnaround checklist'],
   },
 ] as const
 
@@ -542,6 +795,7 @@ export type HomeId = (typeof CITY_HOMES)[number]['id']
 
 export type MissionStage = 'meet-bisi' | 'find-tunde' | 'delivery' | 'free-roam'
 export type GamePanel = 'none' | 'map' | 'jobs' | 'life' | 'inventory' | 'online'
+export type Gender = 'male' | 'female'
 
 export type InventoryItemId = 'city-guide' | 'suya' | 'parcel'
 
@@ -554,17 +808,24 @@ export type InventoryItem = {
 
 export type PlayerState = {
   name: string
+  gender: Gender
   cash: number
+  bankBalance: number
   reputation: number
   level: number
   energy: number
   hunger: number
+  educationCredits: number
   stage: MissionStage
   inventory: InventoryItem[]
   ownsScooter: boolean
   inVehicle: boolean
   completedRuns: number
   completedShifts: number
+  shiftStarted: boolean
+  completedShiftTasks: number[]
+  currentInteriorId: InteriorId | null
+  returnPosition: { x: number; z: number } | null
   job: JobId | null
   faction: FactionId | null
   home: HomeId | null
@@ -582,11 +843,14 @@ export type RemotePlayer = {
 
 export const STARTING_PLAYER: PlayerState = {
   name: 'Kola',
+  gender: 'male',
   cash: 1850,
+  bankBalance: 0,
   reputation: 46,
   level: 1,
   energy: 83,
   hunger: 64,
+  educationCredits: 0,
   stage: 'meet-bisi',
   inventory: [
     {
@@ -606,6 +870,10 @@ export const STARTING_PLAYER: PlayerState = {
   inVehicle: false,
   completedRuns: 0,
   completedShifts: 0,
+  shiftStarted: false,
+  completedShiftTasks: [],
+  currentInteriorId: null,
+  returnPosition: null,
   job: null,
   faction: null,
   home: null,
@@ -616,6 +884,12 @@ export const STARTING_PLAYER: PlayerState = {
 export type PlayerAction =
   | { type: 'restore'; player: PlayerState }
   | { type: 'rename'; name: string }
+  | { type: 'set-gender'; gender: Gender }
+  | { type: 'deposit-bank'; amount: number }
+  | { type: 'withdraw-bank'; amount: number }
+  | { type: 'attend-lecture' }
+  | { type: 'enter-interior'; interiorId: InteriorId; returnPosition: { x: number; z: number } }
+  | { type: 'exit-interior' }
   | { type: 'meet-bisi' }
   | { type: 'accept-delivery' }
   | { type: 'complete-delivery' }
@@ -625,6 +899,8 @@ export type PlayerAction =
   | { type: 'buy-food' }
   | { type: 'eat-food' }
   | { type: 'apply-job'; jobId: JobId }
+  | { type: 'start-shift'; jobId: JobId }
+  | { type: 'complete-work-task'; jobId: JobId; taskIndex: number }
   | { type: 'complete-shift'; jobId: JobId }
   | { type: 'join-faction'; factionId: FactionId | null }
   | { type: 'lease-home'; homeId: HomeId }
@@ -660,6 +936,34 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       return action.player
     case 'rename':
       return { ...state, name: action.name }
+    case 'set-gender':
+      return { ...state, gender: action.gender }
+    case 'deposit-bank': {
+      if (!Number.isSafeInteger(action.amount) || action.amount <= 0 || action.amount > state.cash) return state
+      if (state.bankBalance + action.amount > 1_000_000) return state
+      return { ...state, cash: state.cash - action.amount, bankBalance: state.bankBalance + action.amount }
+    }
+    case 'withdraw-bank': {
+      if (!Number.isSafeInteger(action.amount) || action.amount <= 0 || action.amount > state.bankBalance) return state
+      if (state.cash + action.amount > 1_000_000) return state
+      return { ...state, cash: state.cash + action.amount, bankBalance: state.bankBalance - action.amount }
+    }
+    case 'attend-lecture': {
+      if (state.energy < 12 || state.hunger < 5) return state
+      const reputation = state.reputation + 8
+      return {
+        ...state,
+        energy: state.energy - 12,
+        hunger: state.hunger - 5,
+        educationCredits: state.educationCredits + 1,
+        ...updateReputation(state, reputation),
+      }
+    }
+    case 'enter-interior':
+      if (state.currentInteriorId) return state
+      return { ...state, currentInteriorId: action.interiorId, returnPosition: action.returnPosition, inVehicle: false }
+    case 'exit-interior':
+      return state.currentInteriorId ? { ...state, currentInteriorId: null, returnPosition: null } : state
     case 'meet-bisi': {
       if (state.stage !== 'meet-bisi') return state
       const reputation = state.reputation + 12
@@ -739,10 +1043,27 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       }
     }
     case 'apply-job':
-      return { ...state, job: action.jobId }
+      return { ...state, job: action.jobId, shiftStarted: false, completedShiftTasks: [] }
+    case 'start-shift': {
+      if (state.job !== action.jobId || state.shiftStarted) return state
+      return { ...state, shiftStarted: true, completedShiftTasks: [] }
+    }
+    case 'complete-work-task': {
+      const job = CITY_JOBS.find((entry) => entry.id === action.jobId)
+      if (!job || state.job !== action.jobId || !state.shiftStarted) return state
+      if (!Number.isSafeInteger(action.taskIndex) || action.taskIndex < 0 || action.taskIndex >= job.tasks.length) return state
+      if (state.completedShiftTasks.includes(action.taskIndex)) return state
+      return {
+        ...state,
+        energy: Math.max(0, state.energy - 3),
+        hunger: Math.max(0, state.hunger - 2),
+        completedShiftTasks: [...state.completedShiftTasks, action.taskIndex].sort((a, b) => a - b),
+      }
+    }
     case 'complete-shift': {
       const job = CITY_JOBS.find((entry) => entry.id === action.jobId)
-      if (!job || state.job !== action.jobId) return state
+      if (!job || state.job !== action.jobId || !state.shiftStarted) return state
+      if (state.completedShiftTasks.length !== job.tasks.length) return state
       const reputation = state.reputation + job.reputation
       return {
         ...state,
@@ -750,6 +1071,8 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         energy: Math.max(0, state.energy - 10),
         hunger: Math.max(0, state.hunger - 8),
         completedShifts: state.completedShifts + 1,
+        shiftStarted: false,
+        completedShiftTasks: [],
         ...updateReputation(state, reputation),
       }
     }
