@@ -43,7 +43,7 @@ const CityWorld = dynamic(() => import('./city-world').then((module) => module.C
   loading: () => <div className="world-loading" aria-hidden="true"><span /><span /><span /></div>,
 })
 
-const MOVEMENT_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'])
+const MOVEMENT_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', 'shiftleft', 'shiftright'])
 
 type Position = GamePosition
 type ToastState = { id: number; text: string } | null
