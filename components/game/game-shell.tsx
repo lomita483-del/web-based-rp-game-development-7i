@@ -670,6 +670,7 @@ export default function GameShell() {
         autoWalkTarget={autoWalkTarget}
         spawnPosition={spawnPosition}
         remotePlayers={remotePlayers}
+        gameMinutes={gameMinutes}
       />
       <div className="world-vignette" aria-hidden="true" />
       <GameHud
