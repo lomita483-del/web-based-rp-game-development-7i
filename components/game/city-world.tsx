@@ -2,7 +2,7 @@
 
 import { Stars, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type PerspectiveCamera, type Texture, Vector3 } from 'three'
 import {
   CITY_BUILDINGS,
@@ -1049,7 +1049,7 @@ export function CityWorld(props: CityWorldProps) {
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
   }
-  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     cameraLookRef.current.zoom = MathUtils.clamp(
       cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.08 : 0.92), 0.58, 1.75,
     )
