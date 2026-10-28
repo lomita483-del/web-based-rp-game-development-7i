@@ -406,15 +406,18 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   if (kind === 'square') {
     return (
       <group position={[x, 0, z]}>
-        <mesh position={[0, 0.35, 0]} receiveShadow><boxGeometry args={[12, 0.7, 10]} /><meshStandardMaterial color="#6b7073" roughness={0.75} /></mesh>
-        <mesh position={[0, 21, 0]} castShadow receiveShadow><boxGeometry args={[8.2, 41, 7]} /><meshStandardMaterial map={facadeTexture} color="#8e999c" metalness={0.24} roughness={0.38} /></mesh>
-        <mesh position={[0, 42, 0]} castShadow><boxGeometry args={[8.7, 1, 7.5]} /><meshStandardMaterial color="#263b48" metalness={0.52} roughness={0.3} /></mesh>
-        <mesh position={[0, 43, 0]}><cylinderGeometry args={[0.08, 0.08, 2.2, 8]} /><meshStandardMaterial color="#cba86a" emissive="#b98542" emissiveIntensity={0.6} /></mesh>
-        {Array.from({ length: 9 }, (_, floor) => Array.from({ length: 4 }, (_, column) => (
-          <mesh key={`tower-window-${floor}-${column}`} position={[-2.75 + column * 1.82, 3.4 + floor * 4.1, 3.56]}>
-            <boxGeometry args={[1.1, 2.35, 0.08]} /><meshStandardMaterial color="#91c4d0" emissive="#2f7185" emissiveIntensity={0.25} metalness={0.28} roughness={0.22} />
-          </mesh>
-        )))}
+        {/* Eiffel-inspired landmark tower: tapered iron legs, open lattice silhouette, central mast. */}
+        <mesh position={[0, 0.3, 0]} receiveShadow><cylinderGeometry args={[6.8, 7.4, 0.6, 32]} /><meshStandardMaterial color="#6b7073" roughness={0.75} /></mesh>
+        {Array.from({ length: 4 }, (_, leg) => {
+          const angle = (leg / 4) * Math.PI * 2 + Math.PI / 4
+          return <group key={`iron-leg-${leg}`} rotation={[0, angle, 0]}>
+            <mesh position={[0, 6.4, 4.2]} rotation={[0.52, 0, 0]}><boxGeometry args={[0.42, 13.2, 0.42]} /><meshStandardMaterial color="#6e806f" metalness={0.62} roughness={0.4} /></mesh>
+            <mesh position={[0, 12, 2.5]} rotation={[0.34, 0, 0]}><boxGeometry args={[0.22, 8.4, 0.22]} /><meshStandardMaterial color="#6e806f" metalness={0.62} roughness={0.4} /></mesh>
+          </group>
+        })}
+        {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-platform-${i}`} position={[0, height, 0]}><cylinderGeometry args={[Math.max(1.2, 5.6 - i * 1.05), Math.max(1.2, 5.6 - i * 1.05), 0.24, 24]} /><meshStandardMaterial color="#596d60" metalness={0.55} roughness={0.45} /></mesh>)}
+        {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-ring-${i}`} position={[0, height, 0]}><torusGeometry args={[Math.max(1.2, 5.6 - i * 1.05), 0.12, 6, 24]} /><meshStandardMaterial color="#c5a36a" metalness={0.7} roughness={0.35} /></mesh>)}
+        <mesh position={[0, 23.4, 0]}><cylinderGeometry args={[0.08, 0.55, 7.8, 8]} /><meshStandardMaterial color="#6e806f" metalness={0.65} roughness={0.4} /></mesh>
         <mesh position={[0, 3.4, 3.62]}><boxGeometry args={[3.8, 1.25, 0.12]} /><meshStandardMaterial color="#17252c" /></mesh>
         <mesh position={[0, 3.4, 3.71]}><boxGeometry args={[3.2, 0.12, 0.04]} /><meshBasicMaterial color="#e4c58b" /></mesh>
       </group>
@@ -887,7 +890,7 @@ function PlayerController({
       if (direction.lengthSq() > 0) {
         direction.normalize()
         const running = !inVehicle && (keys.has('shift') || keys.has('shiftleft') || keys.has('shiftright'))
-        const speed = inVehicle ? 10 : running ? 8.8 : 5.2
+        const speed = inVehicle ? 17 : running ? 11.5 : 6.2
         const radius = inVehicle ? 0.75 : 0.42
         const nextX = position.x + direction.x * speed * step
         const nextZ = position.z + direction.z * speed * step
@@ -977,7 +980,7 @@ function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
 function PassbyPedestrian({ index }: { index: number }) {
   const ref = useRef<Group>(null!)
   const lane = index % 2 === 0 ? 1 : -1
-  const startZ = -48 + (index % 6) * 16
+  const startZ = (index % 2 === 0 ? -1 : 1) * (4.5 + (index % 5) * 0.45) + Math.round((-48 + (index % 6) * 16) / 18) * 18
   const speed = 1.15 + (index % 4) * 0.28
   useFrame((_, delta) => {
     if (!ref.current) return
@@ -1038,7 +1041,7 @@ function CityScene({ waypoint, remotePlayers }: Pick<CityWorldProps, 'waypoint' 
         const laneZ = lanes[index % lanes.length]
         const startX = -82 + ((index * 29) % 164)
         const colors = ['#d2a342', '#5a6870', '#823f3c', '#c0b18f', '#d6d1c4', '#435a68', '#ad713e']
-        return <TrafficVehicle key={`traffic-${index}`} position={[startX, 0, laneZ]} color={colors[index % colors.length]} speed={1.8 + (index % 5) * 0.65} minibus={index % 4 === 0} />
+        return <TrafficVehicle key={`traffic-${index}`} position={[startX, 0, laneZ]} color={colors[index % colors.length]} speed={5.5 + (index % 5) * 1.45} minibus={index % 4 === 0} />
       })}
       {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
       {Array.from({ length: 10 }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
@@ -1056,8 +1059,7 @@ export function CityWorld(props: CityWorldProps) {
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     // Reserve the left side for the movement joystick; right-side touch can look or pinch-zoom.
-    if (event.pointerType === 'mouse' && (event.button !== 0 || event.clientX < window.innerWidth * 0.42)) return
-    if (event.pointerType !== 'mouse' && event.clientX < window.innerWidth * 0.42) return
+    if (event.pointerType === 'mouse' && event.button !== 0) return
     activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
     if (activePointersRef.current.size === 1) {
       dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
