@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type CSSProperties, type PointerEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type PointerEvent } from 'react'
 import {
   Activity,
   ArrowRight,
@@ -240,11 +240,9 @@ export function GameHud({
         <span><kbd>P</kbd> CITY LIFE</span>
       </div>
 
-      <div className="touch-controls" role="group" aria-label="Touch movement controls">
-        <button type="button" aria-label="Move forward" onPointerDown={(event) => pressMove(event, 'w', onMoveKey)} onPointerUp={(event) => releaseMove(event, 'w', onMoveKey)} onPointerCancel={(event) => releaseMove(event, 'w', onMoveKey)}><ChevronUp aria-hidden="true" /></button>
-        <button type="button" aria-label="Move left" onPointerDown={(event) => pressMove(event, 'a', onMoveKey)} onPointerUp={(event) => releaseMove(event, 'a', onMoveKey)} onPointerCancel={(event) => releaseMove(event, 'a', onMoveKey)}><ChevronLeft aria-hidden="true" /></button>
-        <button type="button" aria-label="Move backward" onPointerDown={(event) => pressMove(event, 's', onMoveKey)} onPointerUp={(event) => releaseMove(event, 's', onMoveKey)} onPointerCancel={(event) => releaseMove(event, 's', onMoveKey)}><ChevronDown aria-hidden="true" /></button>
-        <button type="button" aria-label="Move right" onPointerDown={(event) => pressMove(event, 'd', onMoveKey)} onPointerUp={(event) => releaseMove(event, 'd', onMoveKey)} onPointerCancel={(event) => releaseMove(event, 'd', onMoveKey)}><ChevronRight aria-hidden="true" /></button>
+      <div className="movement-joystick" role="group" aria-label="Circular movement joystick" onPointerDown={(event) => updateJoystick(event, onMoveKey)} onPointerMove={(event) => { if (event.buttons || event.pressure > 0) updateJoystick(event, onMoveKey) }} onPointerUp={() => clearJoystick(onMoveKey)} onPointerCancel={() => clearJoystick(onMoveKey)} onLostPointerCapture={() => clearJoystick(onMoveKey)}>
+        <span className="movement-joystick-ring" aria-hidden="true" />
+        <span className="movement-joystick-knob" aria-hidden="true" />
       </div>
 
       <div className="vitals-card" aria-label="Player condition">
@@ -255,6 +253,19 @@ export function GameHud({
       {toast && <div className="game-toast" role="status" aria-live="polite" key={toast.id}><Check aria-hidden="true" />{toast.text}</div>}
     </div>
   )
+}
+
+function updateJoystick(event: PointerEvent<HTMLDivElement>, onMoveKey: (key: string, pressed: boolean) => void) {
+  const rect = event.currentTarget.getBoundingClientRect()
+  const dx = (event.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)
+  const dy = (event.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)
+  const threshold = 0.2
+  onMoveKey('a', dx < -threshold); onMoveKey('d', dx > threshold)
+  onMoveKey('w', dy < -threshold); onMoveKey('s', dy > threshold)
+  if (event.pointerType !== 'mouse') event.currentTarget.setPointerCapture?.(event.pointerId)
+}
+function clearJoystick(onMoveKey: (key: string, pressed: boolean) => void) {
+  for (const key of ['w', 'a', 's', 'd']) onMoveKey(key, false)
 }
 
 function pressMove(
@@ -401,6 +412,7 @@ function MapPanel({
   onTravel,
 }: Pick<GamePanelsProps, 'waypoint' | 'playerPosition' | 'onSetWaypoint' | 'onTravel'>) {
   const [selectedLocationId, setSelectedLocationId] = useState<LocationId | null>(waypoint)
+  useEffect(() => { if (waypoint) setSelectedLocationId(waypoint) }, [waypoint])
   const selectedLocation = WORLD_LOCATIONS.find((location) => location.id === selectedLocationId) ?? null
   const target = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const playerPoint = mapCoordinates(playerPosition)
@@ -451,15 +463,6 @@ function MapPanel({
         <div><span>YOUR CITY</span><small>Tap a place to set a route · {target ? `Heading to ${target.name}` : 'Free roam'}</small></div>
         <Compass aria-hidden="true" />
       </div>
-      <div className="location-list">
-        {WORLD_LOCATIONS.map((location) => (
-          <button className={`location-row${selectedLocationId === location.id ? ' is-selected' : ''}`} type="button" key={location.id} onClick={() => { setSelectedLocationId(location.id); onSetWaypoint(location.id) }}>
-            <span className={`location-marker location-marker-${location.kind}`}><MapPin aria-hidden="true" /></span>
-            <span className="location-row-copy"><strong>{location.name}</strong><small>{location.district} · {location.description}</small></span>
-            <span className="location-distance">{Math.round(distanceBetween(playerPosition, location))}m</span>
-          </button>
-        ))}
-      </div>
       {selectedLocation && (
         <section className="travel-options" aria-label={`Travel options to ${selectedLocation.name}`}>
           <div className="travel-options-heading"><span>GETTING THERE</span><strong>{selectedLocation.name}</strong><small>{Math.round(distanceBetween(playerPosition, selectedLocation))}m away · Choose your journey</small></div>
@@ -473,6 +476,15 @@ function MapPanel({
           </div>
         </section>
       )}
+      <div className="location-list">
+        {WORLD_LOCATIONS.map((location) => (
+          <button className={`location-row${selectedLocationId === location.id ? ' is-selected' : ''}`} type="button" key={location.id} onClick={() => { setSelectedLocationId(location.id); onSetWaypoint(location.id) }}>
+            <span className={`location-marker location-marker-${location.kind}`}><MapPin aria-hidden="true" /></span>
+            <span className="location-row-copy"><strong>{location.name}</strong><small>{location.district} · {location.description}</small></span>
+            <span className="location-distance">{Math.round(distanceBetween(playerPosition, location))}m</span>
+          </button>
+        ))}
+      </div>
       <p className="panel-footnote">Gold marks your route. Roads, bridges, and the lagoon connect the island, mainland, port, and outer neighborhoods.</p>
     </div>
   )
