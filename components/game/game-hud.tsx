@@ -321,6 +321,7 @@ export function GamePanels({
   onBuyFood,
   onEatFood,
   onSetWaypoint,
+  onTravel,
   onApplyJob,
   onCompleteShift,
   onJoinFaction,
