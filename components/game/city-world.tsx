@@ -983,7 +983,9 @@ function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
 function PassbyPedestrian({ index }: { index: number }) {
   const ref = useRef<Group>(null!)
   const lane = index % 2 === 0 ? 1 : -1
-  const startZ = (index % 2 === 0 ? -1 : 1) * (4.5 + (index % 5) * 0.45) + Math.round((-48 + (index % 6) * 16) / 18) * 18
+  const sidewalkRoad = ROAD_LINES[Math.floor(index / 2) % ROAD_LINES.length]
+  const sidewalkWidth = Math.abs(sidewalkRoad) <= 42 ? 7 : 5
+  const startZ = sidewalkRoad + lane * (sidewalkWidth / 2 + 1.35)
   const speed = 1.15 + (index % 4) * 0.28
   useFrame((_, delta) => {
     if (!ref.current) return
@@ -1043,12 +1045,13 @@ function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps
       })}
       {treePositions.map((position, index) => <StreetTree key={`tree-${index}`} position={position} scale={index % 3 === 0 ? 0.92 : 0.84} />)}
       {lampPositions.map((position, index) => <StreetLamp key={`lamp-${index}`} position={position} lit={night} />)}
-      {Array.from({ length: 16 }, (_, index) => {
-        const lanes = [-72, -60, -48, -36, -24, -12, 0, 12, 24, 36, 48, 60, 72]
-        const laneZ = lanes[index % lanes.length]
-        const startX = -82 + ((index * 29) % 164)
+      {Array.from({ length: 24 }, (_, index) => {
+        const roadZ = ROAD_LINES[index % ROAD_LINES.length]
+        const roadWidth = Math.abs(roadZ) <= 42 ? 7 : 5
+        const laneOffset = index % 2 === 0 ? -roadWidth * 0.24 : roadWidth * 0.24
+        const startX = -86 + ((index * 37) % 172)
         const colors = ['#d2a342', '#5a6870', '#823f3c', '#c0b18f', '#d6d1c4', '#435a68', '#ad713e']
-        return <TrafficVehicle key={`traffic-${index}`} position={[startX, 0, laneZ]} color={colors[index % colors.length]} speed={5.5 + (index % 5) * 1.45} minibus={index % 4 === 0} />
+        return <TrafficVehicle key={`traffic-${index}`} position={[startX, 0, roadZ + laneOffset]} color={colors[index % colors.length]} speed={8 + (index % 5) * 2.2} minibus={index % 4 === 0} />
       })}
       {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
       {Array.from({ length: 10 }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
@@ -1097,8 +1100,9 @@ export function CityWorld(props: CityWorldProps) {
     const dy = event.clientY - drag.y
     drag.x = event.clientX
     drag.y = event.clientY
-    cameraLookRef.current.yaw = MathUtils.clamp(cameraLookRef.current.yaw - dx * 0.006, -Math.PI * 0.92, Math.PI * 0.92)
-    cameraLookRef.current.pitch = MathUtils.clamp(cameraLookRef.current.pitch - dy * 0.004, -0.55, 0.55)
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
+    cameraLookRef.current.yaw = MathUtils.clamp(cameraLookRef.current.yaw - dx * 0.003, -Math.PI * 0.92, Math.PI * 0.92)
+    cameraLookRef.current.pitch = MathUtils.clamp(cameraLookRef.current.pitch - dy * 0.002, -0.48, 0.48)
   }
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     activePointersRef.current.delete(event.pointerId)
