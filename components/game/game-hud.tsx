@@ -27,6 +27,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import {
+  CITY_BUILDINGS,
   CITY_CHARACTERS,
   CITY_JOBS,
   WORLD_LOCATIONS,
@@ -186,7 +187,7 @@ export function GameHud({
           <span><Compass aria-hidden="true" /> EKO DISTRICT</span>
           <span className="minimap-scale">N ↑</span>
         </div>
-        <div className="minimap">
+        <div className="minimap" role="button" tabIndex={0} onClick={() => onOpenPanel('map')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenPanel('map') } }} aria-label="Open detailed city map">
           <span className="minimap-water" aria-hidden="true" />
           {streets.map((street) => <span className="minimap-road minimap-road-horizontal" key={`h-${street}`} style={{ top: `${50 + street * 0.45}%` }} />)}
           {streets.map((street) => <span className="minimap-road minimap-road-vertical" key={`v-${street}`} style={{ left: `${50 + street * 0.45}%` }} />)}
@@ -418,6 +419,9 @@ function MapPanel({
           <span className="full-map-road full-map-road-vertical" key={`v-${street}`} style={{ left: `${50 + street * 0.45}%` }} />
         ))}
         <span className="full-map-flyover" aria-hidden="true" />
+        {CITY_BUILDINGS.map((building) => (
+          <span key={building.id} className="full-map-building" style={{ ...mapPoint(building), width: `${Math.max(0.8, building.width * 0.26)}%`, height: `${Math.max(0.7, building.depth * 0.26)}%` }} title={building.name}><span>{building.name}</span></span>
+        ))}
         {targetPoint && (
           <svg className="full-map-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             <line x1={playerPoint.x} y1={playerPoint.y} x2={targetPoint.x} y2={targetPoint.y} />
