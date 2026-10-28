@@ -4,7 +4,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Ekó After Hours — Open-world roleplay',
-  description: 'Build a life after dark in a living Lagos-inspired city. Meet the locals, take a night shift, and make the streets your own.',
+  description: 'Explore a living Lagos-inspired city. Meet local characters, take workplace shifts, join a faction, find a home, and shape your own roleplay story.',
   applicationName: 'Ekó After Hours',
   generator: 'v0.app',
   icons: {
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: 'dark',
-  themeColor: '#091411',
+  themeColor: '#10161c',
 }
 
 export default function RootLayout({

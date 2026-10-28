@@ -1,4 +1,14 @@
-import type { InventoryItem, InventoryItemId, MissionStage } from '@/components/game/game-data'
+import {
+  CITY_FACTIONS,
+  CITY_HOMES,
+  CITY_JOBS,
+  type FactionId,
+  type HomeId,
+  type InventoryItem,
+  type InventoryItemId,
+  type JobId,
+  type MissionStage,
+} from '@/components/game/game-data'
 import type { GamePosition, GameSavePayload, GameSaveState } from './types'
 
 const ROOM_ITEMS: Record<InventoryItemId, Omit<InventoryItem, 'id' | 'quantity'>> = {
@@ -28,12 +38,17 @@ function integerInRange(value: unknown, minimum: number, maximum: number): numbe
     : null
 }
 
+function parseOptionalId<T extends string>(value: unknown, allowed: readonly T[]): T | null | undefined {
+  if (value === undefined || value === null) return null
+  return typeof value === 'string' && allowed.includes(value as T) ? (value as T) : undefined
+}
+
 function parsePosition(value: unknown): GamePosition | null {
   if (!isRecord(value) || typeof value.x !== 'number' || typeof value.z !== 'number') return null
   if (!Number.isFinite(value.x) || !Number.isFinite(value.z)) return null
   return {
-    x: Math.max(-58, Math.min(58, value.x)),
-    z: Math.max(-58, Math.min(53, value.z)),
+    x: Math.max(-82, Math.min(82, value.x)),
+    z: Math.max(-82, Math.min(78, value.z)),
   }
 }
 
@@ -70,6 +85,12 @@ export function parseGameSavePayload(value: unknown): GameSavePayload | null {
   const energy = integerInRange(input.energy, 0, 100)
   const hunger = integerInRange(input.hunger, 0, 100)
   const completedRuns = integerInRange(input.completedRuns, 0, 100_000)
+  const completedShifts = input.completedShifts === undefined ? 0 : integerInRange(input.completedShifts, 0, 100_000)
+  const wantedLevel = input.wantedLevel === undefined ? 0 : integerInRange(input.wantedLevel, 0, 5)
+  const voterRegistered = input.voterRegistered === undefined ? false : input.voterRegistered
+  const job = parseOptionalId(input.job, CITY_JOBS.map((entry) => entry.id))
+  const faction = parseOptionalId(input.faction, CITY_FACTIONS.map((entry) => entry.id))
+  const home = parseOptionalId(input.home, CITY_HOMES.map((entry) => entry.id))
   const gameMinutes = integerInRange(value.gameMinutes, 0, 2_000_000_000)
   const inventory = parseInventory(input.inventory)
   const stage = MISSION_STAGES.find((candidate) => candidate === input.stage)
@@ -81,6 +102,12 @@ export function parseGameSavePayload(value: unknown): GameSavePayload | null {
     energy === null ||
     hunger === null ||
     completedRuns === null ||
+    completedShifts === null ||
+    wantedLevel === null ||
+    typeof voterRegistered !== 'boolean' ||
+    job === undefined ||
+    faction === undefined ||
+    home === undefined ||
     gameMinutes === null ||
     !inventory ||
     !stage ||
@@ -101,6 +128,12 @@ export function parseGameSavePayload(value: unknown): GameSavePayload | null {
     ownsScooter: input.ownsScooter,
     inVehicle: input.ownsScooter && input.inVehicle,
     completedRuns,
+    completedShifts,
+    wantedLevel,
+    voterRegistered,
+    job: job as JobId | null,
+    faction: faction as FactionId | null,
+    home: home as HomeId | null,
   }
 
   return { playerState, position, gameMinutes }

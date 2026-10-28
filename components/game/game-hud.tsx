@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowRight,
   BriefcaseBusiness,
+  Building2,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -12,6 +13,7 @@ import {
   ChevronUp,
   Clock3,
   Compass,
+  Landmark,
   Map,
   MapPin,
   Package,
@@ -26,15 +28,21 @@ import {
 } from 'lucide-react'
 import {
   CITY_CHARACTERS,
+  CITY_JOBS,
   WORLD_LOCATIONS,
+  distanceBetween,
   formatGameTime,
   formatNaira,
   getMissionDetails,
   type CharacterId,
+  type FactionId,
   type GamePanel,
+  type HomeId,
+  type JobId,
   type LocationId,
   type PlayerState,
 } from './game-data'
+import { LifePanel } from './life-panel'
 import { OnlinePanel } from './online-panel'
 import type { GameUser, OnlinePlayer, SaveStatus } from '@/lib/game/types'
 
@@ -56,15 +64,18 @@ type HudProps = {
 const PANEL_ACTIONS: { id: Exclude<GamePanel, 'none'>; label: string; icon: LucideIcon; shortcut: string }[] = [
   { id: 'map', label: 'City map', icon: Map, shortcut: 'M' },
   { id: 'jobs', label: 'Work board', icon: BriefcaseBusiness, shortcut: 'J' },
+  { id: 'life', label: 'City life', icon: Landmark, shortcut: 'P' },
   { id: 'inventory', label: 'Bag', icon: Package, shortcut: 'I' },
   { id: 'online', label: 'Online', icon: UsersRound, shortcut: 'O' },
 ]
 
+function mapCoordinates(position: { x: number; z: number }) {
+  return { x: 50 + position.x * 0.45, y: 50 + position.z * 0.45 }
+}
+
 function mapPoint(position: { x: number; z: number }) {
-  return {
-    left: `${50 + position.x * 0.68}%`,
-    top: `${50 + position.z * 0.68}%`,
-  }
+  const point = mapCoordinates(position)
+  return { left: `${point.x}%`, top: `${point.y}%` }
 }
 
 export function GameHud({
@@ -83,6 +94,7 @@ export function GameHud({
 }: HudProps) {
   const mission = getMissionDetails(player.stage)
   const currentDistrict = nearbyLocation?.district ?? 'Lagos Mainland'
+  const streets = [-66, -42, -18, 18, 42, 66]
   const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const interactionLabel = nearbyCharacter
     ? `Talk to ${nearbyCharacter.name}`
@@ -173,10 +185,10 @@ export function GameHud({
           <span className="minimap-scale">N ↑</span>
         </div>
         <div className="minimap">
-          <span className="minimap-road minimap-road-horizontal" />
-          <span className="minimap-road minimap-road-vertical" />
-          <span className="minimap-road minimap-road-horizontal minimap-road-offset" />
-          <span className="minimap-road minimap-road-vertical minimap-road-offset" />
+          <span className="minimap-water" aria-hidden="true" />
+          {streets.map((street) => <span className="minimap-road minimap-road-horizontal" key={`h-${street}`} style={{ top: `${50 + street * 0.45}%` }} />)}
+          {streets.map((street) => <span className="minimap-road minimap-road-vertical" key={`v-${street}`} style={{ left: `${50 + street * 0.45}%` }} />)}
+          <span className="minimap-flyover" aria-hidden="true" />
           {WORLD_LOCATIONS.map((location) => (
             <span
               className={`minimap-location${location.id === waypoint ? ' is-target' : ''}`}
@@ -220,7 +232,9 @@ export function GameHud({
       <div className="keyboard-hints" aria-label="Keyboard controls">
         <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span>
         <span><kbd>E</kbd> INTERACT</span>
-        <span><kbd>TAB</kbd> PHONE</span>
+        <span><kbd>M</kbd> MAP</span>
+        <span><kbd>J</kbd> WORK</span>
+        <span><kbd>P</kbd> CITY LIFE</span>
       </div>
 
       <div className="touch-controls" role="group" aria-label="Touch movement controls">
@@ -270,6 +284,12 @@ type GamePanelsProps = {
   onBuyFood: () => void
   onEatFood: () => void
   onSetWaypoint: (locationId: LocationId) => void
+  onApplyJob: (jobId: JobId) => void
+  onCompleteShift: (jobId: JobId) => void
+  onJoinFaction: (factionId: FactionId | null) => void
+  onLeaseHome: (homeId: HomeId) => void
+  onRegisterVoter: () => void
+  onResolveCourt: () => void
   user: GameUser | null
   sessionLoading: boolean
   players: OnlinePlayer[]
@@ -280,8 +300,9 @@ type GamePanelsProps = {
 }
 
 const PANEL_META: Record<Exclude<GamePanel, 'none'>, { title: string; eyebrow: string; icon: LucideIcon }> = {
-  map: { title: 'City map', eyebrow: 'EKO / WAYFINDING', icon: Map },
-  jobs: { title: 'Work board', eyebrow: 'NIGHT SHIFT / AVAILABLE', icon: BriefcaseBusiness },
+  map: { title: 'City map', eyebrow: 'LAGOS / WAYFINDING', icon: Map },
+  jobs: { title: 'Work board', eyebrow: 'CAREERS / AVAILABLE SHIFTS', icon: BriefcaseBusiness },
+  life: { title: 'City life', eyebrow: 'CITIZEN / COMMUNITY / HOME', icon: Landmark },
   inventory: { title: 'Your bag', eyebrow: 'PLAYER / LOADOUT', icon: Package },
   online: { title: 'Shared world', eyebrow: 'LIVE ROOM / EKO MAINLAND', icon: UsersRound },
 }
@@ -297,6 +318,12 @@ export function GamePanels({
   onBuyFood,
   onEatFood,
   onSetWaypoint,
+  onApplyJob,
+  onCompleteShift,
+  onJoinFaction,
+  onLeaseHome,
+  onRegisterVoter,
+  onResolveCourt,
   user,
   sessionLoading,
   players,
@@ -342,7 +369,8 @@ export function GamePanels({
 
         <div className="panel-scroll">
           {panel === 'map' && <MapPanel waypoint={waypoint} playerPosition={playerPosition} onSetWaypoint={onSetWaypoint} />}
-          {panel === 'jobs' && <JobsPanel player={player} onAcceptDelivery={onAcceptDelivery} onSetWaypoint={onSetWaypoint} />}
+          {panel === 'jobs' && <JobsPanel player={player} playerPosition={playerPosition} onAcceptDelivery={onAcceptDelivery} onSetWaypoint={onSetWaypoint} onApplyJob={onApplyJob} onCompleteShift={onCompleteShift} />}
+          {panel === 'life' && <LifePanel player={player} onJoinFaction={onJoinFaction} onLeaseHome={onLeaseHome} onSetWaypoint={onSetWaypoint} onRegisterVoter={onRegisterVoter} onResolveCourt={onResolveCourt} />}
           {panel === 'inventory' && <InventoryPanel player={player} onBuyFood={onBuyFood} onEatFood={onEatFood} />}
           {panel === 'online' && (
             <OnlinePanel
@@ -366,13 +394,28 @@ function MapPanel({
   playerPosition,
   onSetWaypoint,
 }: Pick<GamePanelsProps, 'waypoint' | 'playerPosition' | 'onSetWaypoint'>) {
+  const target = WORLD_LOCATIONS.find((location) => location.id === waypoint)
+  const playerPoint = mapCoordinates(playerPosition)
+  const targetPoint = target ? mapCoordinates(target) : null
+  const streets = [-66, -42, -18, 18, 42, 66]
+
   return (
     <div className="map-panel-content">
-      <div className="full-map" aria-label="Eko neighborhood map">
-        <span className="full-map-road full-map-road-horizontal" />
-        <span className="full-map-road full-map-road-horizontal full-map-road-lower" />
-        <span className="full-map-road full-map-road-vertical" />
-        <span className="full-map-road full-map-road-vertical full-map-road-right" />
+      <div className="map-world-summary"><span>METROPOLITAN DISTRICT</span><strong>22 places · island, mainland & beyond</strong></div>
+      <div className="full-map" aria-label="Lagos metropolitan district map">
+        <span className="full-map-water" aria-hidden="true" />
+        {streets.map((street) => (
+          <span className="full-map-road full-map-road-horizontal" key={`h-${street}`} style={{ top: `${50 + street * 0.45}%` }} />
+        ))}
+        {streets.map((street) => (
+          <span className="full-map-road full-map-road-vertical" key={`v-${street}`} style={{ left: `${50 + street * 0.45}%` }} />
+        ))}
+        <span className="full-map-flyover" aria-hidden="true" />
+        {targetPoint && (
+          <svg className="full-map-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <line x1={playerPoint.x} y1={playerPoint.y} x2={targetPoint.x} y2={targetPoint.y} />
+          </svg>
+        )}
         {WORLD_LOCATIONS.map((location) => (
           <button
             key={location.id}
@@ -380,7 +423,7 @@ function MapPanel({
             type="button"
             style={mapPoint(location)}
             onClick={() => onSetWaypoint(location.id)}
-            aria-label={`Set route to ${location.name}`}
+            aria-label={`Set route to ${location.name} in ${location.district}`}
             title={location.name}
           >
             <MapPin aria-hidden="true" />
@@ -388,11 +431,13 @@ function MapPanel({
         ))}
         <span className="map-player" style={mapPoint(playerPosition)} aria-label="Your position" />
         <div className="map-north">N ↑</div>
-        <div className="map-label map-label-market">ISLAND</div>
+        <div className="map-label map-label-market">LAGOS ISLAND</div>
+        <div className="map-label map-label-ikeja">IKEJA</div>
         <div className="map-label map-label-mainland">MAINLAND</div>
+        <div className="map-label map-label-lagoon">LAGOS LAGOON</div>
       </div>
       <div className="map-section-heading">
-        <div><span>YOUR DISTRICTS</span><small>Tap a pin to set a route</small></div>
+        <div><span>YOUR CITY</span><small>Tap a place to set a route · {target ? `Heading to ${target.name}` : 'Free roam'}</small></div>
         <Compass aria-hidden="true" />
       </div>
       <div className="location-list">
@@ -400,38 +445,37 @@ function MapPanel({
           <button className="location-row" type="button" key={location.id} onClick={() => onSetWaypoint(location.id)}>
             <span className={`location-marker location-marker-${location.kind}`}><MapPin aria-hidden="true" /></span>
             <span className="location-row-copy"><strong>{location.name}</strong><small>{location.district} · {location.description}</small></span>
-            <span className="location-distance">{Math.round(Math.hypot(playerPosition.x - location.x, playerPosition.z - location.z))}m</span>
+            <span className="location-distance">{Math.round(distanceBetween(playerPosition, location))}m</span>
           </button>
         ))}
       </div>
-      <p className="panel-footnote">The gold beacon marks your current route. Use WASD or the touch pad to explore.</p>
+      <p className="panel-footnote">Gold marks your route. Roads, bridges, and the lagoon connect the island, mainland, port, and outer neighborhoods.</p>
     </div>
   )
 }
 
 function JobsPanel({
   player,
+  playerPosition,
   onAcceptDelivery,
   onSetWaypoint,
-}: Pick<GamePanelsProps, 'player' | 'onAcceptDelivery' | 'onSetWaypoint'>) {
+  onApplyJob,
+  onCompleteShift,
+}: Pick<GamePanelsProps, 'player' | 'playerPosition' | 'onAcceptDelivery' | 'onSetWaypoint' | 'onApplyJob' | 'onCompleteShift'>) {
   const isDeliveryActive = player.stage === 'delivery'
   const canStart = player.stage === 'find-tunde' || player.stage === 'free-roam'
-  const introComplete = player.stage !== 'meet-bisi'
 
   return (
     <div className="jobs-panel-content">
       <div className="shift-summary">
         <div className="shift-summary-icon"><BriefcaseBusiness aria-hidden="true" /></div>
-        <div><span>TONIGHT'S REP</span><strong>{player.completedRuns} completed {player.completedRuns === 1 ? 'run' : 'runs'}</strong></div>
+        <div><span>CAREER RECORD</span><strong>{player.completedShifts} completed {player.completedShifts === 1 ? 'shift' : 'shifts'}</strong></div>
         <span className="rep-pill">{player.reputation} REP</span>
       </div>
-      {!introComplete && (
-        <div className="job-unlock-note"><Sparkles aria-hidden="true" /><span>Meet Bisi at Eko Civic Square to unlock the first courier route.</span></div>
-      )}
       <article className="job-card job-card-featured">
-        <div className="job-card-meta"><span className="job-category">COURIER / LOCAL</span><span className="job-duration">6–8 MIN</span></div>
+        <div className="job-card-meta"><span className="job-category">STORY RUN / COURIER</span><span className="job-duration">FIRST JOB</span></div>
         <h3>Last-mile delivery</h3>
-        <p>Carry a sealed parcel from Balogun Night Market to Ada at Afterglow. No shortcuts required — just a good story.</p>
+        <p>Carry a sealed parcel from Balogun Night Market to Ada at Afterglow. Meet the locals and learn the roads as you go.</p>
         <div className="job-reward-row"><span><Wallet aria-hidden="true" /> ₦480</span><span><Sparkles aria-hidden="true" /> +25 rep</span><span><MapPin aria-hidden="true" /> 2 districts</span></div>
         <button className="primary-action" type="button" onClick={isDeliveryActive ? () => onSetWaypoint('club') : onAcceptDelivery} disabled={!canStart && !isDeliveryActive}>
           {isDeliveryActive ? 'ROUTE TO AFTERGLOW' : canStart ? 'ACCEPT COURIER RUN' : 'MEET BISI FIRST'}
@@ -439,8 +483,32 @@ function JobsPanel({
         </button>
         {isDeliveryActive && <small className="job-active-note"><span className="status-live-dot" /> IN PROGRESS · PACKAGE IN YOUR BAG</small>}
       </article>
+
+      <div className="job-board-heading"><div><span>LOCAL EMPLOYERS</span><small>Apply, travel to work, then clock out for pay.</small></div><BriefcaseBusiness aria-hidden="true" /></div>
+      <div className="job-board-list">
+        {CITY_JOBS.map((job) => {
+          const workplace = WORLD_LOCATIONS.find((location) => location.id === job.locationId)
+          const isAssigned = player.job === job.id
+          const atWork = Boolean(workplace && distanceBetween(playerPosition, workplace) <= 8)
+          return (
+            <article className={`job-card job-card-local${isAssigned ? ' is-assigned' : ''}`} key={job.id}>
+              <div className="job-card-meta"><span className="job-category">{job.category}</span><span className="job-duration">{workplace?.district}</span></div>
+              <h3>{job.title}</h3>
+              <p>{job.description}</p>
+              <div className="job-employer-row"><Building2 aria-hidden="true" /><span>{job.employer}</span></div>
+              <div className="job-reward-row"><span><Wallet aria-hidden="true" /> {formatNaira(job.pay)}</span><span><Sparkles aria-hidden="true" /> +{job.reputation} rep</span></div>
+              <button className={isAssigned ? 'secondary-action' : 'primary-action'} type="button" onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}>
+                {isAssigned ? atWork ? 'CLOCK OUT · CLAIM PAY' : 'ROUTE TO WORKPLACE' : player.job ? 'SWITCH TO THIS JOB' : 'TAKE THIS SHIFT'}
+                <ArrowRight aria-hidden="true" />
+              </button>
+              {isAssigned && <small className="job-active-note"><span className="status-live-dot" /> ACTIVE ROLE · {atWork ? 'WORKPLACE IN RANGE' : 'ROUTE MARKED'}</small>}
+            </article>
+          )
+        })}
+      </div>
+
       <article className="job-card job-card-secondary">
-        <div className="job-card-meta"><span className="job-category">RIDE / RENTAL</span><span className="job-duration">OPEN SHIFT</span></div>
+        <div className="job-card-meta"><span className="job-category">TRANSPORT / RENTAL</span><span className="job-duration">CITY ACCESS</span></div>
         <h3>Get a scooter</h3>
         <p>Rent a nimble city scooter from Kunle at Mainland Motors for ₦350.</p>
         <button className="secondary-action" type="button" onClick={() => onSetWaypoint('garage')}>MARK MAINLAND MOTORS <ArrowRight aria-hidden="true" /></button>
@@ -503,7 +571,11 @@ export function NpcDialogue({
       <button className="npc-dialogue-close" type="button" onClick={onClose} aria-label="Close conversation"><X aria-hidden="true" /></button>
       <div className="npc-dialogue-topline"><span className="roleplay-mark"><UsersRound aria-hidden="true" /> NEARBY / ROLEPLAY</span><span className="npc-distance"><span /> IN RANGE</span></div>
       <div className="npc-dialogue-main">
-        <div className="npc-portrait" style={{ '--npc-color': character.color } as CSSProperties}>{character.name.slice(0, 1)}</div>
+          <div className="npc-portrait" aria-hidden="true" style={{ '--npc-color': character.color, '--npc-skin': character.skinTone, '--npc-hair': character.hairColor, '--npc-accent': character.accentColor } as CSSProperties}>
+            <span className="npc-portrait-shoulders" />
+            <span className="npc-portrait-head"><i /></span>
+            <span className="npc-portrait-hair" />
+          </div>
         <div className="npc-copy">
           <span className="npc-role">{character.role}</span>
           <h2 id="npc-dialogue-title">{character.name}</h2>
@@ -530,6 +602,20 @@ function getCharacterActionLabel(id: CharacterId, player: PlayerState) {
       return player.ownsScooter ? (player.inVehicle ? 'Park the scooter' : 'Take your scooter') : 'Rent scooter · ₦350'
     case 'sade':
       return 'Buy suya · ₦90'
+    case 'chika':
+      return 'Ask about community patrols'
+    case 'amina':
+      return 'Ask about clinic work'
+    case 'wale':
+      return 'Ask about stadium shifts'
+    case 'tobi':
+      return 'Ask about campus life'
+    case 'iyabo':
+      return 'Ask about the harvest'
+    case 'emeka':
+      return 'Ask about dock work'
+    case 'kemi':
+      return 'Ask about local government'
   }
 }
 

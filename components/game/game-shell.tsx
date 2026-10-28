@@ -19,13 +19,20 @@ import type {
 } from '@/lib/game/types'
 import {
   CITY_CHARACTERS,
+  CITY_FACTIONS,
+  CITY_HOMES,
+  CITY_JOBS,
   STARTING_PLAYER,
   WORLD_LOCATIONS,
   distanceBetween,
+  formatNaira,
   getMissionDetails,
   playerReducer,
   type CharacterId,
+  type FactionId,
   type GamePanel,
+  type HomeId,
+  type JobId,
   type LocationId,
   type PlayerState,
 } from './game-data'
@@ -57,6 +64,12 @@ function createGameSavePayload(player: PlayerState, position: Position, gameMinu
       ownsScooter: player.ownsScooter,
       inVehicle: player.inVehicle,
       completedRuns: player.completedRuns,
+      completedShifts: player.completedShifts,
+      job: player.job,
+      faction: player.faction,
+      home: player.home,
+      voterRegistered: player.voterRegistered,
+      wantedLevel: player.wantedLevel,
     },
     position,
     gameMinutes,
@@ -309,10 +322,44 @@ export default function GameShell() {
   }, [])
 
   const handleLocationAction = useCallback((locationId: LocationId) => {
-    if (locationId === 'hotel') {
+    if (locationId === 'polling') {
+      if (player.voterRegistered) {
+        notify('Your Ward 08 voter registration is already active.')
+      } else {
+        dispatch({ type: 'register-voter' })
+        notify('Voter registration complete. +5 REP for taking part in city life.')
+      }
+      return
+    }
+    if (locationId === 'court') {
+      if (player.wantedLevel > 0) {
+        const fine = player.wantedLevel * 300
+        if (player.cash < fine) {
+          notify(`You need ${formatNaira(fine)} to settle the court fine.`)
+          return
+        }
+        dispatch({ type: 'resolve-court' })
+        notify(`Court fine settled · ${formatNaira(fine)}. Your record is clear.`)
+      } else {
+        notify('The public docket is clear. Your civic record is in good standing.')
+      }
+      return
+    }
+    if (locationId === 'police') {
+      notify('The front desk is open. Community patrol shifts are on the Work board.')
+      return
+    }
+    if (locationId === 'hospital') {
+      dispatch({ type: 'rest' })
+      setGameMinutes((minutes) => minutes + 180)
+      notify('Amina helped you recover at Mainland General Hospital.')
+      return
+    }
+    const home = CITY_HOMES.find((entry) => entry.id === player.home)
+    if (home?.locationId === locationId || locationId === 'hotel') {
       dispatch({ type: 'rest' })
       setGameMinutes((minutes) => minutes + 420)
-      notify('You got a few hours of rest at Marina House.')
+      notify(home ? `You rested at ${home.name}.` : 'You got a few hours of rest at Marina House.')
       return
     }
     if (locationId === 'market' || locationId === 'cafe') {
@@ -342,8 +389,9 @@ export default function GameShell() {
       notify('The lagoon is quiet tonight. Take a moment and enjoy the view.')
       return
     }
-    notify('The square is a good place to meet people.')
-  }, [notify, player.cash, player.inVehicle, player.ownsScooter])
+    const location = WORLD_LOCATIONS.find((entry) => entry.id === locationId)
+    if (location) notify(`${location.name}: ${location.description}`)
+  }, [notify, player.cash, player.inVehicle, player.ownsScooter, player.home, player.voterRegistered, player.wantedLevel])
 
   const handleInteract = useCallback(() => {
     if (activeCharacter) return
@@ -404,6 +452,10 @@ export default function GameShell() {
           notify('Suya wrap added to your bag.')
         }
         break
+      default: {
+        const character = CITY_CHARACTERS.find((entry) => entry.id === activeCharacter)
+        notify(character ? `${character.name}: ${character.intro}` : 'The city is full of stories.')
+      }
     }
     setActiveCharacter(null)
   }, [activeCharacter, notify, player.cash, player.inVehicle, player.ownsScooter, player.stage])
@@ -452,6 +504,87 @@ export default function GameShell() {
     if (location) notify(`Route pinned to ${location.name}.`)
   }, [notify])
 
+  const applyJob = useCallback((jobId: JobId) => {
+    const job = CITY_JOBS.find((entry) => entry.id === jobId)
+    if (!job) return
+    dispatch({ type: 'apply-job', jobId })
+    setPinnedWaypoint(job.locationId)
+    notify(`You are on the roster at ${job.employer}. Route marked.`)
+  }, [notify])
+
+  const completeShift = useCallback((jobId: JobId) => {
+    const job = CITY_JOBS.find((entry) => entry.id === jobId)
+    const workplace = job && WORLD_LOCATIONS.find((entry) => entry.id === job.locationId)
+    if (!job || !workplace || player.job !== jobId) return
+    if (distanceBetween(playerPosition, workplace) > 8) {
+      setPinnedWaypoint(job.locationId)
+      notify(`Clock in at ${job.employer} to complete the shift.`)
+      return
+    }
+    dispatch({ type: 'complete-shift', jobId })
+    setGameMinutes((minutes) => minutes + 120)
+    notify(`Shift complete · +${formatNaira(job.pay)} · +${job.reputation} REP.`)
+  }, [notify, player.job, playerPosition])
+
+  const joinFaction = useCallback((factionId: FactionId | null) => {
+    if (factionId && !CITY_FACTIONS.some((faction) => faction.id === factionId)) return
+    dispatch({ type: 'join-faction', factionId })
+    const faction = CITY_FACTIONS.find((entry) => entry.id === factionId)
+    notify(faction ? `You joined ${faction.name}.` : 'You left your faction and are independent again.')
+  }, [notify])
+
+  const leaseHome = useCallback((homeId: HomeId) => {
+    const home = CITY_HOMES.find((entry) => entry.id === homeId)
+    if (!home) return
+    if (player.home) {
+      notify('You already have a home registered. Visit it to rest.')
+      return
+    }
+    if (player.cash < home.price) {
+      notify(`You need ${formatNaira(home.price)} to secure this home.`)
+      return
+    }
+    dispatch({ type: 'lease-home', homeId })
+    setPinnedWaypoint(home.locationId)
+    notify(`${home.name} is yours. Its address is marked on the map.`)
+  }, [notify, player.cash, player.home])
+
+  const registerVoter = useCallback(() => {
+    if (player.voterRegistered) {
+      notify('Your Ward 08 voter registration is already active.')
+      return
+    }
+    const pollingUnit = WORLD_LOCATIONS.find((location) => location.id === 'polling')
+    if (!pollingUnit || distanceBetween(playerPosition, pollingUnit) > 8) {
+      setPinnedWaypoint('polling')
+      notify('Visit Ward 08 Polling Unit to register.')
+      return
+    }
+    dispatch({ type: 'register-voter' })
+    notify('Voter registration complete. +5 REP for taking part in city life.')
+  }, [notify, player.voterRegistered, playerPosition])
+
+  const resolveCourt = useCallback(() => {
+    if (player.wantedLevel < 1) {
+      setPinnedWaypoint('court')
+      notify('Your civic record is clear. The public docket is at Lagos High Court.')
+      return
+    }
+    const court = WORLD_LOCATIONS.find((location) => location.id === 'court')
+    if (!court || distanceBetween(playerPosition, court) > 8) {
+      setPinnedWaypoint('court')
+      notify('Attend the hearing at Lagos High Court to settle the open case.')
+      return
+    }
+    const fine = player.wantedLevel * 300
+    if (player.cash < fine) {
+      notify(`You need ${formatNaira(fine)} to settle the court fine.`)
+      return
+    }
+    dispatch({ type: 'resolve-court' })
+    notify(`Court fine settled · ${formatNaira(fine)}. Your record is clear.`)
+  }, [notify, player.cash, player.wantedLevel, playerPosition])
+
   useEffect(() => {
     const isTyping = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) return false
@@ -481,6 +614,8 @@ export default function GameShell() {
         openPanel('inventory')
       } else if (key === 'o') {
         openPanel('online')
+      } else if (key === 'p') {
+        openPanel('life')
       } else if (key === 'escape') {
         keysRef.current.clear()
         setActiveCharacter(null)
@@ -539,6 +674,12 @@ export default function GameShell() {
           onBuyFood={buyFood}
           onEatFood={eatFood}
           onSetWaypoint={setWaypoint}
+          onApplyJob={applyJob}
+          onCompleteShift={completeShift}
+          onJoinFaction={joinFaction}
+          onLeaseHome={leaseHome}
+          onRegisterVoter={registerVoter}
+          onResolveCourt={resolveCourt}
           user={currentUser}
           sessionLoading={sessionLoading}
           players={onlinePlayers}

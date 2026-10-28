@@ -6,61 +6,196 @@ export const WORLD_LOCATIONS = [
     x: 0,
     z: 3,
     kind: 'square',
-    description: 'A bright meeting point between the island and the mainland.',
+    description: 'The city’s central plaza, framed by offices, cafés, and bus stops.',
   },
   {
     id: 'market',
     name: 'Balogun Night Market',
     district: 'Lagos Island',
-    x: 23,
-    z: -22,
+    x: 20,
+    z: -18,
     kind: 'market',
-    description: 'Food stalls, late traders, and a courier who knows every shortcut.',
+    description: 'A crowded trading street where couriers and stall owners find work.',
   },
   {
     id: 'club',
     name: 'Afterglow Social Club',
     district: 'Yaba',
-    x: -22,
+    x: -20,
     z: 22,
     kind: 'club',
-    description: 'A rooftop spot where every night has a different story.',
+    description: 'A live-music room and neighborhood clubhouse with a late crowd.',
   },
   {
     id: 'garage',
     name: 'Mainland Motors',
     district: 'Surulere',
-    x: 23,
+    x: 22,
     z: 18,
     kind: 'garage',
-    description: 'Rent a scooter, tune a ride, or hear the latest road gossip.',
+    description: 'A working garage, scooter hire desk, and local transport hub.',
   },
   {
     id: 'hotel',
     name: 'Marina House',
     district: 'Victoria Island',
-    x: -23,
-    z: -22,
+    x: -24,
+    z: -20,
     kind: 'hotel',
-    description: 'A quiet room above the city when the night runs long.',
+    description: 'A modest city hotel with rooms above a busy waterfront road.',
   },
   {
     id: 'cafe',
     name: 'Palm & Pepper',
     district: 'Surulere',
-    x: 1,
+    x: 2,
     z: 22,
     kind: 'cafe',
-    description: 'Fresh suya, cold drinks, and a good place to reset.',
+    description: 'Suya, cold drinks, and a familiar place to catch your breath.',
   },
   {
     id: 'waterfront',
-    name: 'Third Mainland Lookout',
+    name: 'Third Mainland Bridge',
     district: 'The Lagoon',
-    x: 0,
-    z: 45,
-    kind: 'waterfront',
-    description: 'A calm view over the lagoon and the lights of the city.',
+    x: 12,
+    z: 73,
+    kind: 'bridge',
+    description: 'A long causeway over the lagoon, with the city lights behind you.',
+  },
+  {
+    id: 'police',
+    name: 'Adekunle Police Division',
+    district: 'Yaba',
+    x: -46,
+    z: -18,
+    kind: 'police',
+    description: 'A neighborhood station, community desk, and public-service workplace.',
+  },
+  {
+    id: 'court',
+    name: 'Lagos High Court',
+    district: 'Ikeja',
+    x: -58,
+    z: -40,
+    kind: 'court',
+    description: 'The civic court and public records office for the district.',
+  },
+  {
+    id: 'hospital',
+    name: 'Mainland General Hospital',
+    district: 'Ikeja',
+    x: -70,
+    z: -5,
+    kind: 'hospital',
+    description: 'A round-the-clock hospital with a busy emergency entrance.',
+  },
+  {
+    id: 'university',
+    name: 'University of Lagos',
+    district: 'Akoka',
+    x: -52,
+    z: -60,
+    kind: 'university',
+    description: 'A large campus of lecture halls, libraries, and student housing.',
+  },
+  {
+    id: 'school',
+    name: 'Eko Secondary School',
+    district: 'Mushin',
+    x: -12,
+    z: -62,
+    kind: 'school',
+    description: 'A neighborhood secondary school with evening study groups.',
+  },
+  {
+    id: 'stadium',
+    name: 'National City Stadium',
+    district: 'Surulere',
+    x: 50,
+    z: -22,
+    kind: 'stadium',
+    description: 'A floodlit football ground with match-day and grounds-crew shifts.',
+  },
+  {
+    id: 'government',
+    name: 'State Government House',
+    district: 'Alausa',
+    x: -52,
+    z: 42,
+    kind: 'government',
+    description: 'The seat of state administration and the district’s civic offices.',
+  },
+  {
+    id: 'polling',
+    name: 'Ward 08 Polling Unit',
+    district: 'Alausa',
+    x: -22,
+    z: 50,
+    kind: 'polling',
+    description: 'Register as a voter and take part in the city’s local elections.',
+  },
+  {
+    id: 'bungalow',
+    name: 'Abule Egba Bungalows',
+    district: 'Mainland Estates',
+    x: 22,
+    z: 50,
+    kind: 'bungalow',
+    description: 'Low-rise homes behind courtyard walls and roadside gardens.',
+  },
+  {
+    id: 'estate',
+    name: 'Lekki Garden Estate',
+    district: 'Lekki',
+    x: 58,
+    z: 44,
+    kind: 'estate',
+    description: 'A gated residential estate with townhouses and a shared clubhouse.',
+  },
+  {
+    id: 'village',
+    name: 'Ibeju Farm Village',
+    district: 'Ibeju-Lekki',
+    x: -62,
+    z: 58,
+    kind: 'village',
+    description: 'A close-knit village at the edge of the city’s agricultural belt.',
+  },
+  {
+    id: 'farm',
+    name: 'Epe Food Cooperative',
+    district: 'Epe',
+    x: 14,
+    z: 66,
+    kind: 'farm',
+    description: 'Small farms and a produce cooperative supplying the city markets.',
+  },
+  {
+    id: 'airport',
+    name: 'Murtala Muhammed Airport',
+    district: 'Ikeja',
+    x: 60,
+    z: -62,
+    kind: 'airport',
+    description: 'The international terminal and ground crew hiring office.',
+  },
+  {
+    id: 'port',
+    name: 'Apapa Shipping Port',
+    district: 'Apapa',
+    x: 66,
+    z: 24,
+    kind: 'port',
+    description: 'A working container port with logistics and dockside shifts.',
+  },
+  {
+    id: 'clubhouse',
+    name: 'Mainland Athletic Club',
+    district: 'Surulere',
+    x: -24,
+    z: -44,
+    kind: 'clubhouse',
+    description: 'A community sports clubhouse for football, fitness, and local events.',
   },
 ] as const
 
@@ -75,27 +210,36 @@ export const CITY_CHARACTERS = [
     x: -2,
     z: 5,
     locationId: 'square',
-    color: '#e9a36f',
+    color: '#bc7251',
+    skinTone: '#875b45',
+    hairColor: '#231b18',
+    accentColor: '#d7a76c',
     intro: 'You look new around here. Every good Lagos story begins with the wrong turn.',
   },
   {
     id: 'tunde',
     name: 'Tunde',
     role: 'Independent courier',
-    x: 20,
-    z: -19,
+    x: 18,
+    z: -16,
     locationId: 'market',
-    color: '#8ad5ba',
+    color: '#315b72',
+    skinTone: '#754c39',
+    hairColor: '#211b18',
+    accentColor: '#d7ad58',
     intro: 'One last parcel needs to get across town. Ada at Afterglow is expecting it.',
   },
   {
     id: 'ada',
     name: 'Ada',
     role: 'Afterglow host',
-    x: -19,
+    x: -18,
     z: 20,
     locationId: 'club',
-    color: '#e7c46d',
+    color: '#763f42',
+    skinTone: '#9b6a4d',
+    hairColor: '#241b1a',
+    accentColor: '#e0b765',
     intro: 'People come here to be remembered. Bring me a good story and we will talk.',
   },
   {
@@ -105,7 +249,10 @@ export const CITY_CHARACTERS = [
     x: 20,
     z: 16,
     locationId: 'garage',
-    color: '#e08c73',
+    color: '#3b5261',
+    skinTone: '#684332',
+    hairColor: '#1d1815',
+    accentColor: '#c77b54',
     intro: 'A scooter is not pretty, but it can pay for itself in one night.',
   },
   {
@@ -115,16 +262,254 @@ export const CITY_CHARACTERS = [
     x: 1,
     z: 19,
     locationId: 'cafe',
-    color: '#b6d66f',
+    color: '#8b5535',
+    skinTone: '#9c6849',
+    hairColor: '#2a1c18',
+    accentColor: '#d7ad69',
     intro: 'Suya first. Big decisions after.',
+  },
+  {
+    id: 'chika',
+    name: 'Chika',
+    role: 'Community police officer',
+    x: -44,
+    z: -16,
+    locationId: 'police',
+    color: '#273f58',
+    skinTone: '#80533f',
+    hairColor: '#1e1b18',
+    accentColor: '#c65c4b',
+    intro: 'We keep this neighborhood safe together. Ask at the front desk about a patrol shift.',
+  },
+  {
+    id: 'amina',
+    name: 'Amina',
+    role: 'Hospital nurse',
+    x: -68,
+    z: -3,
+    locationId: 'hospital',
+    color: '#e1ddd1',
+    skinTone: '#98654a',
+    hairColor: '#251c19',
+    accentColor: '#4b8a91',
+    intro: 'Long night? Take a breath. The clinic is open, and we always need an extra pair of hands.',
+  },
+  {
+    id: 'wale',
+    name: 'Wale',
+    role: 'Stadium groundskeeper',
+    x: 48,
+    z: -20,
+    locationId: 'stadium',
+    color: '#364a43',
+    skinTone: '#87583f',
+    hairColor: '#211b17',
+    accentColor: '#d0a552',
+    intro: 'Match day starts before sunrise. Good grounds crew can make a name here.',
+  },
+  {
+    id: 'tobi',
+    name: 'Tobi',
+    role: 'University teaching assistant',
+    x: -50,
+    z: -58,
+    locationId: 'university',
+    color: '#725044',
+    skinTone: '#87583f',
+    hairColor: '#1d1917',
+    accentColor: '#d5ba8b',
+    intro: 'The campus has a public lecture tonight. There is always room for curious people.',
+  },
+  {
+    id: 'iyabo',
+    name: 'Iyabo',
+    role: 'Farmer & cooperative lead',
+    x: 12,
+    z: 64,
+    locationId: 'farm',
+    color: '#694c38',
+    skinTone: '#925d43',
+    hairColor: '#2b201b',
+    accentColor: '#b87949',
+    intro: 'Fresh produce keeps the whole city moving. We could use another reliable hand.',
+  },
+  {
+    id: 'emeka',
+    name: 'Emeka',
+    role: 'Port dispatch coordinator',
+    x: 64,
+    z: 22,
+    locationId: 'port',
+    color: '#39525c',
+    skinTone: '#76503b',
+    hairColor: '#1f1b18',
+    accentColor: '#d2aa61',
+    intro: 'Containers arrive all night. If you can keep a schedule, the docks have work.',
+  },
+  {
+    id: 'kemi',
+    name: 'Kemi',
+    role: 'Civic information officer',
+    x: -50,
+    z: 40,
+    locationId: 'government',
+    color: '#614b51',
+    skinTone: '#9a694d',
+    hairColor: '#261d19',
+    accentColor: '#d7ad67',
+    intro: 'Local decisions are made by people who show up. Start at the ward polling unit.',
   },
 ] as const
 
 export type CharacterId = (typeof CITY_CHARACTERS)[number]['id']
 export type CityCharacter = (typeof CITY_CHARACTERS)[number]
 
+export const CITY_JOBS = [
+  {
+    id: 'market-loader',
+    title: 'Market loading crew',
+    employer: 'Balogun Night Market',
+    locationId: 'market',
+    category: 'RETAIL & LOGISTICS',
+    pay: 360,
+    reputation: 8,
+    description: 'Help stall owners move produce and close up before the morning rush.',
+  },
+  {
+    id: 'clinic-porter',
+    title: 'Clinic support assistant',
+    employer: 'Mainland General Hospital',
+    locationId: 'hospital',
+    category: 'HEALTHCARE',
+    pay: 480,
+    reputation: 12,
+    description: 'Support the night team with supply runs and patient check-ins.',
+  },
+  {
+    id: 'farmhand',
+    title: 'Farm cooperative hand',
+    employer: 'Epe Food Cooperative',
+    locationId: 'farm',
+    category: 'AGRICULTURE',
+    pay: 540,
+    reputation: 14,
+    description: 'Harvest and pack a market order with the local growers.',
+  },
+  {
+    id: 'port-clerk',
+    title: 'Dock dispatch clerk',
+    employer: 'Apapa Shipping Port',
+    locationId: 'port',
+    category: 'MARITIME',
+    pay: 620,
+    reputation: 15,
+    description: 'Check a cargo manifest and guide a shipment to the right yard.',
+  },
+  {
+    id: 'community-patrol',
+    title: 'Community patrol partner',
+    employer: 'Adekunle Police Division',
+    locationId: 'police',
+    category: 'PUBLIC SERVICE',
+    pay: 460,
+    reputation: 16,
+    description: 'Join a supervised neighborhood walk and log street-light issues.',
+  },
+  {
+    id: 'stadium-crew',
+    title: 'Stadium grounds crew',
+    employer: 'National City Stadium',
+    locationId: 'stadium',
+    category: 'SPORT & EVENTS',
+    pay: 500,
+    reputation: 11,
+    description: 'Prepare the pitch perimeter and stands for the next local fixture.',
+  },
+] as const
+
+export type JobId = (typeof CITY_JOBS)[number]['id']
+export type CityJob = (typeof CITY_JOBS)[number]
+
+export const CITY_FACTIONS = [
+  {
+    id: 'night-market-union',
+    name: 'Night Market Union',
+    district: 'Lagos Island',
+    locationId: 'market',
+    members: 'Traders & couriers',
+    description: 'Back local traders, share delivery routes, and keep the market moving.',
+  },
+  {
+    id: 'mainland-athletic-club',
+    name: 'Mainland Athletic Club',
+    district: 'Surulere',
+    locationId: 'clubhouse',
+    members: 'Players & coaches',
+    description: 'A neighborhood sports group built around football and community events.',
+  },
+  {
+    id: 'eko-civic-watch',
+    name: 'Eko Civic Watch',
+    district: 'Yaba',
+    locationId: 'police',
+    members: 'Residents & volunteers',
+    description: 'Work with residents and officers to improve everyday street safety.',
+  },
+  {
+    id: 'epe-growers-coop',
+    name: 'Epe Growers Cooperative',
+    district: 'Epe',
+    locationId: 'farm',
+    members: 'Growers & suppliers',
+    description: 'Connect local farms with markets, homes, and port-side buyers.',
+  },
+] as const
+
+export type FactionId = (typeof CITY_FACTIONS)[number]['id']
+
+export const CITY_HOMES = [
+  {
+    id: 'marina-room',
+    name: 'Marina room & parlour',
+    district: 'Victoria Island',
+    locationId: 'hotel',
+    price: 650,
+    tenure: 'Weekly room lease',
+    description: 'A small furnished room above the Marina road.',
+  },
+  {
+    id: 'mainland-bungalow',
+    name: 'Surulere bungalow',
+    district: 'Mainland Estates',
+    locationId: 'bungalow',
+    price: 8_000,
+    tenure: 'Home purchase',
+    description: 'A one-bedroom bungalow with a shaded front courtyard.',
+  },
+  {
+    id: 'lekki-townhouse',
+    name: 'Lekki estate townhouse',
+    district: 'Lekki',
+    locationId: 'estate',
+    price: 24_000,
+    tenure: 'Home purchase',
+    description: 'A two-storey home inside a gated residential estate.',
+  },
+  {
+    id: 'epe-farmstead',
+    name: 'Epe farmstead',
+    district: 'Epe',
+    locationId: 'farm',
+    price: 6_500,
+    tenure: 'Home purchase',
+    description: 'A compact farmhouse beside the cooperative fields.',
+  },
+] as const
+
+export type HomeId = (typeof CITY_HOMES)[number]['id']
+
 export type MissionStage = 'meet-bisi' | 'find-tunde' | 'delivery' | 'free-roam'
-export type GamePanel = 'none' | 'map' | 'jobs' | 'inventory' | 'online'
+export type GamePanel = 'none' | 'map' | 'jobs' | 'life' | 'inventory' | 'online'
 
 export type InventoryItemId = 'city-guide' | 'suya' | 'parcel'
 
@@ -147,6 +532,12 @@ export type PlayerState = {
   ownsScooter: boolean
   inVehicle: boolean
   completedRuns: number
+  completedShifts: number
+  job: JobId | null
+  faction: FactionId | null
+  home: HomeId | null
+  voterRegistered: boolean
+  wantedLevel: number
 }
 
 export type RemotePlayer = {
@@ -182,6 +573,12 @@ export const STARTING_PLAYER: PlayerState = {
   ownsScooter: false,
   inVehicle: false,
   completedRuns: 0,
+  completedShifts: 0,
+  job: null,
+  faction: null,
+  home: null,
+  voterRegistered: false,
+  wantedLevel: 0,
 }
 
 export type PlayerAction =
@@ -195,6 +592,12 @@ export type PlayerAction =
   | { type: 'rest' }
   | { type: 'buy-food' }
   | { type: 'eat-food' }
+  | { type: 'apply-job'; jobId: JobId }
+  | { type: 'complete-shift'; jobId: JobId }
+  | { type: 'join-faction'; factionId: FactionId | null }
+  | { type: 'lease-home'; homeId: HomeId }
+  | { type: 'register-voter' }
+  | { type: 'resolve-court' }
 
 function updateReputation(state: PlayerState, reputation: number): Pick<PlayerState, 'reputation' | 'level'> {
   return {
@@ -302,6 +705,39 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
           detail: 'A warm street-food snack. Restores energy and hunger.',
         }),
       }
+    }
+    case 'apply-job':
+      return { ...state, job: action.jobId }
+    case 'complete-shift': {
+      const job = CITY_JOBS.find((entry) => entry.id === action.jobId)
+      if (!job || state.job !== action.jobId) return state
+      const reputation = state.reputation + job.reputation
+      return {
+        ...state,
+        cash: state.cash + job.pay,
+        energy: Math.max(0, state.energy - 10),
+        hunger: Math.max(0, state.hunger - 8),
+        completedShifts: state.completedShifts + 1,
+        ...updateReputation(state, reputation),
+      }
+    }
+    case 'join-faction':
+      return { ...state, faction: action.factionId }
+    case 'lease-home': {
+      const home = CITY_HOMES.find((entry) => entry.id === action.homeId)
+      if (!home || state.cash < home.price) return state
+      return { ...state, cash: state.cash - home.price, home: home.id }
+    }
+    case 'register-voter': {
+      if (state.voterRegistered) return state
+      const reputation = state.reputation + 5
+      return { ...state, voterRegistered: true, ...updateReputation(state, reputation) }
+    }
+    case 'resolve-court': {
+      if (state.wantedLevel < 1) return state
+      const fine = state.wantedLevel * 300
+      if (state.cash < fine) return state
+      return { ...state, cash: state.cash - fine, wantedLevel: 0 }
     }
   }
 }

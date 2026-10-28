@@ -21,15 +21,18 @@ export async function GET(request: Request) {
       .where(eq(gameSaves.userId, user.id))
       .limit(1)
 
+    const normalizedSave = save
+      ? parseGameSavePayload({
+          playerState: save.playerState,
+          position: { x: save.positionX, z: save.positionZ },
+          gameMinutes: save.gameMinutes,
+        })
+      : null
+
     return NextResponse.json(
       {
-        save: save
-          ? {
-              playerState: save.playerState,
-              position: { x: save.positionX, z: save.positionZ },
-              gameMinutes: save.gameMinutes,
-              updatedAt: save.updatedAt.toISOString(),
-            }
+        save: normalizedSave && save
+          ? { ...normalizedSave, updatedAt: save.updatedAt.toISOString() }
           : null,
       },
       { headers: PRIVATE_NO_STORE_HEADERS },

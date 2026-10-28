@@ -18,300 +18,456 @@ type CityWorldProps = {
   remotePlayers: RemotePlayer[]
 }
 
-const BUILDINGS = [
-  { x: -8, z: -9, width: 6, depth: 6, height: 9, color: '#30453b', accent: '#e9c477' },
-  { x: 8, z: -9, width: 7, depth: 6, height: 12, color: '#284139', accent: '#c9df85' },
-  { x: -18, z: -17, width: 11, depth: 10, height: 15, color: '#243c37', accent: '#c9df85' },
-  { x: 16, z: -17, width: 12, depth: 11, height: 22, color: '#1e3635', accent: '#ffd286' },
-  { x: -42, z: -17, width: 13, depth: 11, height: 12, color: '#263934', accent: '#ffcc80' },
-  { x: 42, z: -18, width: 13, depth: 10, height: 17, color: '#263d3b', accent: '#b5d889' },
-  { x: -18, z: 17, width: 13, depth: 10, height: 21, color: '#2b3531', accent: '#f6b269' },
-  { x: 17, z: 17, width: 12, depth: 10, height: 12, color: '#21423a', accent: '#d4e690' },
-  { x: -42, z: 17, width: 12, depth: 10, height: 14, color: '#263a38', accent: '#f1bd75' },
-  { x: 42, z: 17, width: 13, depth: 10, height: 20, color: '#1d3735', accent: '#ffce83' },
-  { x: -18, z: -45, width: 14, depth: 12, height: 17, color: '#293a37', accent: '#c7dc8c' },
-  { x: 17, z: -45, width: 13, depth: 12, height: 13, color: '#223d39', accent: '#f5b572' },
-  { x: -18, z: 44, width: 12, depth: 11, height: 13, color: '#263b36', accent: '#f4c979' },
-  { x: 18, z: 44, width: 13, depth: 11, height: 18, color: '#203a38', accent: '#c9dc88' },
-  { x: -43, z: -45, width: 12, depth: 12, height: 20, color: '#213634', accent: '#edbd79' },
-  { x: 43, z: -45, width: 12, depth: 12, height: 14, color: '#2b3935', accent: '#c7d887' },
+type BuildingSpec = {
+  x: number
+  z: number
+  width: number
+  depth: number
+  height: number
+  color: string
+  accent: string
+}
+
+const ROAD_LINES = [-66, -42, -18, 18, 42, 66]
+
+const BUILDINGS: BuildingSpec[] = [
+  { x: -8, z: -9, width: 7, depth: 6, height: 9, color: '#8e8072', accent: '#ca9d68' },
+  { x: 8, z: -9, width: 7, depth: 6, height: 12, color: '#6d7980', accent: '#dfb96e' },
+  { x: -18, z: -17, width: 11, depth: 10, height: 15, color: '#89745f', accent: '#b85f49' },
+  { x: 16, z: -17, width: 12, depth: 11, height: 20, color: '#67737c', accent: '#d9a35d' },
+  { x: -18, z: 17, width: 13, depth: 10, height: 21, color: '#8e7968', accent: '#d48a62' },
+  { x: 17, z: 17, width: 12, depth: 10, height: 12, color: '#9d927f', accent: '#c88f58' },
+  { x: -44, z: -4, width: 12, depth: 11, height: 17, color: '#7f7973', accent: '#d0a66f' },
+  { x: -44, z: 12, width: 11, depth: 10, height: 11, color: '#a0927f', accent: '#b35f4c' },
+  { x: 44, z: -4, width: 12, depth: 11, height: 18, color: '#73818a', accent: '#d8b66f' },
+  { x: 44, z: 12, width: 12, depth: 10, height: 13, color: '#88796c', accent: '#bb6d53' },
+  { x: -44, z: 28, width: 12, depth: 10, height: 12, color: '#b0a18c', accent: '#c58658' },
+  { x: 44, z: 28, width: 13, depth: 11, height: 16, color: '#7a7771', accent: '#d7ae69' },
+  { x: -44, z: -30, width: 12, depth: 10, height: 16, color: '#7e8790', accent: '#c6845f' },
+  { x: 44, z: -30, width: 13, depth: 11, height: 21, color: '#677681', accent: '#d7b96e' },
+  { x: -16, z: -48, width: 12, depth: 10, height: 13, color: '#988b79', accent: '#b75f4d' },
+  { x: 18, z: -48, width: 12, depth: 10, height: 16, color: '#75818a', accent: '#d1a365' },
+  { x: -44, z: 54, width: 12, depth: 10, height: 11, color: '#9c8c77', accent: '#c48155' },
+  { x: 44, z: 54, width: 13, depth: 10, height: 17, color: '#777a78', accent: '#d9ae66' },
+  { x: 70, z: -12, width: 9, depth: 9, height: 12, color: '#82796e', accent: '#c37a59' },
+  { x: -70, z: 22, width: 9, depth: 9, height: 13, color: '#8e8072', accent: '#d3aa67' },
 ]
 
-const PARKED_CARS = [
-  { x: -7, z: -7, color: '#b75c49', rotation: Math.PI / 2 },
-  { x: 8, z: 7, color: '#d8aa62', rotation: -Math.PI / 2 },
-  { x: 31, z: -4, color: '#588b7a', rotation: Math.PI / 2 },
-  { x: -31, z: 7, color: '#7d8295', rotation: -Math.PI / 2 },
-  { x: 8, z: 31, color: '#bf6d4d', rotation: 0 },
-]
-
-function Building({
-  x,
-  z,
-  width,
-  depth,
-  height,
-  color,
-  accent,
-}: (typeof BUILDINGS)[number]) {
-  const floors = Math.max(3, Math.floor(height / 3))
-  const windowsPerFloor = Math.max(3, Math.floor(width / 2.5))
+function Building({ x, z, width, depth, height, color, accent }: BuildingSpec) {
+  const floors = Math.max(2, Math.floor(height / 3))
+  const columns = Math.max(3, Math.floor(width / 2.4))
+  const windowWidth = Math.min(0.86, width / (columns * 1.65))
 
   return (
     <group position={[x, 0, z]}>
-      <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+      <mesh position={[0, 0.22, 0]} castShadow receiveShadow>
+        <boxGeometry args={[width + 0.5, 0.44, depth + 0.5]} />
+        <meshStandardMaterial color="#5f5d58" roughness={0.96} />
+      </mesh>
+      <mesh position={[0, height / 2 + 0.38, 0]} castShadow receiveShadow>
         <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={color} roughness={0.88} />
+        <meshStandardMaterial color={color} roughness={0.83} metalness={0.04} />
       </mesh>
-      <mesh position={[0, height + 0.18, 0]} castShadow>
-        <boxGeometry args={[width + 0.5, 0.36, depth + 0.5]} />
-        <meshStandardMaterial color="#172521" roughness={0.8} />
+      <mesh position={[0, height + 0.48, 0]} castShadow>
+        <boxGeometry args={[width + 0.65, 0.28, depth + 0.65]} />
+        <meshStandardMaterial color="#5d5d59" roughness={0.82} />
       </mesh>
-      <mesh position={[0, 0.25, depth / 2 + 0.08]}>
-        <boxGeometry args={[width * 0.32, 1.5, 0.12]} />
-        <meshStandardMaterial color="#192b28" roughness={0.55} />
+      <mesh position={[0, 0.92, depth / 2 + 0.06]}>
+        <boxGeometry args={[width * 0.26, 1.35, 0.14]} />
+        <meshStandardMaterial color="#31363a" roughness={0.58} />
       </mesh>
-      {Array.from({ length: floors }, (_, floor) =>
-        Array.from({ length: windowsPerFloor }, (_, column) => {
-          const windowX = (column - (windowsPerFloor - 1) / 2) * (width / (windowsPerFloor + 0.5))
-          const windowY = 1.8 + floor * 2.65
-          const lit = (column + floor + Math.round(x + z)) % 4 !== 0
-          return (
-            <mesh key={`front-${floor}-${column}`} position={[windowX, windowY, depth / 2 + 0.07]}>
-              <boxGeometry args={[0.7, 0.9, 0.09]} />
-              <meshStandardMaterial
-                color={lit ? '#d5bc7a' : '#253b35'}
-                emissive={lit ? accent : '#000000'}
-                emissiveIntensity={lit ? 0.32 : 0}
-                roughness={0.34}
-              />
+      {Array.from({ length: floors }, (_, floor) => {
+        const windowY = 1.55 + floor * 2.72
+        return (
+          <group key={`floor-${floor}`}>
+            <mesh position={[0, windowY - 0.64, depth / 2 + 0.035]}>
+              <boxGeometry args={[width * 0.96, 0.12, 0.18]} />
+              <meshStandardMaterial color={accent} roughness={0.84} />
             </mesh>
-          )
-        }),
-      )}
+            {Array.from({ length: columns }, (_, column) => {
+              const windowX = (column - (columns - 1) / 2) * (width / (columns + 0.1))
+              const lit = (column * 5 + floor * 3 + Math.round(x + z)) % 5 !== 0
+              return (
+                <group key={`window-${floor}-${column}`} position={[windowX, windowY, depth / 2 + 0.08]}>
+                  <mesh>
+                    <boxGeometry args={[windowWidth + 0.12, 1.18, 0.12]} />
+                    <meshStandardMaterial color="#4a4c4a" roughness={0.7} />
+                  </mesh>
+                  <mesh position={[0, 0, 0.08]}>
+                    <boxGeometry args={[windowWidth, 0.94, 0.08]} />
+                    <meshStandardMaterial
+                      color={lit ? '#d4b985' : '#33404a'}
+                      emissive={lit ? '#9c7042' : '#101820'}
+                      emissiveIntensity={lit ? 0.28 : 0.04}
+                      roughness={0.3}
+                      metalness={0.12}
+                    />
+                  </mesh>
+                  <mesh position={[0, -0.02, 0.14]}>
+                    <boxGeometry args={[0.045, 0.9, 0.04]} />
+                    <meshStandardMaterial color="#677078" metalness={0.36} roughness={0.46} />
+                  </mesh>
+                </group>
+              )
+            })}
+          </group>
+        )
+      })}
+      <mesh position={[-width * 0.34, height + 0.82, -depth * 0.08]} castShadow>
+        <cylinderGeometry args={[0.62, 0.68, 1.1, 10]} />
+        <meshStandardMaterial color="#8a8579" roughness={0.94} />
+      </mesh>
+      <mesh position={[width * 0.28, height + 0.9, depth * 0.12]}>
+        <boxGeometry args={[1.4, 0.55, 1]} />
+        <meshStandardMaterial color="#696a67" roughness={0.9} />
+      </mesh>
+    </group>
+  )
+}
+
+function Crosswalk({ x, z }: { x: number; z: number }) {
+  return (
+    <group>
+      {Array.from({ length: 6 }, (_, index) => (
+        <mesh key={`east-${index}`} position={[x - 3 + index * 1.2, 0.025, z + 5.5]}>
+          <boxGeometry args={[0.72, 0.035, 0.22]} />
+          <meshBasicMaterial color="#d5d0c3" />
+        </mesh>
+      ))}
+      {Array.from({ length: 6 }, (_, index) => (
+        <mesh key={`north-${index}`} position={[x + 5.5, 0.027, z - 3 + index * 1.2]}>
+          <boxGeometry args={[0.22, 0.035, 0.72]} />
+          <meshBasicMaterial color="#d5d0c3" />
+        </mesh>
+      ))}
     </group>
   )
 }
 
 function RoadGrid() {
-  const roadOffsets = [-42, -14, 14, 42]
-  const dashes = Array.from({ length: 13 }, (_, index) => -54 + index * 9)
+  const dashPositions = Array.from({ length: 19 }, (_, index) => -86 + index * 9.5)
+  const coreIntersections = [-42, -18, 18, 42]
 
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.22, 0]} receiveShadow>
-        <planeGeometry args={[140, 140]} />
-        <meshStandardMaterial color="#243831" roughness={1} />
+        <planeGeometry args={[180, 180]} />
+        <meshStandardMaterial color="#77736b" roughness={1} />
       </mesh>
-      {roadOffsets.map((z) => (
-        <group key={`road-x-${z}`}>
-          <mesh position={[0, -0.12, z]} receiveShadow>
-            <boxGeometry args={[128, 0.14, 8]} />
-            <meshStandardMaterial color="#28302d" roughness={0.96} />
-          </mesh>
-          <mesh position={[0, -0.035, z - 4.8]}>
-            <boxGeometry args={[128, 0.08, 1.25]} />
-            <meshStandardMaterial color="#66705d" roughness={0.95} />
-          </mesh>
-          <mesh position={[0, -0.035, z + 4.8]}>
-            <boxGeometry args={[128, 0.08, 1.25]} />
-            <meshStandardMaterial color="#66705d" roughness={0.95} />
-          </mesh>
-        </group>
-      ))}
-      {roadOffsets.map((x) => (
-        <group key={`road-z-${x}`}>
-          <mesh position={[x, -0.115, 0]} receiveShadow>
-            <boxGeometry args={[8, 0.14, 128]} />
-            <meshStandardMaterial color="#28302d" roughness={0.96} />
-          </mesh>
-          <mesh position={[x - 4.8, -0.03, 0]}>
-            <boxGeometry args={[1.25, 0.08, 128]} />
-            <meshStandardMaterial color="#66705d" roughness={0.95} />
-          </mesh>
-          <mesh position={[x + 4.8, -0.03, 0]}>
-            <boxGeometry args={[1.25, 0.08, 128]} />
-            <meshStandardMaterial color="#66705d" roughness={0.95} />
-          </mesh>
-        </group>
-      ))}
-      {dashes.map((position) => (
-        <group key={`lane-mark-${position}`}>
-          <mesh position={[position, -0.035, 0]}>
-            <boxGeometry args={[4.2, 0.05, 0.12]} />
-            <meshBasicMaterial color="#d1b778" />
-          </mesh>
-          <mesh position={[0, -0.035, position]}>
-            <boxGeometry args={[0.12, 0.05, 4.2]} />
-            <meshBasicMaterial color="#d1b778" />
-          </mesh>
-        </group>
-      ))}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.2, 61]} receiveShadow>
-        <planeGeometry args={[150, 28]} />
-        <meshStandardMaterial color="#163a3d" roughness={0.28} metalness={0.18} />
-      </mesh>
-      <mesh position={[0, 0.02, 47]}>
-        <boxGeometry args={[26, 0.18, 0.8]} />
-        <meshStandardMaterial color="#a89167" roughness={0.88} />
-      </mesh>
-    </group>
-  )
-}
-
-function PalmTree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
-  return (
-    <group position={position} scale={scale}>
-      <mesh position={[0, 1.4, 0]} castShadow>
-        <cylinderGeometry args={[0.16, 0.28, 2.8, 7]} />
-        <meshStandardMaterial color="#77533c" roughness={1} />
-      </mesh>
-      {Array.from({ length: 6 }, (_, index) => {
-        const angle = (index / 6) * Math.PI * 2
+      {ROAD_LINES.map((offset) => {
+        const width = Math.abs(offset) <= 42 ? 10 : 7
+        const isMainRoad = width === 10
         return (
-          <mesh
-            key={index}
-            position={[Math.cos(angle) * 0.8, 2.68 + Math.sin(index * 1.7) * 0.1, Math.sin(angle) * 0.8]}
-            rotation={[0.12, -angle, -0.5]}
-            castShadow
-          >
-            <coneGeometry args={[0.34, 1.8, 5]} />
-            <meshStandardMaterial color={index % 2 ? '#456d4c' : '#568354'} roughness={0.92} />
-          </mesh>
+          <group key={`road-${offset}`}>
+            <mesh position={[0, -0.08, offset]} receiveShadow>
+              <boxGeometry args={[180, 0.16, width]} />
+              <meshStandardMaterial color="#30353b" roughness={0.96} />
+            </mesh>
+            {[-1, 1].map((side) => (
+              <group key={`sidewalk-h-${side}`}>
+                <mesh position={[0, 0.015, offset + side * (width / 2 + 1.15)]} receiveShadow>
+                  <boxGeometry args={[180, 0.2, 1.9]} />
+                  <meshStandardMaterial color="#a19a8c" roughness={0.92} />
+                </mesh>
+                <mesh position={[0, 0.11, offset + side * (width / 2 + 0.16)]}>
+                  <boxGeometry args={[180, 0.28, 0.22]} />
+                  <meshStandardMaterial color="#c0b7a5" roughness={0.87} />
+                </mesh>
+              </group>
+            ))}
+            {isMainRoad && dashPositions.map((position) => (
+              <mesh key={`dash-h-${position}`} position={[position, 0.012, offset]}>
+                <boxGeometry args={[3.2, 0.026, 0.12]} />
+                <meshBasicMaterial color="#d4b877" />
+              </mesh>
+            ))}
+          </group>
         )
       })}
-      <mesh position={[0, 2.7, 0]}>
-        <sphereGeometry args={[0.24, 8, 8]} />
-        <meshStandardMaterial color="#c08a4f" roughness={0.9} />
+      {ROAD_LINES.map((offset) => {
+        const width = Math.abs(offset) <= 42 ? 10 : 7
+        const isMainRoad = width === 10
+        return (
+          <group key={`road-v-${offset}`}>
+            <mesh position={[offset, -0.075, 0]} receiveShadow>
+              <boxGeometry args={[width, 0.16, 180]} />
+              <meshStandardMaterial color="#30353b" roughness={0.96} />
+            </mesh>
+            {[-1, 1].map((side) => (
+              <group key={`sidewalk-v-${side}`}>
+                <mesh position={[offset + side * (width / 2 + 1.15), 0.016, 0]} receiveShadow>
+                  <boxGeometry args={[1.9, 0.2, 180]} />
+                  <meshStandardMaterial color="#a19a8c" roughness={0.92} />
+                </mesh>
+                <mesh position={[offset + side * (width / 2 + 0.16), 0.11, 0]}>
+                  <boxGeometry args={[0.22, 0.28, 180]} />
+                  <meshStandardMaterial color="#c0b7a5" roughness={0.87} />
+                </mesh>
+              </group>
+            ))}
+            {isMainRoad && dashPositions.map((position) => (
+              <mesh key={`dash-v-${position}`} position={[offset, 0.014, position]}>
+                <boxGeometry args={[0.12, 0.026, 3.2]} />
+                <meshBasicMaterial color="#d4b877" />
+              </mesh>
+            ))}
+          </group>
+        )
+      })}
+      {coreIntersections.flatMap((x) => coreIntersections.map((z) => <Crosswalk key={`crossing-${x}-${z}`} x={x} z={z} />))}
+      <mesh position={[0, 0.02, 66.8]}>
+        <boxGeometry args={[180, 0.18, 1.1]} />
+        <meshStandardMaterial color="#b6aa92" roughness={0.9} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.09, 78]} receiveShadow>
+        <planeGeometry args={[180, 20]} />
+        <meshStandardMaterial color="#34535b" roughness={0.34} metalness={0.18} />
       </mesh>
     </group>
   )
 }
 
-function StreetLamp({ position }: { position: [number, number, number] }) {
+function StreetTree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 1.35, 0]} castShadow>
+        <cylinderGeometry args={[0.2, 0.32, 2.7, 9]} />
+        <meshStandardMaterial color="#695343" roughness={0.97} />
+      </mesh>
+      <mesh position={[0, 3.05, 0]} castShadow>
+        <sphereGeometry args={[1.18, 10, 9]} />
+        <meshStandardMaterial color="#5e6656" roughness={0.98} />
+      </mesh>
+      <mesh position={[0.42, 3.4, 0.1]} castShadow>
+        <sphereGeometry args={[0.72, 9, 8]} />
+        <meshStandardMaterial color="#73705c" roughness={1} />
+      </mesh>
+      <mesh position={[-0.48, 2.78, -0.1]} castShadow>
+        <sphereGeometry args={[0.76, 9, 8]} />
+        <meshStandardMaterial color="#555e52" roughness={1} />
+      </mesh>
+    </group>
+  )
+}
+
+function StreetLamp({ position, lit = false }: { position: [number, number, number]; lit?: boolean }) {
   return (
     <group position={position}>
-      <mesh position={[0, 2, 0]} castShadow>
-        <cylinderGeometry args={[0.06, 0.09, 4, 6]} />
-        <meshStandardMaterial color="#38423d" metalness={0.55} roughness={0.44} />
+      <mesh position={[0, 2.45, 0]} castShadow>
+        <cylinderGeometry args={[0.07, 0.12, 4.9, 8]} />
+        <meshStandardMaterial color="#4b5052" metalness={0.58} roughness={0.46} />
       </mesh>
-      <mesh position={[0.35, 3.92, 0]} rotation={[0, 0, -0.2]}>
-        <boxGeometry args={[0.8, 0.08, 0.1]} />
-        <meshStandardMaterial color="#42453b" metalness={0.5} roughness={0.4} />
+      <mesh position={[0.34, 4.74, 0]} rotation={[0, 0, -0.16]}>
+        <boxGeometry args={[0.84, 0.1, 0.16]} />
+        <meshStandardMaterial color="#53565a" metalness={0.52} roughness={0.4} />
       </mesh>
-      <mesh position={[0.65, 3.84, 0]}>
-        <sphereGeometry args={[0.18, 10, 8]} />
-        <meshStandardMaterial color="#ffe2a3" emissive="#ffcf74" emissiveIntensity={1.5} />
+      <mesh position={[0.7, 4.63, 0]}>
+        <boxGeometry args={[0.36, 0.12, 0.3]} />
+        <meshStandardMaterial color="#edc17a" emissive="#d39b54" emissiveIntensity={lit ? 1.4 : 0.7} roughness={0.25} />
       </mesh>
-      <pointLight position={[0.65, 3.72, 0]} color="#ffc775" intensity={0.58} distance={8} decay={2} />
+      {lit && <pointLight position={[0.7, 4.5, 0]} color="#ffd49a" intensity={0.48} distance={11} decay={2} />}
     </group>
   )
 }
 
-function MarketStall() {
+function Flyover() {
+  const piers = [-72, -48, -24, 0, 24, 48, 72]
+  const laneMarks = Array.from({ length: 18 }, (_, index) => -84 + index * 9.5)
   return (
-    <group position={[23, 0, -22]}>
-      <mesh position={[0, 0.8, 0]} castShadow>
-        <boxGeometry args={[4.4, 1.4, 2.8]} />
-        <meshStandardMaterial color="#704838" roughness={0.88} />
+    <group position={[0, 0, -42]}>
+      {piers.map((x) => (
+        <mesh key={`pier-${x}`} position={[x, 3.1, 0]} castShadow>
+          <boxGeometry args={[1.7, 6.2, 1.4]} />
+          <meshStandardMaterial color="#858178" roughness={0.9} />
+        </mesh>
+      ))}
+      <mesh position={[0, 6.45, 0]} castShadow receiveShadow>
+        <boxGeometry args={[180, 0.9, 10]} />
+        <meshStandardMaterial color="#454a50" roughness={0.94} />
       </mesh>
-      <mesh position={[0, 1.72, 0]} rotation={[0, 0, 0]} castShadow>
-        <boxGeometry args={[5.2, 0.2, 3.6]} />
-        <meshStandardMaterial color="#d19d50" roughness={0.8} />
-      </mesh>
-      <mesh position={[0, 1.88, 0]}>
-        <boxGeometry args={[5.2, 0.08, 0.42]} />
-        <meshStandardMaterial color="#a65340" roughness={0.8} />
-      </mesh>
-      <mesh position={[0.7, 2.2, 0]}>
-        <sphereGeometry args={[0.22, 10, 10]} />
-        <meshStandardMaterial color="#ffe0a0" emissive="#f4ba67" emissiveIntensity={1.35} />
-      </mesh>
-      <pointLight position={[0.7, 2.4, 0]} color="#ffc578" intensity={0.65} distance={7} />
+      {[-1, 1].map((side) => (
+        <mesh key={`rail-${side}`} position={[0, 7.12, side * 4.75]}>
+          <boxGeometry args={[180, 0.42, 0.28]} />
+          <meshStandardMaterial color="#b9b2a4" roughness={0.66} metalness={0.24} />
+        </mesh>
+      ))}
+      {laneMarks.map((x) => (
+        <mesh key={`flyover-mark-${x}`} position={[x, 6.92, 0]}>
+          <boxGeometry args={[3.5, 0.026, 0.13]} />
+          <meshBasicMaterial color="#d6bb83" />
+        </mesh>
+      ))}
     </group>
   )
 }
 
-function ClubFacade() {
+function LagoonBridge() {
+  const piers = [-72, -48, -24, 0, 24, 48, 72]
+  const laneMarks = Array.from({ length: 19 }, (_, index) => -84 + index * 9.3)
   return (
-    <group position={[-22, 0, 22]}>
-      <mesh position={[0, 2.7, 0]} castShadow receiveShadow>
-        <boxGeometry args={[8.5, 5.4, 6.4]} />
-        <meshStandardMaterial color="#292b35" roughness={0.75} />
+    <group position={[0, 0, 76]}>
+      {piers.map((x) => (
+        <mesh key={`bridge-pier-${x}`} position={[x, 1.9, 0]} castShadow>
+          <cylinderGeometry args={[0.65, 0.82, 4.2, 8]} />
+          <meshStandardMaterial color="#696e70" roughness={0.8} />
+        </mesh>
+      ))}
+      <mesh position={[0, 4.2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[180, 0.78, 7]} />
+        <meshStandardMaterial color="#42484d" roughness={0.88} />
       </mesh>
-      <mesh position={[0, 5.55, 0]}>
-        <boxGeometry args={[9, 0.3, 6.8]} />
-        <meshStandardMaterial color="#d26c56" emissive="#d26c56" emissiveIntensity={0.2} />
-      </mesh>
-      <mesh position={[0, 3.9, 3.25]}>
-        <boxGeometry args={[4.8, 1.15, 0.14]} />
-        <meshStandardMaterial color="#f0bd65" emissive="#a8603d" emissiveIntensity={0.9} />
-      </mesh>
-      <mesh position={[-3.1, 2.8, 3.28]}>
-        <boxGeometry args={[0.7, 2.3, 0.16]} />
-        <meshStandardMaterial color="#d87b55" emissive="#ad533c" emissiveIntensity={0.45} />
-      </mesh>
-      <pointLight position={[0, 4, 5]} color="#e78458" intensity={1.1} distance={12} />
+      {[-1, 1].map((side) => (
+        <mesh key={`bridge-rail-${side}`} position={[0, 4.78, side * 3.2]}>
+          <boxGeometry args={[180, 0.42, 0.22]} />
+          <meshStandardMaterial color="#a39d91" metalness={0.26} roughness={0.62} />
+        </mesh>
+      ))}
+      {laneMarks.map((x) => (
+        <mesh key={`bridge-mark-${x}`} position={[x, 4.62, 0]}>
+          <boxGeometry args={[3.1, 0.026, 0.11]} />
+          <meshBasicMaterial color="#d6bb83" />
+        </mesh>
+      ))}
     </group>
   )
 }
 
-function GarageFacade() {
-  return (
-    <group position={[23, 0, 18]}>
-      <mesh position={[0, 1.8, 0]} castShadow>
-        <boxGeometry args={[7.5, 3.6, 6]} />
-        <meshStandardMaterial color="#303a36" roughness={0.94} />
-      </mesh>
-      <mesh position={[0, 3.72, 0]}>
-        <boxGeometry args={[8, 0.22, 6.4]} />
-        <meshStandardMaterial color="#db9b52" emissive="#b67d45" emissiveIntensity={0.25} />
-      </mesh>
-      <mesh position={[0, 1.45, 3.1]}>
-        <boxGeometry args={[3.7, 2.3, 0.12]} />
-        <meshStandardMaterial color="#192521" roughness={0.7} />
-      </mesh>
-      <pointLight position={[0, 3.8, 4.2]} color="#ffd18c" intensity={0.7} distance={9} />
-    </group>
-  )
-}
+function CivicBuilding({ location }: { location: (typeof WORLD_LOCATIONS)[number] }) {
+  const { x, z, kind } = location
+  if (kind === 'bridge') return null
 
-function CafeFacade() {
-  return (
-    <group position={[1, 0, 22]}>
-      <mesh position={[0, 1.75, 0]} castShadow>
-        <boxGeometry args={[7.6, 3.5, 6.4]} />
-        <meshStandardMaterial color="#35423a" roughness={0.88} />
-      </mesh>
-      <mesh position={[0, 3.62, 0]}>
-        <boxGeometry args={[8, 0.22, 6.7]} />
-        <meshStandardMaterial color="#88a963" roughness={0.75} />
-      </mesh>
-      <mesh position={[0, 2.3, 3.27]}>
-        <boxGeometry args={[3.8, 1, 0.12]} />
-        <meshStandardMaterial color="#f4c575" emissive="#b97b4f" emissiveIntensity={0.48} />
-      </mesh>
-      <pointLight position={[0, 2.2, 4.2]} color="#ffd18b" intensity={0.55} distance={8} />
-    </group>
-  )
-}
+  if (kind === 'stadium') {
+    return (
+      <group position={[x, 0, z]}>
+        <mesh position={[0, 2.2, 0]} castShadow>
+          <cylinderGeometry args={[10, 11, 4.4, 32, 1, true]} />
+          <meshStandardMaterial color="#77766f" roughness={0.8} side={2} />
+        </mesh>
+        <mesh position={[0, 0.14, 0]}>
+          <boxGeometry args={[11.5, 0.18, 7]} />
+          <meshStandardMaterial color="#536950" roughness={0.95} />
+        </mesh>
+        <mesh position={[0, 0.25, 0]}>
+          <boxGeometry args={[0.08, 0.035, 6.8]} />
+          <meshBasicMaterial color="#ded8c6" />
+        </mesh>
+        <mesh position={[0, 2.25, 0]}>
+          <torusGeometry args={[10.2, 0.16, 8, 32]} />
+          <meshStandardMaterial color="#c6bba4" roughness={0.65} />
+        </mesh>
+        {[-1, 1].map((side) => <mesh key={side} position={[side * 4.6, 0.42, 0]}><boxGeometry args={[0.11, 0.04, 6.6]} /><meshBasicMaterial color="#ded8c6" /></mesh>)}
+        <mesh position={[0, 4.6, 0]} castShadow><boxGeometry args={[5.2, 0.46, 4.5]} /><meshStandardMaterial color="#a99c89" roughness={0.8} /></mesh>
+        {[-1, 1].map((side) => <StreetLamp key={`stadium-lamp-${side}`} position={[side * 10, 0, -6]} lit={side < 0} />)}
+      </group>
+    )
+  }
 
-function HotelFacade() {
+  if (kind === 'airport') {
+    return (
+      <group position={[x, 0, z]}>
+        <mesh position={[0, 2.7, 0]} castShadow receiveShadow><boxGeometry args={[19, 5.4, 8]} /><meshStandardMaterial color="#9c988e" roughness={0.7} /></mesh>
+        <mesh position={[0, 4.4, 4.1]}><boxGeometry args={[15, 1.7, 0.18]} /><meshStandardMaterial color="#5c7580" metalness={0.22} roughness={0.3} /></mesh>
+        <mesh position={[12, 5.4, -2]} castShadow><boxGeometry args={[3.2, 11, 3.2]} /><meshStandardMaterial color="#777a78" roughness={0.78} /></mesh>
+        <mesh position={[12, 11.2, -2]}><boxGeometry args={[3.7, 1.2, 3.7]} /><meshStandardMaterial color="#526775" metalness={0.26} roughness={0.32} /></mesh>
+        <mesh position={[0, 0.02, -12]}><boxGeometry args={[32, 0.08, 5]} /><meshStandardMaterial color="#464b50" roughness={0.88} /></mesh>
+        {Array.from({ length: 8 }, (_, index) => <mesh key={`runway-light-${index}`} position={[-14 + index * 4, 0.14, -14]}><sphereGeometry args={[0.11, 8, 6]} /><meshStandardMaterial color="#f4d29a" emissive="#d5a35f" emissiveIntensity={1.2} /></mesh>)}
+      </group>
+    )
+  }
+
+  if (kind === 'port') {
+    return (
+      <group position={[x, 0, z]}>
+        {Array.from({ length: 8 }, (_, index) => {
+          const colors = ['#a85443', '#b67a45', '#4d6871', '#777a70']
+          const row = Math.floor(index / 4)
+          const column = index % 4
+          return <mesh key={`container-${index}`} position={[-5.5 + column * 3.7, 1 + row * 2.1, -2 + row * 4]} castShadow><boxGeometry args={[3.5, 1.9, 3.5]} /><meshStandardMaterial color={colors[index % colors.length]} roughness={0.82} /></mesh>
+        })}
+        <mesh position={[0, 8, -8]} castShadow><boxGeometry args={[0.6, 15, 0.6]} /><meshStandardMaterial color="#77776f" metalness={0.34} roughness={0.58} /></mesh>
+        <mesh position={[5, 14.8, -8]} castShadow><boxGeometry args={[10, 0.62, 0.58]} /><meshStandardMaterial color="#77776f" metalness={0.34} roughness={0.58} /></mesh>
+        <mesh position={[8, 10.8, -8]}><boxGeometry args={[0.3, 7.4, 0.32]} /><meshStandardMaterial color="#a2957c" metalness={0.3} roughness={0.6} /></mesh>
+        <mesh position={[5, 4.9, -8]}><boxGeometry args={[0.22, 0.22, 0.25]} /><meshStandardMaterial color="#d7a75f" emissive="#d7a75f" emissiveIntensity={0.6} /></mesh>
+      </group>
+    )
+  }
+
+  if (kind === 'farm') {
+    return (
+      <group position={[x, 0, z]}>
+        <mesh position={[0, 0.02, 0]}><boxGeometry args={[22, 0.11, 18]} /><meshStandardMaterial color="#756c5b" roughness={1} /></mesh>
+        {Array.from({ length: 8 }, (_, index) => <mesh key={`crop-row-${index}`} position={[-8 + index * 2.3, 0.16, 0]}><boxGeometry args={[0.36, 0.18, 15]} /><meshStandardMaterial color={index % 2 ? '#5d684f' : '#777457'} roughness={1} /></mesh>)}
+        <mesh position={[0, 1.6, -9]} castShadow><boxGeometry args={[6, 3.2, 4]} /><meshStandardMaterial color="#947656" roughness={0.94} /></mesh>
+        <mesh position={[0, 3.35, -9]} rotation={[0, 0, Math.PI / 4]}><coneGeometry args={[4.2, 2, 4]} /><meshStandardMaterial color="#6f5741" roughness={0.92} /></mesh>
+        <mesh position={[0, 0.9, -6.93]}><boxGeometry args={[1.5, 1.8, 0.1]} /><meshStandardMaterial color="#3e3d37" roughness={0.8} /></mesh>
+      </group>
+    )
+  }
+
+  if (kind === 'village') {
+    const huts = [[-5, -3], [1, -5], [6, 1], [-2, 5], [5, 7]] as const
+    return (
+      <group position={[x, 0, z]}>
+        <mesh position={[0, 0.02, 0]}><boxGeometry args={[24, 0.12, 21]} /><meshStandardMaterial color="#887d69" roughness={1} /></mesh>
+        {huts.map(([hutX, hutZ], index) => (
+          <group key={`hut-${index}`} position={[hutX, 0, hutZ]}>
+            <mesh position={[0, 1.2, 0]} castShadow><cylinderGeometry args={[1.75, 2, 2.4, 8]} /><meshStandardMaterial color={index % 2 ? '#ad9270' : '#8f7558'} roughness={0.96} /></mesh>
+            <mesh position={[0, 2.65, 0]} rotation={[0, Math.PI / 4, 0]} castShadow><coneGeometry args={[2.25, 1.7, 8]} /><meshStandardMaterial color="#59483a" roughness={1} /></mesh>
+            <mesh position={[0, 0.8, 1.96]}><boxGeometry args={[0.62, 1.2, 0.12]} /><meshStandardMaterial color="#44372d" roughness={0.8} /></mesh>
+          </group>
+        ))}
+      </group>
+    )
+  }
+
+  if (kind === 'square') {
+    return (
+      <group position={[x, 0, z]}>
+        <mesh position={[0, 0.02, 0]} receiveShadow><boxGeometry args={[21, 0.16, 16]} /><meshStandardMaterial color="#b5aa98" roughness={0.9} /></mesh>
+        <mesh position={[0, 0.42, 0]}><cylinderGeometry args={[2.3, 2.8, 0.65, 16]} /><meshStandardMaterial color="#7b7a74" roughness={0.66} /></mesh>
+        <mesh position={[0, 0.94, 0]}><cylinderGeometry args={[1.25, 1.3, 0.38, 16]} /><meshStandardMaterial color="#4c6a70" roughness={0.32} metalness={0.18} /></mesh>
+        {[-1, 1].map((side) => <mesh key={`plaza-seat-${side}`} position={[side * 6, 0.5, 4]}><boxGeometry args={[3.2, 0.4, 0.7]} /><meshStandardMaterial color="#6c5747" roughness={0.86} /></mesh>)}
+      </group>
+    )
+  }
+
+  const buildingColors: Record<string, { wall: string; trim: string; width: number; depth: number; height: number }> = {
+    market: { wall: '#9e7453', trim: '#d49b55', width: 9, depth: 7, height: 4.4 },
+    club: { wall: '#4b4650', trim: '#c96b53', width: 10, depth: 7, height: 6 },
+    garage: { wall: '#716d64', trim: '#d19a4e', width: 10, depth: 8, height: 4.5 },
+    hotel: { wall: '#817a70', trim: '#caa96b', width: 10, depth: 8, height: 11 },
+    cafe: { wall: '#a48a6e', trim: '#b75e49', width: 8, depth: 7, height: 4.2 },
+    police: { wall: '#76838b', trim: '#ba6050', width: 12, depth: 9, height: 7 },
+    court: { wall: '#b0a795', trim: '#85755e', width: 14, depth: 10, height: 8 },
+    hospital: { wall: '#b6b3aa', trim: '#4d7d85', width: 14, depth: 10, height: 10 },
+    university: { wall: '#a58d72', trim: '#47626c', width: 16, depth: 10, height: 8 },
+    school: { wall: '#b09c80', trim: '#a85d48', width: 13, depth: 9, height: 5.5 },
+    government: { wall: '#b3aa98', trim: '#9d754c', width: 15, depth: 10, height: 9 },
+    polling: { wall: '#a99b83', trim: '#ba6851', width: 8, depth: 6, height: 4 },
+    bungalow: { wall: '#ad967a', trim: '#c47754', width: 11, depth: 8, height: 4.2 },
+    estate: { wall: '#958e83', trim: '#a96650', width: 12, depth: 9, height: 6 },
+    clubhouse: { wall: '#655d53', trim: '#cf9f59', width: 10, depth: 8, height: 5.2 },
+  }
+  const style = buildingColors[kind] ?? { wall: '#8d8377', trim: '#c59157', width: 10, depth: 8, height: 6 }
+
   return (
-    <group position={[-23, 0, -22]}>
-      <mesh position={[0, 4.4, 0]} castShadow receiveShadow>
-        <boxGeometry args={[8.8, 8.8, 6.8]} />
-        <meshStandardMaterial color="#263b37" roughness={0.88} />
-      </mesh>
-      <mesh position={[0, 8.95, 0]}>
-        <boxGeometry args={[9.2, 0.24, 7.2]} />
-        <meshStandardMaterial color="#d0ae6d" roughness={0.82} />
-      </mesh>
-      <mesh position={[0, 2.1, 3.48]}>
-        <boxGeometry args={[2.3, 3.2, 0.16]} />
-        <meshStandardMaterial color="#172822" roughness={0.7} />
-      </mesh>
-      <pointLight position={[0, 4.2, 4.1]} color="#f2c575" intensity={0.55} distance={9} />
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.28, 0]} castShadow><boxGeometry args={[style.width + 0.8, 0.56, style.depth + 0.8]} /><meshStandardMaterial color="#68655f" roughness={0.94} /></mesh>
+      <mesh position={[0, style.height / 2 + 0.56, 0]} castShadow receiveShadow><boxGeometry args={[style.width, style.height, style.depth]} /><meshStandardMaterial color={style.wall} roughness={0.82} /></mesh>
+      <mesh position={[0, style.height + 0.7, 0]} castShadow><boxGeometry args={[style.width + 0.6, 0.32, style.depth + 0.6]} /><meshStandardMaterial color={style.trim} roughness={0.78} /></mesh>
+      <mesh position={[0, 0.86, style.depth / 2 + 0.07]}><boxGeometry args={[1.45, 1.52, 0.16]} /><meshStandardMaterial color="#35383a" roughness={0.5} /></mesh>
+      {[-1, 1].map((side) => <mesh key={`column-${side}`} position={[side * style.width * 0.34, 1.8, style.depth / 2 + 0.12]} castShadow><cylinderGeometry args={[0.22, 0.28, 2.65, 8]} /><meshStandardMaterial color="#d0c6b4" roughness={0.72} /></mesh>)}
+      <mesh position={[0, style.height + 1.1, style.depth / 2 + 0.22]}><boxGeometry args={[style.width * 0.5, 0.6, 0.14]} /><meshStandardMaterial color={kind === 'hospital' ? '#e7e1d2' : style.trim} emissive={style.trim} emissiveIntensity={0.18} roughness={0.45} /></mesh>
+      {kind === 'hospital' && (
+        <group position={[0, style.height + 2.35, style.depth / 2 + 0.22]}>
+          <mesh><boxGeometry args={[0.44, 1.35, 0.18]} /><meshStandardMaterial color="#ba554b" emissive="#8e342f" emissiveIntensity={0.25} /></mesh>
+          <mesh><boxGeometry args={[1.35, 0.44, 0.2]} /><meshStandardMaterial color="#ba554b" emissive="#8e342f" emissiveIntensity={0.25} /></mesh>
+        </group>
+      )}
+      {kind === 'police' && <mesh position={[0, 3.1, style.depth / 2 + 0.18]}><boxGeometry args={[style.width * 0.8, 0.3, 0.16]} /><meshStandardMaterial color="#32546a" roughness={0.45} /></mesh>}
+      {(kind === 'court' || kind === 'government') && [-4, -2, 0, 2, 4].map((column) => <mesh key={`civic-column-${column}`} position={[column, 2.4, style.depth / 2 + 0.3]} castShadow><cylinderGeometry args={[0.19, 0.24, 3.6, 8]} /><meshStandardMaterial color="#d4caba" roughness={0.7} /></mesh>)}
+      {kind === 'market' && [-1, 1].map((side) => <mesh key={`awning-${side}`} position={[side * 2.8, 2.6, style.depth / 2 + 0.85]} rotation={[0.18, 0, side * 0.06]}><boxGeometry args={[3.4, 0.16, 1.9]} /><meshStandardMaterial color={side < 0 ? '#b65a48' : '#d1a24c'} roughness={0.8} /></mesh>)}
+      {(kind === 'bungalow' || kind === 'estate') && <mesh position={[0, style.height + 1.4, 0]} rotation={[0, Math.PI / 4, 0]} castShadow><coneGeometry args={[style.width * 0.61, 2.2, 4]} /><meshStandardMaterial color="#67574a" roughness={0.95} /></mesh>}
     </group>
   )
 }
@@ -323,34 +479,116 @@ function LandmarkMarkers({ waypoint }: { waypoint: LocationId | null }) {
     <group>
       {WORLD_LOCATIONS.map((location) => (
         <group key={location.id} position={[location.x, 0, location.z]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
-            <ringGeometry args={[0.62, 0.78, 32]} />
-            <meshBasicMaterial color={location.id === waypoint ? '#e7ca74' : '#98c879'} transparent opacity={0.72} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.055, 0]}>
+            <ringGeometry args={[0.5, 0.62, 32]} />
+            <meshBasicMaterial color={location.id === waypoint ? '#f2c77b' : '#b58b59'} transparent opacity={location.id === waypoint ? 0.92 : 0.55} />
           </mesh>
           <mesh position={[0, 0.42, 0]}>
-            <octahedronGeometry args={[0.2, 0]} />
-            <meshStandardMaterial
-              color={location.id === waypoint ? '#f2cc72' : '#a9d184'}
-              emissive={location.id === waypoint ? '#b98446' : '#427254'}
-              emissiveIntensity={0.9}
-              roughness={0.3}
-            />
+            <octahedronGeometry args={[0.17, 0]} />
+            <meshStandardMaterial color={location.id === waypoint ? '#f4d18e' : '#c1965d'} emissive={location.id === waypoint ? '#b17a3d' : '#66482d'} emissiveIntensity={0.78} roughness={0.34} />
           </mesh>
         </group>
       ))}
       {target && (
         <group position={[target.x, 0, target.z]}>
-          <mesh position={[0, 2.25, 0]}>
-            <cylinderGeometry args={[0.09, 0.48, 4.3, 12, 1, true]} />
-            <meshBasicMaterial color="#f0c96f" transparent opacity={0.17} depthWrite={false} />
+          <mesh position={[0, 2.8, 0]}>
+            <cylinderGeometry args={[0.08, 0.52, 5.4, 12, 1, true]} />
+            <meshBasicMaterial color="#f1c574" transparent opacity={0.16} depthWrite={false} />
           </mesh>
-          <mesh position={[0, 4.55, 0]}>
-            <octahedronGeometry args={[0.4, 0]} />
-            <meshStandardMaterial color="#ffe39a" emissive="#d99c50" emissiveIntensity={1.5} />
+          <mesh position={[0, 5.6, 0]}>
+            <octahedronGeometry args={[0.34, 0]} />
+            <meshStandardMaterial color="#ffe1a1" emissive="#bd8244" emissiveIntensity={1.5} />
           </mesh>
-          <pointLight position={[0, 2.4, 0]} color="#f3bd60" intensity={0.85} distance={8} />
+          <Html position={[0, 6.3, 0]} center distanceFactor={18}>
+            <span className="world-landmark-tag">{target.name}</span>
+          </Html>
         </group>
       )}
+    </group>
+  )
+}
+
+function HumanoidModel({
+  skinTone,
+  hairColor,
+  clothing,
+  accentColor,
+  keysRef,
+  paused = false,
+  walking = false,
+}: {
+  skinTone: string
+  hairColor: string
+  clothing: string
+  accentColor: string
+  keysRef?: MutableRefObject<Set<string>>
+  paused?: boolean
+  walking?: boolean
+}) {
+  const leftArm = useRef<Group>(null!)
+  const rightArm = useRef<Group>(null!)
+  const leftLeg = useRef<Group>(null!)
+  const rightLeg = useRef<Group>(null!)
+
+  useFrame((state) => {
+    const isMoving = Boolean(keysRef?.current.size) && !paused
+    const stride = isMoving ? Math.sin(state.clock.elapsedTime * 10) * 0.44 : 0
+    const idle = Math.sin(state.clock.elapsedTime * 1.5) * 0.035
+    leftArm.current.rotation.x = isMoving ? stride : idle
+    rightArm.current.rotation.x = isMoving ? -stride : -idle
+    leftLeg.current.rotation.x = isMoving ? -stride : 0
+    rightLeg.current.rotation.x = isMoving ? stride : 0
+  })
+
+  return (
+    <group>
+      <mesh position={[0, 1.03, 0]} castShadow>
+        <capsuleGeometry args={[0.27, 0.48, 5, 10]} />
+        <meshStandardMaterial color={clothing} roughness={0.77} />
+      </mesh>
+      <mesh position={[0, 1.42, 0.015]}>
+        <boxGeometry args={[0.45, 0.13, 0.32]} />
+        <meshStandardMaterial color={accentColor} roughness={0.76} />
+      </mesh>
+      <mesh position={[0, 1.54, 0]}>
+        <cylinderGeometry args={[0.1, 0.13, 0.25, 10]} />
+        <meshStandardMaterial color={skinTone} roughness={0.92} />
+      </mesh>
+      <mesh position={[0, 1.86, 0]} castShadow>
+        <sphereGeometry args={[0.27, 16, 12]} />
+        <meshStandardMaterial color={skinTone} roughness={0.82} />
+      </mesh>
+      <mesh position={[0, 2.01, -0.035]}>
+        <sphereGeometry args={[0.28, 14, 9, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color={hairColor} roughness={0.96} />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <group key={`face-side-${side}`}>
+          <mesh position={[side * 0.275, 1.86, 0.015]}><sphereGeometry args={[0.055, 8, 7]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
+          <mesh position={[side * 0.1, 1.88, 0.23]}><sphereGeometry args={[0.027, 8, 6]} /><meshStandardMaterial color="#f0e8dc" roughness={0.5} /></mesh>
+          <mesh position={[side * 0.1, 1.88, 0.253]}><sphereGeometry args={[0.013, 6, 5]} /><meshStandardMaterial color="#211c19" roughness={0.5} /></mesh>
+          <mesh position={[side * 0.1, 1.94, 0.23]} rotation={[0, 0, side * -0.12]}><boxGeometry args={[0.1, 0.024, 0.03]} /><meshStandardMaterial color={hairColor} roughness={0.9} /></mesh>
+        </group>
+      ))}
+      <mesh position={[0, 1.82, 0.265]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.06, 0.16, 6]} /><meshStandardMaterial color={skinTone} roughness={0.88} /></mesh>
+      <mesh position={[0, 1.73, 0.235]}><boxGeometry args={[0.11, 0.018, 0.03]} /><meshStandardMaterial color="#57392f" roughness={0.82} /></mesh>
+      <group ref={leftArm} position={[-0.33, 1.28, 0]}>
+        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.09, 0.36, 5, 8]} /><meshStandardMaterial color={clothing} roughness={0.8} /></mesh>
+        <mesh position={[0, -0.53, 0.02]}><sphereGeometry args={[0.085, 8, 7]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
+      </group>
+      <group ref={rightArm} position={[0.33, 1.28, 0]}>
+        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.09, 0.36, 5, 8]} /><meshStandardMaterial color={clothing} roughness={0.8} /></mesh>
+        <mesh position={[0, -0.53, 0.02]}><sphereGeometry args={[0.085, 8, 7]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
+      </group>
+      <group ref={leftLeg} position={[-0.13, 0.72, 0]}>
+        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.105, 0.37, 5, 8]} /><meshStandardMaterial color="#35383a" roughness={0.94} /></mesh>
+        <mesh position={[0, -0.55, 0.11]} castShadow><boxGeometry args={[0.23, 0.16, 0.38]} /><meshStandardMaterial color="#24272a" roughness={0.86} /></mesh>
+      </group>
+      <group ref={rightLeg} position={[0.13, 0.72, 0]}>
+        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.105, 0.37, 5, 8]} /><meshStandardMaterial color="#35383a" roughness={0.94} /></mesh>
+        <mesh position={[0, -0.55, 0.11]} castShadow><boxGeometry args={[0.23, 0.16, 0.38]} /><meshStandardMaterial color="#24272a" roughness={0.86} /></mesh>
+      </group>
+      {walking && <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[0.34, 0.42, 24]} /><meshBasicMaterial color="#d8aa68" transparent opacity={0.48} /></mesh>}
     </group>
   )
 }
@@ -359,106 +597,59 @@ function CharacterActor({ character }: { character: (typeof CITY_CHARACTERS)[num
   const characterRef = useRef<Group>(null!)
 
   useFrame((state) => {
-    if (!characterRef.current) return
-    characterRef.current.position.y = Math.sin(state.clock.elapsedTime * 2 + character.x) * 0.025
+    if (characterRef.current) characterRef.current.position.y = Math.sin(state.clock.elapsedTime * 1.7 + character.x) * 0.025
   })
 
   return (
     <group ref={characterRef} position={[character.x, 0, character.z]}>
-      <mesh position={[0, 0.92, 0]} castShadow>
-        <cylinderGeometry args={[0.25, 0.34, 0.95, 8]} />
-        <meshStandardMaterial color={character.color} roughness={0.84} />
-      </mesh>
-      <mesh position={[0, 1.58, 0]} castShadow>
-        <sphereGeometry args={[0.27, 12, 10]} />
-        <meshStandardMaterial color="#7e5a47" roughness={0.92} />
-      </mesh>
-      <mesh position={[0, 1.81, -0.02]}>
-        <sphereGeometry args={[0.28, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#241f1b" roughness={0.95} />
-      </mesh>
-      <mesh position={[0, 0.36, 0.02]}>
-        <boxGeometry args={[0.38, 0.08, 0.42]} />
-        <meshStandardMaterial color="#d7bd83" roughness={0.92} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
-        <ringGeometry args={[0.42, 0.48, 24]} />
-        <meshBasicMaterial color={character.color} transparent opacity={0.5} />
-      </mesh>
+      <HumanoidModel skinTone={character.skinTone} hairColor={character.hairColor} clothing={character.color} accentColor={character.accentColor} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}><ringGeometry args={[0.38, 0.43, 24]} /><meshBasicMaterial color="#c18c56" transparent opacity={0.52} /></mesh>
     </group>
   )
 }
 
-function AvatarModel() {
-  return (
-    <group>
-      <mesh position={[0, 0.84, 0]} castShadow>
-        <cylinderGeometry args={[0.28, 0.36, 0.88, 9]} />
-        <meshStandardMaterial color="#d19a68" roughness={0.8} />
-      </mesh>
-      <mesh position={[0, 1.52, 0]} castShadow>
-        <sphereGeometry args={[0.28, 14, 12]} />
-        <meshStandardMaterial color="#7c513c" roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 1.74, -0.02]}>
-        <sphereGeometry args={[0.29, 12, 9, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#1f201b" roughness={0.96} />
-      </mesh>
-      <mesh position={[0, 0.32, -0.08]}>
-        <boxGeometry args={[0.42, 0.28, 0.24]} />
-        <meshStandardMaterial color="#bd744e" roughness={0.88} />
-      </mesh>
-      <mesh position={[0, 1.06, -0.28]}>
-        <boxGeometry args={[0.45, 0.52, 0.12]} />
-        <meshStandardMaterial color="#293a33" roughness={0.95} />
-      </mesh>
-      <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.34, 0.43, 32]} />
-        <meshBasicMaterial color="#b5d77b" transparent opacity={0.55} />
-      </mesh>
-    </group>
-  )
+function AvatarModel({ keysRef, paused }: { keysRef: MutableRefObject<Set<string>>; paused: boolean }) {
+  return <HumanoidModel skinTone="#80543e" hairColor="#201a17" clothing="#52606a" accentColor="#cf9e62" keysRef={keysRef} paused={paused} walking />
 }
 
 function ScooterModel() {
   return (
     <group position={[0, 0.08, 0]}>
-      <mesh position={[0, 0.62, 0]} castShadow>
-        <boxGeometry args={[0.86, 0.5, 1.5]} />
-        <meshStandardMaterial color="#d5964f" metalness={0.28} roughness={0.55} />
-      </mesh>
-      <mesh position={[0, 0.97, -0.24]} rotation={[-0.18, 0, 0]}>
-        <boxGeometry args={[0.52, 0.36, 0.62]} />
-        <meshStandardMaterial color="#273b35" roughness={0.55} />
-      </mesh>
-      <mesh position={[0, 1.2, -0.68]}>
-        <sphereGeometry args={[0.12, 10, 8]} />
-        <meshStandardMaterial color="#ffe3aa" emissive="#ffcc76" emissiveIntensity={1.4} />
-      </mesh>
-      {[-0.5, 0.5].map((x) =>
-        [-0.48, 0.48].map((z) => (
-          <mesh key={`${x}-${z}`} position={[x, 0.3, z]} rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.28, 0.28, 0.16, 12]} />
-            <meshStandardMaterial color="#121513" roughness={0.95} />
-          </mesh>
-        )),
-      )}
-      <mesh position={[0, 0.94, 0.54]}>
-        <boxGeometry args={[0.74, 0.09, 0.08]} />
-        <meshStandardMaterial color="#323a34" metalness={0.5} roughness={0.4} />
-      </mesh>
-      <pointLight position={[0, 1.14, -0.8]} color="#f2ca84" intensity={0.4} distance={6} />
+      <mesh position={[0, 0.64, 0]} castShadow><boxGeometry args={[0.74, 0.48, 1.55]} /><meshStandardMaterial color="#bd8447" metalness={0.22} roughness={0.5} /></mesh>
+      <mesh position={[0, 0.98, -0.18]} rotation={[-0.16, 0, 0]}><boxGeometry args={[0.51, 0.42, 0.65]} /><meshStandardMaterial color="#6e7778" roughness={0.42} /></mesh>
+      <mesh position={[0, 1.22, -0.67]}><sphereGeometry args={[0.12, 10, 8]} /><meshStandardMaterial color="#f8d995" emissive="#efbd69" emissiveIntensity={1.35} /></mesh>
+      {[-0.4, 0.4].map((x) => [-0.52, 0.52].map((z) => <mesh key={`${x}-${z}`} position={[x, 0.31, z]} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.27, 0.27, 0.17, 16]} /><meshStandardMaterial color="#1c2021" roughness={0.96} /></mesh>))}
+      <mesh position={[0, 0.97, 0.57]}><boxGeometry args={[0.68, 0.08, 0.12]} /><meshStandardMaterial color="#474d4f" metalness={0.58} roughness={0.42} /></mesh>
     </group>
   )
 }
 
-function PlayerController({
-  keysRef,
-  onPlayerPosition,
-  inVehicle,
-  paused,
-  spawnPosition,
-}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'paused' | 'spawnPosition'>) {
+function TrafficVehicle({ position, color, speed, minibus = false }: { position: [number, number, number]; color: string; speed: number; minibus?: boolean }) {
+  const vehicleRef = useRef<Group>(null!)
+
+  useFrame((_, delta) => {
+    if (!vehicleRef.current) return
+    vehicleRef.current.position.x += speed * Math.min(delta, 0.05)
+    if (vehicleRef.current.position.x > 90) vehicleRef.current.position.x = -90
+  })
+
+  return (
+    <group ref={vehicleRef} position={position} rotation={[0, Math.PI / 2, 0]}>
+      <mesh position={[0, 0.65, 0]} castShadow><boxGeometry args={minibus ? [1.85, 1.15, 3.6] : [1.72, 0.72, 3.4]} /><meshStandardMaterial color={color} metalness={0.15} roughness={0.58} /></mesh>
+      <mesh position={[0, minibus ? 1.38 : 1.12, -0.08]} castShadow><boxGeometry args={minibus ? [1.55, 0.55, 2.4] : [1.38, 0.48, 1.75]} /><meshStandardMaterial color="#526a73" metalness={0.28} roughness={0.29} /></mesh>
+      <mesh position={[0, 0.42, 1.73]}><boxGeometry args={[1.45, 0.16, 0.14]} /><meshStandardMaterial color="#4a4e50" metalness={0.34} roughness={0.48} /></mesh>
+      {[-1, 1].map((side) => (
+        <group key={`wheels-${side}`}>
+          {[-1.1, 1.1].map((wheelZ) => <mesh key={wheelZ} position={[side * 0.86, 0.36, wheelZ]} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.28, 0.28, 0.16, 12]} /><meshStandardMaterial color="#1b1d1f" roughness={0.98} /></mesh>)}
+          <mesh position={[side * 0.58, 0.76, 1.68]}><boxGeometry args={[0.16, 0.2, 0.12]} /><meshStandardMaterial color="#f4d59a" emissive="#c58f51" emissiveIntensity={0.72} /></mesh>
+        </group>
+      ))}
+      {minibus && <mesh position={[0, 1.05, 0.54]}><boxGeometry args={[1.88, 0.13, 0.12]} /><meshStandardMaterial color="#e9d08c" roughness={0.75} /></mesh>}
+    </group>
+  )
+}
+
+function PlayerController({ keysRef, onPlayerPosition, inVehicle, paused, spawnPosition }: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'paused' | 'spawnPosition'>) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
   const cameraTarget = useRef(new Vector3())
@@ -491,32 +682,25 @@ function PlayerController({
         const speed = inVehicle ? 10 : 5.2
         playerRef.current.position.x += direction.x * speed * step
         playerRef.current.position.z += direction.z * speed * step
-        playerRef.current.rotation.y = MathUtils.damp(
-          playerRef.current.rotation.y,
-          Math.atan2(direction.x, direction.z),
-          10,
-          step,
-        )
+        playerRef.current.rotation.y = MathUtils.damp(playerRef.current.rotation.y, Math.atan2(direction.x, direction.z), 10, step)
       }
     }
 
-    playerRef.current.position.x = MathUtils.clamp(playerRef.current.position.x, -58, 58)
-    playerRef.current.position.z = MathUtils.clamp(playerRef.current.position.z, -58, 53)
-
+    playerRef.current.position.x = MathUtils.clamp(playerRef.current.position.x, -82, 82)
+    playerRef.current.position.z = MathUtils.clamp(playerRef.current.position.z, -82, 78)
     const { x, z } = playerRef.current.position
+    const onBridge = z >= 72 && z <= 78
+    playerRef.current.position.y = onBridge ? 4.62 : 0
+
     const tallViewport = size.height > size.width * 1.15
     const perspectiveCamera = camera as PerspectiveCamera
-    const nextFov = tallViewport ? 62 : 45
+    const nextFov = tallViewport ? 55 : 43
     if (perspectiveCamera.fov !== nextFov) {
       perspectiveCamera.fov = nextFov
       perspectiveCamera.updateProjectionMatrix()
     }
-    cameraTarget.current.set(
-      x,
-      tallViewport ? (inVehicle ? 18 : 20) : (inVehicle ? 8.5 : 9.5),
-      z + (tallViewport ? 27 : 15),
-    )
-    cameraLookAt.current.set(x, inVehicle ? 1.8 : 2, z - 7)
+    cameraTarget.current.set(x, playerRef.current.position.y + (tallViewport ? (inVehicle ? 16 : 17) : (inVehicle ? 8.5 : 9.5)), z + (tallViewport ? 22 : 16))
+    cameraLookAt.current.set(x, playerRef.current.position.y + (inVehicle ? 1.8 : 2), z - 7)
     camera.position.lerp(cameraTarget.current, 1 - Math.exp(-step * 3.8))
     camera.lookAt(cameraLookAt.current)
 
@@ -529,131 +713,65 @@ function PlayerController({
 
   return (
     <group ref={playerRef} position={[spawnPosition.x, 0, spawnPosition.z]}>
-      {inVehicle ? <ScooterModel /> : <AvatarModel />}
+      {inVehicle ? <ScooterModel /> : <AvatarModel keysRef={keysRef} paused={paused} />}
     </group>
   )
 }
 
 function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
-  const palette = ['#d5e982', '#e8c279', '#df9c6d', '#7fb7a0', '#b8a3d9'] as const
+  const palette = ['#76624f', '#405a6a', '#7e514a', '#647050', '#74627b'] as const
   const paletteIndex = [...player.userId].reduce((hash, character) => (hash * 31 + character.charCodeAt(0)) >>> 0, 7) % palette.length
   const color = palette[paletteIndex]
 
   return (
     <group position={[player.x, 0, player.z]}>
-      {player.inVehicle && (
-        <mesh position={[0, 0.24, 0]} castShadow>
-          <boxGeometry args={[0.68, 0.2, 1.1]} />
-          <meshStandardMaterial color="#c78a4b" metalness={0.2} roughness={0.58} />
-        </mesh>
-      )}
-      <mesh position={[0, 0.86, 0]} castShadow>
-        <capsuleGeometry args={[0.3, 0.72, 4, 10]} />
-        <meshStandardMaterial color={color} roughness={0.72} />
-      </mesh>
-      <mesh position={[0, 1.7, 0]} castShadow>
-        <sphereGeometry args={[0.24, 14, 10]} />
-        <meshStandardMaterial color="#c99770" roughness={0.76} />
-      </mesh>
-      <Html position={[0, 2.25, 0]} center distanceFactor={10} sprite>
-        <span className="world-player-tag" aria-hidden="true">{player.displayName}</span>
+      {player.inVehicle && <group position={[0, 0, 0.2]} scale={0.72}><ScooterModel /></group>}
+      <HumanoidModel skinTone="#87583f" hairColor="#211a17" clothing={color} accentColor="#d0a76b" />
+      <Html position={[0, 2.4, 0]} center distanceFactor={13} sprite>
+        <span className="world-player-tag">{player.displayName}</span>
       </Html>
     </group>
   )
 }
 
-function CityScene({
-  keysRef,
-  onPlayerPosition,
-  inVehicle,
-  paused,
-  waypoint,
-  spawnPosition,
-  remotePlayers,
-}: CityWorldProps) {
-  const palmPositions: [number, number, number][] = [
-    [-9, 0, -7],
-    [10, 0, -7],
-    [-9, 0, 7],
-    [10, 0, 7],
-    [-34, 0, -8],
-    [34, 0, 8],
-    [-34, 0, 36],
-    [34, 0, 35],
-    [-8, 0, 36],
-    [9, 0, 36],
-    [-34, 0, -36],
-    [34, 0, -35],
+function CityScene({ keysRef, onPlayerPosition, inVehicle, paused, waypoint, spawnPosition, remotePlayers }: CityWorldProps) {
+  const treePositions: [number, number, number][] = [
+    [-10, 0, -6], [10, 0, -6], [-10, 0, 8], [10, 0, 8],
+    [-34, 0, -10], [34, 0, 10], [-34, 0, 35], [34, 0, 35],
+    [-8, 0, 35], [8, 0, 35], [-34, 0, -34], [34, 0, -34],
+    [-66, 0, 18], [66, 0, -30], [-64, 0, 46], [64, 0, 52],
   ]
   const lampPositions: [number, number, number][] = [
-    [-8, 0, -7],
-    [8, 0, -7],
-    [-8, 0, 7],
-    [8, 0, 7],
-    [-34, 0, 7],
-    [34, 0, -7],
-    [-34, 0, 35],
-    [34, 0, 35],
+    [-9, 0, -8], [9, 0, -8], [-9, 0, 9], [9, 0, 9],
+    [-35, 0, -17], [35, 0, 17], [-35, 0, 35], [35, 0, 35],
+    [-65, 0, -17], [65, 0, 17], [-65, 0, 42], [65, 0, 42],
+    [-18, 0, -64], [18, 0, -64], [-42, 0, 58], [42, 0, 58],
   ]
 
   return (
     <>
-      <color attach="background" args={['#101b18']} />
-      <fog attach="fog" args={['#101b18', 48, 115]} />
-      <ambientLight intensity={1.18} color="#c8d5bd" />
-      <hemisphereLight args={['#dbe2c5', '#1e3027', 1.15]} />
-      <directionalLight position={[25, 35, 16]} intensity={2.1} color="#f5dcb0" castShadow />
-      <pointLight position={[-14, 9, 11]} intensity={0.7} color="#c4d88a" distance={32} />
-      <Stars radius={100} depth={55} count={850} factor={2.4} saturation={0} fade speed={0.2} />
+      <color attach="background" args={['#121a22']} />
+      <fog attach="fog" args={['#121a22', 64, 210]} />
+      <ambientLight intensity={0.72} color="#c1c8ca" />
+      <hemisphereLight args={['#a9b9ca', '#38352f', 0.92]} />
+      <directionalLight position={[28, 40, 12]} intensity={1.45} color="#e6d5bd" castShadow />
+      <pointLight position={[-18, 14, 14]} intensity={0.48} color="#d3a66c" distance={42} />
+      <Stars radius={160} depth={80} count={360} factor={2} saturation={0} fade speed={0.12} />
       <RoadGrid />
-      {BUILDINGS.map((building) => (
-        <Building key={`${building.x}-${building.z}`} {...building} />
-      ))}
-      <HotelFacade />
-      <MarketStall />
-      <ClubFacade />
-      <GarageFacade />
-      <CafeFacade />
-      {palmPositions.map((position, index) => (
-        <PalmTree key={index} position={position} scale={index % 3 === 0 ? 1.1 : 0.86} />
-      ))}
-      {lampPositions.map((position, index) => (
-        <StreetLamp key={index} position={position} />
-      ))}
-      {PARKED_CARS.map((car, index) => (
-        <group key={index} position={[car.x, 0, car.z]} rotation={[0, car.rotation, 0]}>
-          <mesh position={[0, 0.65, 0]} castShadow>
-            <boxGeometry args={[1.5, 0.65, 3.1]} />
-            <meshStandardMaterial color={car.color} metalness={0.16} roughness={0.58} />
-          </mesh>
-          <mesh position={[0, 1.08, -0.12]}>
-            <boxGeometry args={[1.18, 0.42, 1.48]} />
-            <meshStandardMaterial color="#7d9c8b" metalness={0.4} roughness={0.2} transparent opacity={0.7} />
-          </mesh>
-          {[-0.76, 0.76].map((x) =>
-            [-0.96, 0.96].map((z) => (
-              <mesh key={`${x}-${z}`} position={[x, 0.35, z]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.28, 0.28, 0.18, 12]} />
-                <meshStandardMaterial color="#131715" roughness={0.96} />
-              </mesh>
-            )),
-          )}
-        </group>
-      ))}
-      {CITY_CHARACTERS.map((character) => (
-        <CharacterActor key={character.id} character={character} />
-      ))}
-      {remotePlayers.map((player) => (
-        <RemotePlayerAvatar key={player.userId} player={player} />
-      ))}
+      <Flyover />
+      <LagoonBridge />
+      {BUILDINGS.map((building) => <Building key={`${building.x}-${building.z}`} {...building} />)}
+      {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} />)}
+      {treePositions.map((position, index) => <StreetTree key={`tree-${index}`} position={position} scale={index % 3 === 0 ? 1.06 : 0.88} />)}
+      {lampPositions.map((position, index) => <StreetLamp key={`lamp-${index}`} position={position} lit={index < 5} />)}
+      <TrafficVehicle position={[-78, 0, 18]} color="#d2a342" speed={3.4} minibus />
+      <TrafficVehicle position={[-34, 0, -18]} color="#5a6870" speed={2.2} />
+      <TrafficVehicle position={[8, 0, 42]} color="#823f3c" speed={2.8} minibus />
+      <TrafficVehicle position={[-18, 0, -66]} color="#c0b18f" speed={2.5} />
+      {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
+      {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
       <LandmarkMarkers waypoint={waypoint} />
-      <PlayerController
-        keysRef={keysRef}
-        onPlayerPosition={onPlayerPosition}
-        inVehicle={inVehicle}
-        paused={paused}
-        spawnPosition={spawnPosition}
-      />
+      <PlayerController keysRef={keysRef} onPlayerPosition={onPlayerPosition} inVehicle={inVehicle} paused={paused} spawnPosition={spawnPosition} />
     </>
   )
 }
@@ -662,9 +780,9 @@ export function CityWorld(props: CityWorldProps) {
   return (
     <div className="world-canvas" aria-hidden="true">
       <Canvas
-        dpr={[1, 1.5]}
+        dpr={[1, 1.35]}
         shadows="basic"
-        camera={{ position: [-2, 12, 19], fov: 45, near: 0.1, far: 160 }}
+        camera={{ position: [-2, 16, 24], fov: 55, near: 0.1, far: 280 }}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
       >
         <CityScene {...props} />
