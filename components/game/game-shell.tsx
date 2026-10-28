@@ -515,11 +515,27 @@ export default function GameShell() {
       return
     }
     setAutoWalkTarget(null)
-    const messages: Record<Exclude<TravelMode, 'walk'>, string> = {
-      cab: `Cab requested for ${location.name}. Route is marked on your map.`,
-      bike: `Okada request placed for ${location.name}. Route is marked on your map.`,
+    if (mode === 'cab' || mode === 'bike' || mode === 'driver') {
+      // Dispatch a playable ride: confirm the pickup, then move the player to the
+      // selected destination after a short arrival/boarding sequence.
+      const rideName = mode === 'bike' ? 'Okada' : mode === 'driver' ? 'Private driver' : 'Cab'
+      notify(`${rideName} booked. Your driver is on the way to your pickup point…`)
+      const entrance = WORLD_LOCATIONS.find((entry) => entry.id === locationId)
+      if (!entrance) return
+      window.setTimeout(() => {
+        notify(`${rideName} has arrived. Boarding…`)
+        dispatch({ type: 'toggle-vehicle' })
+        window.setTimeout(() => {
+          setSpawnPosition({ x: entrance.x, z: entrance.z })
+          setPlayerPosition({ x: entrance.x, z: entrance.z })
+          dispatch({ type: 'toggle-vehicle' })
+          notify(`You have arrived at ${location.name}.`)
+        }, 1800)
+      }, 2200)
+      return
+    }
+    const messages: Record<Exclude<TravelMode, 'walk' | 'cab' | 'bike' | 'driver'>, string> = {
       danfo: `Waiting for the next danfo going toward ${location.district}. Route is marked.`,
-      driver: `Private driver requested for ${location.name}. Route is marked on your map.`,
       drive: `Self-drive route set to ${location.name}. Enter a vehicle to drive there.`,
     }
     notify(messages[mode])
