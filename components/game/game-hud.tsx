@@ -240,11 +240,11 @@ export function GameHud({
         <span><kbd>P</kbd> CITY LIFE</span>
       </div>
 
-      <div className="movement-joystick" role="group" aria-label="Circular movement joystick" onPointerDown={(event) => updateJoystick(event, onMoveKey)} onPointerMove={(event) => { if (event.buttons || event.pressure > 0) updateJoystick(event, onMoveKey) }} onPointerUp={() => clearJoystick(onMoveKey)} onPointerCancel={() => clearJoystick(onMoveKey)} onLostPointerCapture={() => clearJoystick(onMoveKey)}>
+      <div className="movement-joystick" role="group" aria-label="Circular movement joystick" onPointerDown={(event) => { event.preventDefault(); updateJoystick(event, onMoveKey) }} onPointerMove={(event) => updateJoystick(event, onMoveKey)} onPointerUp={() => clearJoystick(onMoveKey)} onPointerCancel={() => clearJoystick(onMoveKey)} onLostPointerCapture={() => clearJoystick(onMoveKey)}>
         <span className="movement-joystick-ring" aria-hidden="true" />
         <span className="movement-joystick-knob" aria-hidden="true" />
       </div>
-      <button className="run-button" type="button" onPointerDown={(event) => { event.preventDefault(); onMoveKey('shift', true) }} onPointerUp={() => onMoveKey('shift', false)} onPointerCancel={() => onMoveKey('shift', false)} onLostPointerCapture={() => onMoveKey('shift', false)} aria-label="Run while moving">RUN</button>
+      <button className="run-button" type="button" onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); onMoveKey('shift', true) }} onPointerUp={() => onMoveKey('shift', false)} onPointerCancel={() => onMoveKey('shift', false)} onLostPointerCapture={() => onMoveKey('shift', false)} aria-label="Run while moving">RUN</button>
 
       <div className="vitals-card" aria-label="Player condition">
         <div className="vital-row"><Zap aria-hidden="true" /><span>ENERGY</span><div><i style={{ width: `${player.energy}%` }} /></div><b>{player.energy}%</b></div>
