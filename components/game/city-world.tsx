@@ -418,7 +418,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
         })}
         {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-platform-${i}`} position={[0, height, 0]}><cylinderGeometry args={[Math.max(1.2, 5.6 - i * 1.05), Math.max(1.2, 5.6 - i * 1.05), 0.24, 24]} /><meshStandardMaterial color="#596d60" metalness={0.55} roughness={0.45} /></mesh>)}
         {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-ring-${i}`} position={[0, height, 0]}><torusGeometry args={[Math.max(1.2, 5.6 - i * 1.05), 0.12, 6, 24]} /><meshStandardMaterial color="#d9b16b" emissive="#ffb64d" emissiveIntensity={0.8} metalness={0.7} roughness={0.35} /></mesh>)}
-        {[4.8, 9.2, 14.2, 19.5, 23.4].map((height, i) => <pointLight key={`tower-glow-${i}`} position={[0, height, 0]} color={i % 2 ? "#f6d99b" : "#ffd07a"} intensity={1.1} distance={15} />)
+        {[4.8, 9.2, 14.2, 19.5, 23.4].map((height, i) => <pointLight key={`tower-glow-${i}`} position={[0, height, 0]} color={i % 2 ? "#f6d99b" : "#ffd07a"} intensity={1.1} distance={15} />)}
         <mesh position={[0, 23.4, 0]}><cylinderGeometry args={[0.08, 0.55, 7.8, 8]} /><meshStandardMaterial color="#6e806f" metalness={0.65} roughness={0.4} /></mesh>
         <mesh position={[0, 3.4, 3.62]}><boxGeometry args={[3.8, 1.25, 0.12]} /><meshStandardMaterial color="#17252c" /></mesh>
         <mesh position={[0, 3.4, 3.71]}><boxGeometry args={[3.2, 0.12, 0.04]} /><meshBasicMaterial color="#e4c58b" /></mesh>
