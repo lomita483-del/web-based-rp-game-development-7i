@@ -332,7 +332,7 @@ export const LOCATION_FOOTPRINTS: Partial<Record<LocationId, { width: number; de
   polling: { width: 8, depth: 6 },
   bungalow: { width: 11, depth: 8 },
   estate: { width: 12, depth: 9 },
-  village: { width: 5, depth: 5, offsetX: 1, offsetZ: -5 }
+  village: { width: 5, depth: 5, offsetX: 1, offsetZ: -5 },
   farm: { width: 6, depth: 4, offsetZ: -5.5 },
   airport: { width: 14, depth: 8 },
   port: { width: 13, depth: 10 },
