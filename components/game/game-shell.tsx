@@ -36,7 +36,7 @@ import {
   type LocationId,
   type PlayerState,
 } from './game-data'
-import { GameHud, GamePanels, NpcDialogue } from './game-hud'
+import { GameHud, GamePanels, NpcDialogue, type TravelMode } from './game-hud'
 
 const CityWorld = dynamic(() => import('./city-world').then((module) => module.CityWorld), {
   ssr: false,
@@ -84,6 +84,7 @@ export default function GameShell() {
   const [activePanel, setActivePanel] = useState<GamePanel>('none')
   const [activeCharacter, setActiveCharacter] = useState<CharacterId | null>(null)
   const [pinnedWaypoint, setPinnedWaypoint] = useState<LocationId | null>(null)
+  const [autoWalkTarget, setAutoWalkTarget] = useState<LocationId | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
   const keysRef = useRef(new Set<string>())
   const toastId = useRef(0)
@@ -504,6 +505,26 @@ export default function GameShell() {
     if (location) notify(`Route pinned to ${location.name}.`)
   }, [notify])
 
+  const handleTravel = useCallback((locationId: LocationId, mode: TravelMode) => {
+    const location = WORLD_LOCATIONS.find((entry) => entry.id === locationId)
+    if (!location) return
+    setPinnedWaypoint(locationId)
+    if (mode === 'walk') {
+      setAutoWalkTarget(locationId)
+      notify(`Walking automatically to ${location.name}. Use the joystick anytime to take over.`)
+      return
+    }
+    setAutoWalkTarget(null)
+    const messages: Record<Exclude<TravelMode, 'walk'>, string> = {
+      cab: `Cab requested for ${location.name}. Route is marked on your map.`,
+      bike: `Okada request placed for ${location.name}. Route is marked on your map.`,
+      danfo: `Waiting for the next danfo going toward ${location.district}. Route is marked.`,
+      driver: `Private driver requested for ${location.name}. Route is marked on your map.`,
+      drive: `Self-drive route set to ${location.name}. Enter a vehicle to drive there.`,
+    }
+    notify(messages[mode])
+  }, [notify])
+
   const applyJob = useCallback((jobId: JobId) => {
     const job = CITY_JOBS.find((entry) => entry.id === jobId)
     if (!job) return
@@ -644,6 +665,7 @@ export default function GameShell() {
         inVehicle={player.inVehicle}
         paused={paused}
         waypoint={waypoint}
+        autoWalkTarget={autoWalkTarget}
         spawnPosition={spawnPosition}
         remotePlayers={remotePlayers}
       />
@@ -674,6 +696,7 @@ export default function GameShell() {
           onBuyFood={buyFood}
           onEatFood={eatFood}
           onSetWaypoint={setWaypoint}
+          onTravel={handleTravel}
           onApplyJob={applyJob}
           onCompleteShift={completeShift}
           onJoinFaction={joinFaction}
