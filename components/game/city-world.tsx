@@ -1073,7 +1073,7 @@ export function CityWorld(props: CityWorldProps) {
       const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)
       if (pinchDistanceRef.current > 0 && distance > 0) {
         const ratio = pinchDistanceRef.current / distance
-        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * (distance / pinchDistanceRef.current), 0.58, 1.75)
+        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * (distance / pinchDistanceRef.current), 0.5, 2.8)
       }
       pinchDistanceRef.current = distance
       dragRef.current = null
