@@ -1,6 +1,6 @@
 'use client'
 
-import type { CSSProperties, PointerEvent } from 'react'
+import { useState, type CSSProperties, type PointerEvent } from 'react'
 import {
   Activity,
   ArrowRight,
@@ -45,6 +45,8 @@ import {
 import { LifePanel } from './life-panel'
 import { OnlinePanel } from './online-panel'
 import type { GameUser, OnlinePlayer, SaveStatus } from '@/lib/game/types'
+
+export type TravelMode = 'cab' | 'bike' | 'danfo' | 'driver' | 'drive' | 'walk'
 
 type HudProps = {
   player: PlayerState
@@ -284,6 +286,7 @@ type GamePanelsProps = {
   onBuyFood: () => void
   onEatFood: () => void
   onSetWaypoint: (locationId: LocationId) => void
+  onTravel: (locationId: LocationId, mode: TravelMode) => void
   onApplyJob: (jobId: JobId) => void
   onCompleteShift: (jobId: JobId) => void
   onJoinFaction: (factionId: FactionId | null) => void
@@ -368,7 +371,7 @@ export function GamePanels({
         </nav>
 
         <div className="panel-scroll">
-          {panel === 'map' && <MapPanel waypoint={waypoint} playerPosition={playerPosition} onSetWaypoint={onSetWaypoint} />}
+          {panel === 'map' && <MapPanel waypoint={waypoint} playerPosition={playerPosition} onSetWaypoint={onSetWaypoint} onTravel={onTravel} />}
           {panel === 'jobs' && <JobsPanel player={player} playerPosition={playerPosition} onAcceptDelivery={onAcceptDelivery} onSetWaypoint={onSetWaypoint} onApplyJob={onApplyJob} onCompleteShift={onCompleteShift} />}
           {panel === 'life' && <LifePanel player={player} onJoinFaction={onJoinFaction} onLeaseHome={onLeaseHome} onSetWaypoint={onSetWaypoint} onRegisterVoter={onRegisterVoter} onResolveCourt={onResolveCourt} />}
           {panel === 'inventory' && <InventoryPanel player={player} onBuyFood={onBuyFood} onEatFood={onEatFood} />}
@@ -393,7 +396,10 @@ function MapPanel({
   waypoint,
   playerPosition,
   onSetWaypoint,
-}: Pick<GamePanelsProps, 'waypoint' | 'playerPosition' | 'onSetWaypoint'>) {
+  onTravel,
+}: Pick<GamePanelsProps, 'waypoint' | 'playerPosition' | 'onSetWaypoint' | 'onTravel'>) {
+  const [selectedLocationId, setSelectedLocationId] = useState<LocationId | null>(waypoint)
+  const selectedLocation = WORLD_LOCATIONS.find((location) => location.id === selectedLocationId) ?? null
   const target = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const playerPoint = mapCoordinates(playerPosition)
   const targetPoint = target ? mapCoordinates(target) : null
@@ -422,8 +428,8 @@ function MapPanel({
             className={`map-pin${waypoint === location.id ? ' is-target' : ''}`}
             type="button"
             style={mapPoint(location)}
-            onClick={() => onSetWaypoint(location.id)}
-            aria-label={`Set route to ${location.name} in ${location.district}`}
+            onClick={() => { setSelectedLocationId(location.id); onSetWaypoint(location.id) }}
+            aria-label={`Select ${location.name} in ${location.district}`}
             title={location.name}
           >
             <MapPin aria-hidden="true" />
@@ -442,13 +448,26 @@ function MapPanel({
       </div>
       <div className="location-list">
         {WORLD_LOCATIONS.map((location) => (
-          <button className="location-row" type="button" key={location.id} onClick={() => onSetWaypoint(location.id)}>
+          <button className={`location-row${selectedLocationId === location.id ? ' is-selected' : ''}`} type="button" key={location.id} onClick={() => { setSelectedLocationId(location.id); onSetWaypoint(location.id) }}>
             <span className={`location-marker location-marker-${location.kind}`}><MapPin aria-hidden="true" /></span>
             <span className="location-row-copy"><strong>{location.name}</strong><small>{location.district} · {location.description}</small></span>
             <span className="location-distance">{Math.round(distanceBetween(playerPosition, location))}m</span>
           </button>
         ))}
       </div>
+      {selectedLocation && (
+        <section className="travel-options" aria-label={`Travel options to ${selectedLocation.name}`}>
+          <div className="travel-options-heading"><span>GETTING THERE</span><strong>{selectedLocation.name}</strong><small>{Math.round(distanceBetween(playerPosition, selectedLocation))}m away · Choose your journey</small></div>
+          <div className="travel-options-grid">
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'cab')}><span>🚕</span><strong>Book a cab</strong><small>₦2,500 · on-demand</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'bike')}><span>🏍️</span><strong>Book a bike</strong><small>₦1,200 · faster</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'danfo')}><span>🚌</span><strong>Next danfo</strong><small>Wait for route bus</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'driver')}><span>🚘</span><strong>Private driver</strong><small>₦5,000 · chauffeured</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'drive')}><span>🔑</span><strong>Drive myself</strong><small>Use your vehicle</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'walk')}><span>🚶</span><strong>Walk there</strong><small>Automatic walking</small></button>
+          </div>
+        </section>
+      )}
       <p className="panel-footnote">Gold marks your route. Roads, bridges, and the lagoon connect the island, mainland, port, and outer neighborhoods.</p>
     </div>
   )
