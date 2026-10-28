@@ -664,6 +664,7 @@ export default function GameShell() {
         onPlayerPosition={handlePlayerPosition}
         inVehicle={player.inVehicle}
         gender={player.gender}
+        activeInterior={null}
         paused={paused}
         waypoint={waypoint}
         autoWalkTarget={autoWalkTarget}
