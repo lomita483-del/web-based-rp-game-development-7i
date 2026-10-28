@@ -884,7 +884,9 @@ function PlayerController({
         if (destination) {
           const dx = destination.x - position.x
           const dz = destination.z - position.z
-          if (Math.hypot(dx, dz) > 2.1) direction.set(dx, 0, dz)
+          // Follow a street-grid route in orthogonal legs instead of cutting diagonally across blocks.
+          if (Math.abs(dx) > 2.1) direction.set(dx, 0, 0)
+          else if (Math.abs(dz) > 2.1) direction.set(0, 0, dz)
         }
       }
 
