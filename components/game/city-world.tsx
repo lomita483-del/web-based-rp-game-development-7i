@@ -21,7 +21,7 @@ import {
 import { InteriorScene } from './interior-scene'
 
 type PlayerPosition = { x: number; z: number }
-type CameraLook = { yaw: number; pitch: number }
+type CameraLook = { yaw: number; pitch: number; zoom: number }
 
 type CityWorldProps = {
   keysRef: MutableRefObject<Set<string>>
@@ -893,10 +893,11 @@ function PlayerController({
       perspectiveCamera.updateProjectionMatrix()
     }
 
-    const cameraHeight = inside
+    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.58, 1.75)
+    const cameraHeight = (inside
       ? tallViewport ? 12 : 9.5
-      : tallViewport ? (inVehicle ? 16 : 17) : (inVehicle ? 8.5 : 9.5)
-    const cameraDistance = inside ? (tallViewport ? 14 : 11) : (tallViewport ? 22 : 16)
+      : tallViewport ? (inVehicle ? 16 : 17) : (inVehicle ? 8.5 : 9.5)) * zoom
+    const cameraDistance = (inside ? (tallViewport ? 14 : 11) : (tallViewport ? 22 : 16)) * zoom
     const look = cameraLookRef.current
     const yaw = look.yaw
     const pitch = look.pitch
@@ -995,16 +996,40 @@ function CityScene({ waypoint, remotePlayers }: Pick<CityWorldProps, 'waypoint' 
 }
 
 export function CityWorld(props: CityWorldProps) {
-  const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0 })
+  const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0, zoom: 1 })
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
+  const activePointersRef = useRef(new Map<number, { x: number; y: number }>())
+  const pinchDistanceRef = useRef(0)
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    // Keep the left half free for movement controls and ignore mouse clicks on UI.
-    if (event.button !== 0 || event.clientX < window.innerWidth * 0.42) return
-    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
-    event.currentTarget.setPointerCapture(event.pointerId)
+    // Reserve the left side for the movement joystick; right-side touch can look or pinch-zoom.
+    if (event.pointerType === 'mouse' && (event.button !== 0 || event.clientX < window.innerWidth * 0.42)) return
+    if (event.pointerType !== 'mouse' && event.clientX < window.innerWidth * 0.42) return
+    activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    if (activePointersRef.current.size === 1) {
+      dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
+    } else if (activePointersRef.current.size === 2) {
+      const points = [...activePointersRef.current.values()]
+      pinchDistanceRef.current = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)
+      dragRef.current = null
+    }
+    try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* pointer may already be captured by browser */ }
   }
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const previous = activePointersRef.current.get(event.pointerId)
+    if (!previous) return
+    activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    if (activePointersRef.current.size >= 2) {
+      const points = [...activePointersRef.current.values()].slice(0, 2)
+      const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)
+      if (pinchDistanceRef.current > 0 && distance > 0) {
+        const ratio = pinchDistanceRef.current / distance
+        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * ratio, 0.58, 1.75)
+      }
+      pinchDistanceRef.current = distance
+      dragRef.current = null
+      return
+    }
     const drag = dragRef.current
     if (!drag || drag.pointerId !== event.pointerId) return
     const dx = event.clientX - drag.x
@@ -1015,9 +1040,19 @@ export function CityWorld(props: CityWorldProps) {
     cameraLookRef.current.pitch = MathUtils.clamp(cameraLookRef.current.pitch - dy * 0.004, -0.55, 0.55)
   }
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return
-    dragRef.current = null
+    activePointersRef.current.delete(event.pointerId)
+    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null
+    pinchDistanceRef.current = 0
+    if (activePointersRef.current.size === 1) {
+      const [pointerId, point] = [...activePointersRef.current.entries()][0]
+      dragRef.current = { pointerId, x: point.x, y: point.y }
+    }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    cameraLookRef.current.zoom = MathUtils.clamp(
+      cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.08 : 0.92), 0.58, 1.75,
+    )
   }
 
   return (
@@ -1028,6 +1063,7 @@ export function CityWorld(props: CityWorldProps) {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onWheel={handleWheel}
       style={{ touchAction: 'none' }}
     >
       <Canvas
