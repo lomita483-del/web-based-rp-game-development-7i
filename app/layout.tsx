@@ -3,8 +3,9 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'Ekó After Hours — Open-world roleplay',
+  description: 'Build a life after dark in a living Lagos-inspired city. Meet the locals, take a night shift, and make the streets your own.',
+  applicationName: 'Ekó After Hours',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -26,11 +27,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light dark',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
-  ],
+  colorScheme: 'dark',
+  themeColor: '#091411',
 }
 
 export default function RootLayout({
