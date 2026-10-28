@@ -402,6 +402,24 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   const { x, z, kind } = location
   if (kind === 'bridge') return null
 
+  if (kind === 'square') {
+    return (
+      <group position={[x, 0, z - 13]}>
+        <mesh position={[0, 0.35, 0]} receiveShadow><boxGeometry args={[12, 0.7, 10]} /><meshStandardMaterial color="#6b7073" roughness={0.75} /></mesh>
+        <mesh position={[0, 21, 0]} castShadow receiveShadow><boxGeometry args={[8.2, 41, 7]} /><meshStandardMaterial map={facadeTexture} color="#8e999c" metalness={0.24} roughness={0.38} /></mesh>
+        <mesh position={[0, 42, 0]} castShadow><boxGeometry args={[8.7, 1, 7.5]} /><meshStandardMaterial color="#263b48" metalness={0.52} roughness={0.3} /></mesh>
+        <mesh position={[0, 43, 0]}><cylinderGeometry args={[0.08, 0.08, 2.2, 8]} /><meshStandardMaterial color="#cba86a" emissive="#b98542" emissiveIntensity={0.6} /></mesh>
+        {Array.from({ length: 9 }, (_, floor) => Array.from({ length: 4 }, (_, column) => (
+          <mesh key={`tower-window-${floor}-${column}`} position={[-2.75 + column * 1.82, 3.4 + floor * 4.1, 3.56]}>
+            <boxGeometry args={[1.1, 2.35, 0.08]} /><meshStandardMaterial color="#91c4d0" emissive="#2f7185" emissiveIntensity={0.25} metalness={0.28} roughness={0.22} />
+          </mesh>
+        )))}
+        <mesh position={[0, 3.4, 3.62]}><boxGeometry args={[3.8, 1.25, 0.12]} /><meshStandardMaterial color="#17252c" /></mesh>
+        <mesh position={[0, 3.4, 3.71]}><boxGeometry args={[3.2, 0.12, 0.04]} /><meshBasicMaterial color="#e4c58b" /></mesh>
+      </group>
+    )
+  }
+
   if (kind === 'stadium') {
     return (
       <group position={[x, 0, z]}>
@@ -893,7 +911,7 @@ function PlayerController({
       perspectiveCamera.updateProjectionMatrix()
     }
 
-    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.58, 1.75)
+    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
     const cameraHeight = (inside
       ? tallViewport ? 12 : 9.5
       : tallViewport ? (inVehicle ? 16 : 17) : (inVehicle ? 8.5 : 9.5)) * zoom
@@ -944,6 +962,25 @@ function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
   )
 }
 
+function PassbyPedestrian({ index }: { index: number }) {
+  const ref = useRef<Group>(null!)
+  const lane = index % 2 === 0 ? 1 : -1
+  const startZ = -48 + (index % 6) * 16
+  const speed = 1.15 + (index % 4) * 0.28
+  useFrame((_, delta) => {
+    if (!ref.current) return
+    ref.current.position.x += lane * speed * Math.min(delta, 0.05)
+    if (ref.current.position.x > 80) ref.current.position.x = -80
+    if (ref.current.position.x < -80) ref.current.position.x = 80
+    ref.current.rotation.y = lane > 0 ? Math.PI / 2 : -Math.PI / 2
+  })
+  const female = index % 2 === 1
+  const shirts = ['#8c4d3f', '#d1a05b', '#456b72', '#65764d', '#6c587e', '#c5c0b4']
+  return <group ref={ref} position={[lane * (index % 3) * 1.2, 0, startZ]} scale={0.88}>
+    <HumanoidModel skinTone={index % 3 === 0 ? '#69432f' : '#87583f'} hairColor={female ? '#211817' : '#30221b'} clothing={shirts[index % shirts.length]} accentColor="#d2b17a" gender={female ? 'female' : 'male'} walking />
+  </group>
+}
+
 function CityScene({ waypoint, remotePlayers }: Pick<CityWorldProps, 'waypoint' | 'remotePlayers'>) {
   const concreteSource = useTexture('/textures/lagos-concrete.png')
   const asphaltSource = useTexture('/textures/eko-asphalt.png')
@@ -989,6 +1026,7 @@ function CityScene({ waypoint, remotePlayers }: Pick<CityWorldProps, 'waypoint' 
       <TrafficVehicle position={[8, 0, 42]} color="#823f3c" speed={2.8} minibus />
       <TrafficVehicle position={[-18, 0, -66]} color="#c0b18f" speed={2.5} />
       {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
+      {Array.from({ length: 10 }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
       {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
       <LandmarkMarkers waypoint={waypoint} />
     </>
@@ -1024,7 +1062,7 @@ export function CityWorld(props: CityWorldProps) {
       const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)
       if (pinchDistanceRef.current > 0 && distance > 0) {
         const ratio = pinchDistanceRef.current / distance
-        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * ratio, 0.58, 1.75)
+        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * (distance / pinchDistanceRef.current), 0.58, 1.75)
       }
       pinchDistanceRef.current = distance
       dragRef.current = null
@@ -1051,7 +1089,7 @@ export function CityWorld(props: CityWorldProps) {
   }
   const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     cameraLookRef.current.zoom = MathUtils.clamp(
-      cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.08 : 0.92), 0.58, 1.75,
+      cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.12 : 0.89), 0.5, 2.8,
     )
   }
 
