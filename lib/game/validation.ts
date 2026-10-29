@@ -50,7 +50,7 @@ function parsePosition(value: unknown): GamePosition | null {
   if (!isRecord(value) || typeof value.x !== 'number' || typeof value.z !== 'number') return null
   if (!Number.isFinite(value.x) || !Number.isFinite(value.z)) return null
   return {
-    x: Math.max(-82, Math.min(82, value.x)),
+    x: Math.max(-145, Math.min(82, value.x)),
     z: Math.max(-82, Math.min(78, value.z)),
   }
 }

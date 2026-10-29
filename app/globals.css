@@ -3972,3 +3972,171 @@ button:focus-visible {
 @media (max-width: 430px) {
   .mission-card { width: calc(100vw - 0.7rem - 6.25rem - 0.55rem - 0.5rem); }
 }
+
+
+/* ---- Interiors: service sheet and fade ---- */
+.service-backdrop {
+  position: absolute;
+  z-index: 12;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+  background: rgb(4 8 10 / 46%);
+  backdrop-filter: blur(3px);
+  pointer-events: auto;
+}
+.service-sheet {
+  display: flex;
+  width: min(30rem, 100%);
+  max-height: min(34rem, calc(100% - 4rem));
+  flex-direction: column;
+  border: 1px solid var(--game-border);
+  border-radius: 1.1rem;
+  background: rgb(14 20 27 / 96%);
+  box-shadow: var(--game-shadow);
+  color: var(--game-cream);
+  animation: service-rise 180ms ease-out;
+}
+@keyframes service-rise {
+  from { opacity: 0; transform: translateY(0.6rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.service-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 0.9rem;
+  border-bottom: 1px solid var(--game-border);
+}
+.service-head-icon {
+  display: grid;
+  width: 2.3rem;
+  height: 2.3rem;
+  flex: none;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: rgb(223 180 109 / 14%);
+  color: var(--game-lime);
+}
+.service-head-icon svg { width: 1.15rem; height: 1.15rem; }
+.service-head-copy { min-width: 0; flex: 1; }
+.service-head-copy span { display: block; color: var(--game-muted); font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.service-head-copy h2 { margin: 0.1rem 0 0; overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.service-close {
+  display: grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--game-border);
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--game-cream);
+  cursor: pointer;
+}
+.service-close svg { width: 1rem; height: 1rem; }
+.service-body {
+  display: grid;
+  gap: 0.6rem;
+  overflow-y: auto;
+  padding: 0.8rem 0.9rem 0.95rem;
+  overscroll-behavior: contain;
+}
+.service-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem;
+  border: 1px solid var(--game-border);
+  border-radius: 0.85rem;
+  background: rgb(255 255 255 / 3%);
+}
+.service-card p { margin: 0; color: #b9c0b0; font-size: 0.72rem; line-height: 1.45; }
+.service-card .primary-action,
+.service-card .secondary-action { margin-top: 0.2rem; }
+.service-card button:disabled { cursor: default; opacity: 0.5; }
+.service-card-title { display: flex; align-items: center; gap: 0.45rem; color: var(--game-gold); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.service-card-title svg { width: 0.95rem; height: 0.95rem; }
+.service-balances { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.service-balances div { padding: 0.55rem 0.65rem; border-radius: 0.65rem; background: rgb(0 0 0 / 24%); }
+.service-balances small { display: block; color: var(--game-muted); font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; }
+.service-balances strong { font-size: 1rem; }
+.service-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.service-chip-row > span { width: 4.6rem; color: var(--game-muted); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.service-chip-row button {
+  min-height: 2.1rem;
+  padding: 0 0.7rem;
+  border: 1px solid rgb(223 180 109 / 34%);
+  border-radius: 0.6rem;
+  background: rgb(223 180 109 / 10%);
+  color: var(--game-cream);
+  font-size: 0.66rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.service-chip-row button:disabled { cursor: default; opacity: 0.4; }
+.service-tasks { display: grid; margin: 0; padding: 0; gap: 0.4rem; list-style: none; }
+.service-tasks li { display: flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.6rem; border-radius: 0.65rem; background: rgb(0 0 0 / 22%); }
+.service-tasks li > span { display: grid; width: 1.4rem; height: 1.4rem; flex: none; place-items: center; border-radius: 50%; background: rgb(223 180 109 / 18%); color: var(--game-lime); font-size: 0.62rem; font-weight: 800; }
+.service-tasks li > span svg { width: 0.8rem; height: 0.8rem; }
+.service-tasks li > em { flex: 1; font-size: 0.72rem; font-style: normal; }
+.service-tasks li.is-done > em { color: var(--game-muted); text-decoration: line-through; }
+.service-tasks li button { min-height: 1.9rem; padding: 0 0.65rem; border: 0; border-radius: 0.5rem; background: var(--game-lime); color: #182219; font-size: 0.6rem; font-weight: 850; cursor: pointer; }
+
+.scene-fade {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  background: #05080a;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms ease;
+}
+.scene-fade.is-active { opacity: 1; pointer-events: auto; }
+
+/* Maps use the true world projection now, so roads are drawn straight and aligned. */
+.minimap-road-horizontal,
+.full-map-road-horizontal {
+  left: 0;
+  width: 100%;
+  transform: none;
+}
+
+.minimap-road-vertical,
+.full-map-road-vertical {
+  top: 0;
+  height: 100%;
+  transform: none;
+}
+
+.minimap-flyover,
+.full-map-flyover {
+  top: 34%;
+  left: 0;
+  width: 100%;
+  transform: none;
+}
+
+.minimap-campus,
+.full-map-campus {
+  position: absolute;
+  z-index: 0;
+  border: 1px solid rgb(143 196 128 / 55%);
+  border-radius: 0.2rem;
+  background: rgb(79 128 74 / 34%);
+  pointer-events: none;
+}
+
+.full-map-campus em {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgb(214 236 198 / 85%);
+  font-size: 0.5rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
