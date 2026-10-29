@@ -1,3 +1,29 @@
+function TrafficSignal({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 2.8, 0]} castShadow>
+        <boxGeometry args={[0.16, 5.6, 0.16]} />
+        <meshStandardMaterial color="#4d4d4d" metalness={0.52} roughness={0.4} />
+      </mesh>
+      <mesh position={[0.38, 4.2, 0]}>
+        <boxGeometry args={[0.7, 1.2, 0.22]} />
+        <meshStandardMaterial color="#242b2d" roughness={0.74} />
+      </mesh>
+      <mesh position={[0.38, 4.75, 0.09]}>
+        <sphereGeometry args={[0.12, 12, 10]} />
+        <meshStandardMaterial color="#f0c87e" emissive="#d59d48" emissiveIntensity={1.2} />
+      </mesh>
+      <mesh position={[0.38, 4.1, 0.09]}>
+        <sphereGeometry args={[0.12, 12, 10]} />
+        <meshStandardMaterial color="#d45c51" emissive="#9d2d28" emissiveIntensity={0.75} />
+      </mesh>
+      <mesh position={[0.38, 3.45, 0.09]}>
+        <sphereGeometry args={[0.12, 12, 10]} />
+        <meshStandardMaterial color="#53b46d" emissive="#2e7a45" emissiveIntensity={0.8} />
+      </mesh>
+    </group>
+  )
+}
 
 function TrafficVehicle({
   position,
@@ -20,55 +46,60 @@ function TrafficVehicle({
   const isBike = kind === 'bike'
   const isKeke = kind === 'keke'
   const isTruck = kind === 'truck'
-  const bodyLength = minibus ? 3.6 : isTruck ? 4.9 : isKeke ? 2.6 : isBike ? 1.65 : 3.2
-  const bodyHeight = isBike ? 0.52 : isKeke ? 1.1 : minibus ? 1.18 : 0.74
+  const vehicleLength = minibus ? 3.6 : isTruck ? 5.1 : isKeke ? 2.7 : isBike ? 1.7 : 3.2
+  const vehicleHeight = isBike ? 0.52 : isKeke ? 1.08 : minibus ? 1.2 : 0.72
 
   useFrame((_, delta) => {
     if (!vehicleRef.current) return
-    const travel = Math.min(delta, 0.05) * speed
+    const travel = speed * Math.min(delta, 0.05)
     const current = vehicleRef.current.position
     if (axis === 'x') {
       current.x += direction * travel
       if (current.x > 92) current.x = -92
       if (current.x < -92) current.x = 92
+      vehicleRef.current.rotation.y = direction > 0 ? Math.PI / 2 : -Math.PI / 2
     } else {
       current.z += direction * travel
       if (current.z > 92) current.z = -92
       if (current.z < -92) current.z = 92
+      vehicleRef.current.rotation.y = direction > 0 ? 0 : Math.PI
     }
-    vehicleRef.current.rotation.y = axis === 'x' ? (direction > 0 ? Math.PI / 2 : -Math.PI / 2) : (direction > 0 ? 0 : Math.PI)
   })
 
   return (
     <group ref={vehicleRef} position={position}>
-      <mesh position={[0, isBike ? 0.52 : 0.62, 0]} castShadow>
-        <boxGeometry args={isBike ? [0.9, 0.38, 1.9] : [bodyLength, bodyHeight, isTruck ? 1.9 : minibus ? 2.1 : 1.65]} />
-        <meshStandardMaterial color={color} metalness={0.18} roughness={0.58} />
-      </mesh>
-      <mesh position={[0, isBike ? 0.95 : 0.98, isTruck ? 0.18 : -0.02]} castShadow>
-        <boxGeometry args={[isBike ? 0.65 : isTruck ? 2.8 : minibus ? 1.5 : 1.22, isBike ? 0.32 : 0.48, isTruck ? 1.28 : minibus ? 1.45 : 1.06]} />
-        <meshStandardMaterial color={kind === 'danfo' ? '#516b7c' : kind === 'keke' ? '#9b8a4f' : '#4a5358'} metalness={0.24} roughness={0.45} />
+      {!isBike && (
+        <mesh position={[0, isKeke ? 0.82 : 0.62, 0]} castShadow>
+          <boxGeometry args={[vehicleLength, vehicleHeight, isTruck ? 1.9 : minibus ? 2.1 : 1.65]} />
+          <meshStandardMaterial color={color} metalness={0.18} roughness={0.58} />
+        </mesh>
+      )}
+      {isBike && (
+        <mesh position={[0, 0.52, 0]} castShadow>
+          <boxGeometry args={[1.15, 0.42, 1.8]} />
+          <meshStandardMaterial color={color} metalness={0.18} roughness={0.52} />
+        </mesh>
+      )}
+      <mesh position={[0, isBike ? 0.94 : minibus ? 1.1 : isTruck ? 1.2 : 0.98, isTruck ? 0.15 : -0.04]} castShadow>
+        <boxGeometry args={[isBike ? 0.72 : isTruck ? 2.8 : minibus ? 1.55 : 1.18, isBike ? 0.34 : 0.5, isTruck ? 1.25 : minibus ? 1.42 : 1.02]} />
+        <meshStandardMaterial color={kind === 'danfo' ? '#566f86' : kind === 'keke' ? '#9b8a4f' : '#4e575d'} metalness={0.24} roughness={0.48} />
       </mesh>
       {!isBike && (
         <>
-          <mesh position={[0, 0.36, bodyLength * 0.46]}><boxGeometry args={[bodyLength * 0.72, 0.12, isTruck ? 0.15 : 0.12]} /><meshStandardMaterial color="#f3d49a" emissive="#c58e51" emissiveIntensity={0.72} /></mesh>
-          {[-1, 1].map((side) => (
-            <group key={`wheel-${side}`}>
-              {[-1, 1].map((wheel) => (
-                <mesh key={`wheel-${side}-${wheel}`} position={[side * (bodyLength * 0.33), 0.24, wheel * (isTruck ? 1.05 : 0.92)]} rotation={[0, 0, Math.PI / 2]} castShadow>
-                  <cylinderGeometry args={[0.24, 0.24, 0.15, 12]} />
-                  <meshStandardMaterial color="#1c2124" roughness={0.96} />
-                </mesh>
-              ))}
-            </group>
+          <mesh position={[0, 0.35, vehicleLength * 0.45]}><boxGeometry args={[vehicleLength * 0.72, 0.12, isTruck ? 0.18 : 0.12]} /><meshStandardMaterial color="#f3d49a" emissive="#c58e51" emissiveIntensity={0.72} /></mesh>
+          {[[-1, 1], [1, 1], [-1, -1], [1, -1]].map(([xSide, zSide], index) => (
+            <mesh key={`wheel-${index}`} position={[xSide * (vehicleLength * 0.28), 0.26, zSide * (isTruck ? 1.04 : 0.9)]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.24, 0.24, 0.16, 12]} />
+              <meshStandardMaterial color="#1b2123" roughness={0.96} />
+            </mesh>
           ))}
         </>
       )}
       {isBike && (
         <>
-          {[[-0.44, 0.52], [0.44, 0.52], [-0.46, -0.52], [0.46, -0.52]].map(([x, z], index) => (
-            <mesh key={`bike-wheel-${index}`} position={[x, 0.26, z]} rotation={[0, 0, Math.PI / 2]} castShadow>
-              <cylinderGeometry args={[0.18, 0.18, 0.11, 12]} />
+          {[[-0.44, 0.52], [0.44, 0.52], [-0.46, -0.52], [0.46, -0.52]].map(([xSide, zSide], index) => (
+            <mesh key={`bike-wheel-${index}`} position={[xSide, 0.26, zSide]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.18, 0.18, 0.12, 12]} />
               <meshStandardMaterial color="#1d2325" roughness={0.96} />
             </mesh>
           ))}
@@ -117,4 +148,35 @@ const CITY_TRAFFIC_FLOW = [
   { key: 'traffic-36', x: -66, z: 12, axis: 'z', direction: 1, speed: 8.4, color: '#887a60', kind: 'car' },
 ] as const
 
-// ...existing code continues below
+function collidesWithBuilding(x: number, z: number, radius: number) {
+  return CITY_COLLISION_BLOCKS.some((block) =>
+    Math.abs(x - block.x) < block.width / 2 + radius &&
+    Math.abs(z - block.z) < block.depth / 2 + radius,
+  )
+}
+
+function TrafficVehicleOld({ position, color, speed, minibus = false }: { position: [number, number, number]; color: string; speed: number; minibus?: boolean }) {
+  const vehicleRef = useRef<Group>(null!)
+
+  useFrame((_, delta) => {
+    if (!vehicleRef.current) return
+    vehicleRef.current.position.x += speed * Math.min(delta, 0.05)
+    if (vehicleRef.current.position.x > 90) vehicleRef.current.position.x = -90
+  })
+
+  return (
+    <group ref={vehicleRef} position={position} rotation={[0, Math.PI / 2, 0]}>
+      <mesh position={[0, 0.65, 0]} castShadow><boxGeometry args={minibus ? [1.85, 1.15, 3.6] : [1.72, 0.72, 3.4]} /><meshStandardMaterial color={color} metalness={0.15} roughness={0.58} /></mesh>
+      <mesh position={[0, minibus ? 1.38 : 1.12, -0.08]} castShadow><boxGeometry args={minibus ? [1.55, 0.55, 2.4] : [1.38, 0.48, 1.75]} /><meshStandardMaterial color="#526a73" metalness={0.28} roughness={0.42} /></mesh>
+      <mesh position={[0, 0.42, 1.73]}><boxGeometry args={[1.45, 0.16, 0.14]} /><meshStandardMaterial color="#4a4e50" metalness={0.34} roughness={0.48} /></mesh>
+      {[-1, 1].map((side) => (
+        <group key={`wheels-${side}`}>
+          {[-1.1, 1.1].map((wheelZ) => <mesh key={wheelZ} position={[side * 0.86, 0.36, wheelZ]} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.28, 0.28, 0.16, 12]} /><meshStandardMaterial color="#1d2328" roughness={0.96} /></mesh>)}
+          <mesh position={[side * 0.58, 0.76, 1.68]}><boxGeometry args={[0.16, 0.2, 0.12]} /><meshStandardMaterial color="#f4d59a" emissive="#c58f51" emissiveIntensity={0.72} /></mesh>
+        </group>
+      ))}
+      {minibus && <mesh position={[0, 1.05, 0.54]}><boxGeometry args={[1.88, 0.13, 0.12]} /><meshStandardMaterial color="#e9d08c" roughness={0.75} /></mesh>}
+    </group>
+  )
+}
+
