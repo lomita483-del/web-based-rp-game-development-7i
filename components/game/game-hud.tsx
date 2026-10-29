@@ -658,8 +658,6 @@ function JobsPanel({
                 onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}
               >
                 {actionLabel}
-              <button className={isAssigned ? 'secondary-action' : 'primary-action'} type="button" onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}>
-                {isAssigned ? atWork ? 'GO INSIDE TO WORK' : 'ROUTE TO WORKPLACE' : player.job ? 'SWITCH TO THIS JOB' : 'TAKE THIS SHIFT'}
                 <ArrowRight aria-hidden="true" />
               </button>
               {isAssigned && <small className="job-active-note"><span className="status-live-dot" /> ACTIVE ROLE · {activeRoleStatus}</small>}
