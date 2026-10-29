@@ -74,17 +74,24 @@ const ENTERABLE_INTERIORS = [
 function createGameSavePayload(player: PlayerState, position: Position, gameMinutes: number): GameSavePayload {
   return {
     playerState: {
+      gender: player.gender,
       cash: player.cash,
+      bankBalance: player.bankBalance,
       reputation: player.reputation,
       level: player.level,
       energy: player.energy,
       hunger: player.hunger,
+      educationCredits: player.educationCredits,
       stage: player.stage,
       inventory: player.inventory.map((item) => ({ ...item })),
       ownsScooter: player.ownsScooter,
       inVehicle: player.inVehicle,
       completedRuns: player.completedRuns,
       completedShifts: player.completedShifts,
+      shiftStarted: player.shiftStarted,
+      completedShiftTasks: [...player.completedShiftTasks],
+      currentInteriorId: player.currentInteriorId,
+      returnPosition: player.returnPosition ? { ...player.returnPosition } : null,
       job: player.job,
       faction: player.faction,
       home: player.home,
@@ -126,7 +133,10 @@ export default function GameShell() {
     error: saveLoadError,
     isLoading: saveLoading,
   } = useSWR(saveKey, fetchGameSave, { revalidateOnFocus: false, revalidateOnReconnect: true })
-  const presenceKey = currentUserId ? (['/api/game/presence', currentUserId] as const) : null
+  const presenceRoomId = player.currentInteriorId ? `interior:${player.currentInteriorId}` : 'eko-mainland'
+  const presenceKey = currentUserId
+    ? ([`/api/game/presence?roomId=${encodeURIComponent(presenceRoomId)}`, currentUserId] as const)
+    : null
   const {
     data: presenceResponse,
     error: presenceLoadError,
@@ -157,7 +167,7 @@ export default function GameShell() {
   const latestSavePayloadRef = useRef<GameSavePayload>(
     createGameSavePayload(STARTING_PLAYER, { x: -6, z: 4 }, 21 * 60 + 42),
   )
-  const latestPresenceRef = useRef<PresenceUpdate>({ x: -6, z: 4, inVehicle: false })
+  const latestPresenceRef = useRef<PresenceUpdate>({ x: -6, z: 4, inVehicle: false, roomId: 'eko-mainland' })
 
   useEffect(() => {
     if (!currentUserId) {
@@ -205,8 +215,12 @@ export default function GameShell() {
   }, [gameMinutes, player, playerPosition])
 
   useEffect(() => {
-    latestPresenceRef.current = { ...playerPosition, inVehicle: player.inVehicle }
-  }, [player.inVehicle, playerPosition])
+    latestPresenceRef.current = {
+      ...playerPosition,
+      inVehicle: player.inVehicle,
+      roomId: player.currentInteriorId ? `interior:${player.currentInteriorId}` : 'eko-mainland',
+    }
+  }, [player.currentInteriorId, player.inVehicle, playerPosition])
 
   const saveCurrentGame = useCallback(async () => {
     if (!currentUserId || saveReadyUserId !== currentUserId || saveInFlightRef.current) return
@@ -314,6 +328,8 @@ export default function GameShell() {
       .sort((a, b) => a.distance - b.distance)[0]
     return closest && closest.distance < 7.5 ? closest.location : null
   }, [activeInterior, playerPosition])
+  const nearInteriorAction = Boolean(activeInterior && distanceBetween(playerPosition, activeInterior.actionPoint) < 1.8)
+  const prioritizeEntry = Boolean(nearbyEntry && (!nearbyCharacter || nearbyEntry.distance <= distanceBetween(playerPosition, nearbyCharacter)))
   const canExitInterior = Boolean(activeInterior && distanceBetween(playerPosition, activeInterior.exitPoint) < 2.35)
 
   const mission = getMissionDetails(player.stage)
@@ -462,8 +478,14 @@ export default function GameShell() {
   const handleInteract = useCallback(() => {
     if (activeCharacter || worldTransitioning) return
     if (activeInterior) {
+      if (nearInteriorAction) {
+        const location = WORLD_LOCATIONS.find((entry) => entry.id === activeInterior.id)
+        if (location) handleLocationAction(location.id)
+        else notify(`${activeInterior.name}: ${activeInterior.actionLabel} is available on site.`)
+        return
+      }
       if (!canExitInterior) {
-        notify(`Walk back to the front door to leave ${activeInterior.name}.`)
+        notify(`Walk to the service marker or front door in ${activeInterior.name}.`)
         return
       }
       const outsidePosition = player.returnPosition ?? playerPosition
@@ -477,7 +499,7 @@ export default function GameShell() {
       })
       return
     }
-    if (nearbyCharacter) {
+    if (nearbyCharacter && !prioritizeEntry) {
       keysRef.current.clear()
       setActiveCharacter(nearbyCharacter.id)
       return
@@ -495,7 +517,7 @@ export default function GameShell() {
       return
     }
     if (nearbyLocation) handleLocationAction(nearbyLocation.id)
-  }, [activeCharacter, activeInterior, canExitInterior, handleLocationAction, nearbyCharacter, nearbyEntry, nearbyLocation, notify, player.returnPosition, playerPosition, runWorldTransition, worldTransitioning])
+  }, [activeCharacter, activeInterior, canExitInterior, handleLocationAction, nearbyCharacter, nearbyEntry, nearbyLocation, nearInteriorAction, notify, player.returnPosition, playerPosition, prioritizeEntry, runWorldTransition, worldTransitioning])
 
   const handleCharacterAction = useCallback(() => {
     if (!activeCharacter) return
@@ -822,7 +844,9 @@ export default function GameShell() {
         nearbyCharacter={nearbyCharacter}
         nearbyLocation={nearbyLocation}
         nearbyInterior={nearbyInterior}
+        prioritizeInterior={prioritizeEntry}
         activeInterior={activeInterior}
+        nearInteriorAction={nearInteriorAction}
         canExitInterior={canExitInterior}
         rideBooking={rideBooking}
         waypoint={waypoint}

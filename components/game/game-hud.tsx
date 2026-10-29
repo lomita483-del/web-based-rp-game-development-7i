@@ -67,7 +67,9 @@ type HudProps = {
   nearbyCharacter: (typeof CITY_CHARACTERS)[number] | null
   nearbyLocation: (typeof WORLD_LOCATIONS)[number] | null
   nearbyInterior: InteriorDefinition | null
+  prioritizeInterior: boolean
   activeInterior: InteriorDefinition | null
+  nearInteriorAction: boolean
   canExitInterior: boolean
   rideBooking: RideBooking | null
   waypoint: LocationId | null
@@ -118,7 +120,9 @@ export function GameHud({
   nearbyCharacter,
   nearbyLocation,
   nearbyInterior,
+  prioritizeInterior,
   activeInterior,
+  nearInteriorAction,
   canExitInterior,
   rideBooking,
   waypoint,
@@ -135,14 +139,16 @@ export function GameHud({
   const rideDestination = rideBooking && WORLD_LOCATIONS.find((location) => location.id === rideBooking.destinationId)
   const RideIcon = rideBooking?.mode === 'bike' ? Bike : rideBooking?.mode === 'danfo' ? BusFront : CarFront
   const interactionLabel = activeInterior
-    ? canExitInterior ? `Exit ${activeInterior.name}` : `Return to the door at ${activeInterior.name}`
-    : nearbyCharacter
-      ? `Talk to ${nearbyCharacter.name}`
-      : nearbyInterior
-        ? `Enter ${nearbyInterior.name}`
-        : nearbyLocation
-          ? `Explore ${nearbyLocation.name}`
-          : 'Wander the city'
+    ? nearInteriorAction ? activeInterior.actionLabel : canExitInterior ? `Exit ${activeInterior.name}` : `Inside ${activeInterior.name}`
+    : nearbyInterior && prioritizeInterior
+      ? `Enter ${nearbyInterior.name}`
+      : nearbyCharacter
+        ? `Talk to ${nearbyCharacter.name}`
+        : nearbyInterior
+          ? `Enter ${nearbyInterior.name}`
+          : nearbyLocation
+            ? `Explore ${nearbyLocation.name}`
+            : 'Wander the city'
 
   return (
     <div className="game-hud">
@@ -271,11 +277,11 @@ export function GameHud({
           className="interaction-button"
           type="button"
           onClick={onInteract}
-          disabled={!nearbyCharacter && !nearbyLocation && !nearbyInterior && !activeInterior}
+          disabled={activeInterior ? !nearInteriorAction && !canExitInterior : !nearbyCharacter && !nearbyLocation && !nearbyInterior}
         >
           <span className="interaction-key">E</span>
           <span className="interaction-copy">
-            <small>{activeInterior ? 'INSIDE' : nearbyInterior ? 'BUILDING ENTRY' : nearbyCharacter ? 'ROLEPLAY' : nearbyLocation ? 'LOCATION' : 'EXPLORE'}</small>
+            <small>{activeInterior ? nearInteriorAction ? 'SERVICE' : canExitInterior ? 'EXIT' : 'INSIDE' : nearbyInterior && prioritizeInterior ? 'BUILDING ENTRY' : nearbyCharacter ? 'ROLEPLAY' : nearbyInterior ? 'BUILDING ENTRY' : nearbyLocation ? 'LOCATION' : 'EXPLORE'}</small>
             <strong>{interactionLabel}</strong>
           </span>
           <ArrowRight aria-hidden="true" />

@@ -1337,6 +1337,7 @@ function PlayerController({
 
   useEffect(() => {
     playerRef.current?.position.set(spawnPosition.x, 0, spawnPosition.z)
+    if (playerRef.current) playerRef.current.rotation.y = Math.PI
     publishTimer.current = 0
     onPositionRef.current(spawnPosition)
   }, [activeInterior?.id, spawnPosition.x, spawnPosition.z])
@@ -1408,8 +1409,8 @@ function PlayerController({
     const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
     const cameraHeight = (inside
       ? tallViewport ? 4.8 : 4.2
-      : tallViewport ? (inVehicle || rideVehicle ? 12.6 : 13.4) : (inVehicle || rideVehicle ? 7.6 : 8.5)) * zoom
-    const cameraDistance = (inside ? (tallViewport ? 4.4 : 3.8) : (tallViewport ? 19 : 14.5)) * zoom
+      : tallViewport ? (inVehicle || rideVehicle ? 9.2 : 10.2) : (inVehicle || rideVehicle ? 7.6 : 8.5)) * zoom
+    const cameraDistance = (inside ? (tallViewport ? 4.4 : 3.8) : 14.5) * zoom
     const look = cameraLookRef.current
     const yaw = look.yaw
     const pitch = look.pitch
@@ -1421,7 +1422,7 @@ function PlayerController({
     cameraLookAt.current.set(
       x - Math.sin(yaw) * 7,
       position.y + (inside ? 1.6 : inVehicle || rideVehicle ? 1.8 : 2) + Math.sin(pitch) * 5,
-      z - Math.cos(yaw) * (inside ? 1.2 : 4.5),
+      z - Math.cos(yaw) * (inside ? 1.2 : 3.6),
     )
     camera.position.lerp(cameraTarget.current, 1 - Math.exp(-step * 3.8))
     camera.lookAt(cameraLookAt.current)
