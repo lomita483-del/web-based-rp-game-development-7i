@@ -173,7 +173,7 @@ button:focus-visible {
   to { opacity: 1; transform: translateY(-0.25rem); }
 }
 
-.world-vignette {
+  .world-vignette {
   position: absolute;
   z-index: 1;
   inset: 0;
@@ -181,6 +181,20 @@ button:focus-visible {
   background:
     linear-gradient(180deg, rgb(6 15 12 / 38%) 0%, transparent 23%, transparent 65%, rgb(6 13 11 / 44%) 100%),
     radial-gradient(ellipse at 50% 46%, transparent 38%, rgb(3 10 8 / 38%) 100%);
+  }
+
+.world-transition {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #182226 0%, #0d1216 72%);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.world-transition.is-active {
+  opacity: 0.96;
 }
 
 .game-hud {
@@ -201,6 +215,7 @@ button:focus-visible {
 .keyboard-hints,
 .touch-controls,
 .vitals-card,
+.ride-status-card,
 .game-toast {
   pointer-events: auto;
 }
@@ -964,6 +979,70 @@ button:focus-visible {
 .touch-controls button svg {
   width: 1.1rem;
   height: 1.1rem;
+}
+
+.ride-status-card {
+  position: absolute;
+  top: 6.25rem;
+  left: 50%;
+  display: flex;
+  width: min(21rem, calc(100vw - 2rem));
+  align-items: center;
+  gap: 0.62rem;
+  padding: 0.62rem 0.78rem;
+  transform: translateX(-50%);
+  border: 1px solid rgb(223 180 109 / 26%);
+  border-radius: 0.9rem;
+  background: linear-gradient(120deg, rgb(13 24 27 / 94%), rgb(18 31 29 / 91%));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 30%);
+  backdrop-filter: blur(14px);
+}
+
+.ride-status-icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(223 180 109 / 24%);
+  border-radius: 0.6rem;
+  background: rgb(223 180 109 / 9%);
+  color: var(--game-gold);
+}
+
+.ride-status-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.ride-status-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 0.16rem;
+}
+
+.ride-status-copy small {
+  color: #aab9ad;
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.ride-status-copy strong {
+  overflow: hidden;
+  color: #f0eadb;
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ride-status-fare {
+  flex: 0 0 auto;
+  color: #dfbd79;
+  font-size: 0.63rem;
+  font-weight: 750;
 }
 
 .game-toast {
@@ -3833,10 +3912,15 @@ button:focus-visible {
 .travel-options-grid button:hover,
 .travel-options-grid button:focus-visible { border-color: #d6ad69; background: rgb(214 173 105 / 10%); }
 .travel-options-grid button > span { grid-row: span 2; font-size: 1.1rem; }
+.travel-options-grid button .travel-option-icon { display: grid; width: 1.35rem; height: 1.35rem; place-items: center; color: #d6b979; }
+.travel-options-grid button .travel-option-icon svg { width: 1.08rem; height: 1.08rem; }
 .travel-options-grid button > strong { font-size: 0.67rem; }
 .travel-options-grid button > small { color: #9aaba5; font-size: 0.56rem; }
 .location-row.is-selected { border-color: rgb(220 187 126 / 55%); background: rgb(220 187 126 / 8%); }
 @media (max-width: 760px) {
+  .ride-status-card { top: 14rem; width: min(21rem, calc(100vw - 1.2rem)); padding: 0.54rem 0.66rem; }
+  .ride-status-copy small { font-size: 0.48rem; }
+  .ride-status-copy strong { font-size: 0.65rem; }
   .minimap-card { top: 5rem; right: 0.55rem; width: 6.25rem; padding: 0.2rem; }
   .game-panel { width: min(92vw, 32rem); }
   .full-map-building span { max-width: 5.5rem; font-size: 0.36rem; }

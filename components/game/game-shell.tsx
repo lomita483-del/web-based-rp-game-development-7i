@@ -18,6 +18,7 @@ import type {
   SaveStatus,
 } from '@/lib/game/types'
 import {
+  CITY_BUILDINGS,
   CITY_CHARACTERS,
   CITY_FACTIONS,
   CITY_HOMES,
@@ -25,7 +26,11 @@ import {
   STARTING_PLAYER,
   WORLD_LOCATIONS,
   distanceBetween,
+  estimateRideFare,
   formatNaira,
+  getBuildingEntrancePosition,
+  getInteriorDefinition,
+  getLocationEntrancePosition,
   getMissionDetails,
   playerReducer,
   type CharacterId,
@@ -35,6 +40,10 @@ import {
   type JobId,
   type LocationId,
   type PlayerState,
+  type InteriorDefinition,
+  type RideBooking,
+  type RideBookingStatus,
+  type RideVehicleType,
 } from './game-data'
 import { GameHud, GamePanels, NpcDialogue, type TravelMode } from './game-hud'
 
@@ -50,6 +59,17 @@ type ToastState = { id: number; text: string } | null
 
 const fetchGameSave = ([url]: readonly [string, string]) => gameFetcher<GameSaveResponse>(url)
 const fetchPresence = ([url]: readonly [string, string]) => gameFetcher<PresenceResponse>(url)
+
+const ENTERABLE_INTERIORS = [
+  ...CITY_BUILDINGS.map((building) => ({
+    interior: getInteriorDefinition(building.id),
+    entrance: getBuildingEntrancePosition(building),
+  })),
+  ...WORLD_LOCATIONS.map((location) => ({
+    interior: getInteriorDefinition(location.id),
+    entrance: getLocationEntrancePosition(location.id),
+  })),
+].filter((entry): entry is { interior: InteriorDefinition; entrance: Position } => Boolean(entry.interior && entry.entrance))
 
 function createGameSavePayload(player: PlayerState, position: Position, gameMinutes: number): GameSavePayload {
   return {
@@ -85,9 +105,14 @@ export default function GameShell() {
   const [activeCharacter, setActiveCharacter] = useState<CharacterId | null>(null)
   const [pinnedWaypoint, setPinnedWaypoint] = useState<LocationId | null>(null)
   const [autoWalkTarget, setAutoWalkTarget] = useState<LocationId | null>(null)
+  const [rideBooking, setRideBooking] = useState<RideBooking | null>(null)
+  const [worldTransitioning, setWorldTransitioning] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
   const keysRef = useRef(new Set<string>())
   const toastId = useRef(0)
+  const rideSequenceRef = useRef(0)
+  const rideTimerIdsRef = useRef<number[]>([])
+  const transitionTimerRef = useRef<number | null>(null)
   const { data: sessionResponse, isLoading: sessionLoading, mutate: refreshSession } = useSWR<GameSessionResponse>(
     '/api/game/session',
     gameFetcher,
@@ -262,23 +287,38 @@ export default function GameShell() {
     await refreshSession()
   }, [changePresence, refreshSession])
 
+  const activeInterior = useMemo(
+    () => player.currentInteriorId ? getInteriorDefinition(player.currentInteriorId) : null,
+    [player.currentInteriorId],
+  )
+  const nearbyEntry = useMemo(() => {
+    if (activeInterior) return null
+    const closest = ENTERABLE_INTERIORS
+      .map((entry) => ({ ...entry, distance: distanceBetween(playerPosition, entry.entrance) }))
+      .sort((a, b) => a.distance - b.distance)[0]
+    return closest && closest.distance < 3.5 ? closest : null
+  }, [activeInterior, playerPosition])
+  const nearbyInterior = nearbyEntry?.interior ?? null
   const nearbyCharacter = useMemo(() => {
+    if (activeInterior) return null
     const closest = CITY_CHARACTERS
       .map((character) => ({ character, distance: distanceBetween(playerPosition, character) }))
       .sort((a, b) => a.distance - b.distance)[0]
     return closest && closest.distance < 4.8 ? closest.character : null
-  }, [playerPosition])
+  }, [activeInterior, playerPosition])
 
   const nearbyLocation = useMemo(() => {
+    if (activeInterior) return null
     const closest = WORLD_LOCATIONS
       .map((location) => ({ location, distance: distanceBetween(playerPosition, location) }))
       .sort((a, b) => a.distance - b.distance)[0]
     return closest && closest.distance < 7.5 ? closest.location : null
-  }, [playerPosition])
+  }, [activeInterior, playerPosition])
+  const canExitInterior = Boolean(activeInterior && distanceBetween(playerPosition, activeInterior.exitPoint) < 2.35)
 
   const mission = getMissionDetails(player.stage)
   const waypoint = pinnedWaypoint ?? mission.targetLocation
-  const paused = activePanel !== 'none' || activeCharacter !== null
+  const paused = activePanel !== 'none' || activeCharacter !== null || worldTransitioning || Boolean(rideBooking && rideBooking.status !== 'arrived')
 
   const notify = useCallback((text: string) => {
     toastId.current += 1
@@ -296,6 +336,11 @@ export default function GameShell() {
     return () => window.clearInterval(timer)
   }, [])
 
+  useEffect(() => () => {
+    rideTimerIdsRef.current.forEach((timerId) => window.clearTimeout(timerId))
+    if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current)
+  }, [])
+
   const openPanel = useCallback((panel: Exclude<GamePanel, 'none'>) => {
     keysRef.current.clear()
     setActiveCharacter(null)
@@ -311,6 +356,26 @@ export default function GameShell() {
   const closePanel = useCallback(() => {
     keysRef.current.clear()
     setActivePanel('none')
+  }, [])
+
+  const runWorldTransition = useCallback((updateWorld: () => void) => {
+    if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current)
+    setWorldTransitioning(true)
+    transitionTimerRef.current = window.setTimeout(() => {
+      updateWorld()
+      transitionTimerRef.current = window.setTimeout(() => {
+        setWorldTransitioning(false)
+        transitionTimerRef.current = null
+      }, 220)
+    }, 150)
+  }, [])
+
+  const scheduleRideTimer = useCallback((delay: number, callback: () => void) => {
+    const timerId = window.setTimeout(() => {
+      rideTimerIdsRef.current = rideTimerIdsRef.current.filter((currentId) => currentId !== timerId)
+      callback()
+    }, delay)
+    rideTimerIdsRef.current.push(timerId)
   }, [])
 
   const setMoveKey = useCallback((key: string, pressed: boolean) => {
@@ -395,14 +460,42 @@ export default function GameShell() {
   }, [notify, player.cash, player.inVehicle, player.ownsScooter, player.home, player.voterRegistered, player.wantedLevel])
 
   const handleInteract = useCallback(() => {
-    if (activeCharacter) return
+    if (activeCharacter || worldTransitioning) return
+    if (activeInterior) {
+      if (!canExitInterior) {
+        notify(`Walk back to the front door to leave ${activeInterior.name}.`)
+        return
+      }
+      const outsidePosition = player.returnPosition ?? playerPosition
+      keysRef.current.clear()
+      setAutoWalkTarget(null)
+      runWorldTransition(() => {
+        dispatch({ type: 'exit-interior' })
+        setSpawnPosition(outsidePosition)
+        setPlayerPosition(outsidePosition)
+        notify(`You stepped outside ${activeInterior.name}.`)
+      })
+      return
+    }
     if (nearbyCharacter) {
       keysRef.current.clear()
       setActiveCharacter(nearbyCharacter.id)
       return
     }
+    if (nearbyEntry) {
+      keysRef.current.clear()
+      setAutoWalkTarget(null)
+      const insidePosition = { x: 0, z: 3.2 }
+      runWorldTransition(() => {
+        dispatch({ type: 'enter-interior', interiorId: nearbyEntry.interior.id, returnPosition: nearbyEntry.entrance })
+        setSpawnPosition(insidePosition)
+        setPlayerPosition(insidePosition)
+        notify(`You entered ${nearbyEntry.interior.name}. Press E at the front door to step outside.`)
+      })
+      return
+    }
     if (nearbyLocation) handleLocationAction(nearbyLocation.id)
-  }, [activeCharacter, handleLocationAction, nearbyCharacter, nearbyLocation])
+  }, [activeCharacter, activeInterior, canExitInterior, handleLocationAction, nearbyCharacter, nearbyEntry, nearbyLocation, notify, player.returnPosition, playerPosition, runWorldTransition, worldTransitioning])
 
   const handleCharacterAction = useCallback(() => {
     if (!activeCharacter) return
@@ -509,37 +602,67 @@ export default function GameShell() {
     const location = WORLD_LOCATIONS.find((entry) => entry.id === locationId)
     if (!location) return
     setPinnedWaypoint(locationId)
+
     if (mode === 'walk') {
       setAutoWalkTarget(locationId)
-      notify(`Walking automatically to ${location.name}. Use the joystick anytime to take over.`)
+      closePanel()
+      notify(`Walking to ${location.name}. Your route leads to its entrance; use the controls to take over.`)
       return
     }
+
+    if (mode === 'drive') {
+      setAutoWalkTarget(null)
+      closePanel()
+      if (!player.ownsScooter) {
+        setPinnedWaypoint('garage')
+        notify('Visit Mainland Motors to rent a scooter before self-driving.')
+        return
+      }
+      if (!player.inVehicle) dispatch({ type: 'toggle-vehicle' })
+      notify(`Scooter ready. Follow the marked route to ${location.name}.`)
+      return
+    }
+
+    if (rideBooking && rideBooking.status !== 'arrived') {
+      notify('Your current ride is already on the way.')
+      return
+    }
+
+    const fare = estimateRideFare(distanceBetween(playerPosition, location), mode)
+    if (player.cash < fare) {
+      notify(`You need ${formatNaira(fare)} for this ride.`)
+      return
+    }
+
     setAutoWalkTarget(null)
-    if (mode === 'cab' || mode === 'bike' || mode === 'driver') {
-      // Dispatch a playable ride: confirm the pickup, then move the player to the
-      // selected destination after a short arrival/boarding sequence.
-      const rideName = mode === 'bike' ? 'Okada' : mode === 'driver' ? 'Private driver' : 'Cab'
-      notify(`${rideName} booked. Your driver is on the way to your pickup point…`)
-      const entrance = WORLD_LOCATIONS.find((entry) => entry.id === locationId)
-      if (!entrance) return
-      window.setTimeout(() => {
-        notify(`${rideName} has arrived. Boarding…`)
-        dispatch({ type: 'toggle-vehicle' })
-        window.setTimeout(() => {
-          setSpawnPosition({ x: entrance.x, z: entrance.z })
-          setPlayerPosition({ x: entrance.x, z: entrance.z })
-          dispatch({ type: 'toggle-vehicle' })
-          notify(`You have arrived at ${location.name}.`)
-        }, 1800)
-      }, 2200)
-      return
+    keysRef.current.clear()
+    closePanel()
+    const rideId = rideSequenceRef.current + 1
+    rideSequenceRef.current = rideId
+    dispatch({ type: 'pay-ride', amount: fare })
+    const rideName = mode === 'bike' ? 'Okada' : mode === 'danfo' ? 'Danfo' : mode === 'driver' ? 'Private driver' : 'City cab'
+    setRideBooking({ id: rideId, destinationId: locationId, mode, fare, status: 'dispatching' })
+    notify(`${rideName} requested for ${formatNaira(fare)}. A driver is finding your pickup.`)
+
+    const updateStatus = (status: RideBookingStatus) => {
+      setRideBooking((current) => current?.id === rideId ? { ...current, status } : current)
     }
-    const messages: Record<Exclude<TravelMode, 'walk' | 'cab' | 'bike' | 'driver'>, string> = {
-      danfo: `Waiting for the next danfo going toward ${location.district}. Route is marked.`,
-      drive: `Self-drive route set to ${location.name}. Enter a vehicle to drive there.`,
-    }
-    notify(messages[mode])
-  }, [notify])
+    scheduleRideTimer(1400, () => updateStatus('approaching'))
+    scheduleRideTimer(2600, () => updateStatus('boarding'))
+    scheduleRideTimer(4100, () => updateStatus('en-route'))
+    scheduleRideTimer(6600, () => {
+      const destination = getLocationEntrancePosition(locationId) ?? { x: location.x, z: location.z }
+      runWorldTransition(() => {
+        setSpawnPosition(destination)
+        setPlayerPosition(destination)
+        updateStatus('arrived')
+        notify(`You arrived at ${location.name}. Fare paid: ${formatNaira(fare)}.`)
+      })
+    })
+    scheduleRideTimer(10800, () => {
+      setRideBooking((current) => current?.id === rideId ? null : current)
+    })
+  }, [closePanel, notify, player.cash, player.inVehicle, player.ownsScooter, playerPosition, rideBooking, runWorldTransition, scheduleRideTimer])
 
   const applyJob = useCallback((jobId: JobId) => {
     const job = CITY_JOBS.find((entry) => entry.id === jobId)
@@ -679,8 +802,9 @@ export default function GameShell() {
         keysRef={keysRef}
         onPlayerPosition={handlePlayerPosition}
         inVehicle={player.inVehicle}
+        rideVehicle={rideBooking && (rideBooking.status === 'boarding' || rideBooking.status === 'en-route') ? rideBooking.mode : null}
         gender={player.gender}
-        activeInterior={null}
+        activeInterior={activeInterior}
         paused={paused}
         waypoint={waypoint}
         autoWalkTarget={autoWalkTarget}
@@ -688,6 +812,7 @@ export default function GameShell() {
         remotePlayers={remotePlayers}
         gameMinutes={gameMinutes}
       />
+      <div className={`world-transition${worldTransitioning ? ' is-active' : ''}`} aria-hidden="true" />
       <div className="world-vignette" aria-hidden="true" />
       <GameHud
         player={player}
@@ -696,6 +821,10 @@ export default function GameShell() {
         playerPosition={playerPosition}
         nearbyCharacter={nearbyCharacter}
         nearbyLocation={nearbyLocation}
+        nearbyInterior={nearbyInterior}
+        activeInterior={activeInterior}
+        canExitInterior={canExitInterior}
+        rideBooking={rideBooking}
         waypoint={waypoint}
         activePanel={activePanel}
         toast={toast}

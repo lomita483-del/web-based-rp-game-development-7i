@@ -4,8 +4,13 @@ import { useEffect, useState, type CSSProperties, type PointerEvent } from 'reac
 import {
   Activity,
   ArrowRight,
+  Bike,
   BriefcaseBusiness,
   Building2,
+  BusFront,
+  CarFront,
+  Footprints,
+  KeyRound,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -32,6 +37,7 @@ import {
   CITY_JOBS,
   WORLD_LOCATIONS,
   distanceBetween,
+  estimateRideFare,
   formatGameTime,
   formatNaira,
   getMissionDetails,
@@ -42,12 +48,16 @@ import {
   type JobId,
   type LocationId,
   type PlayerState,
+  type InteriorDefinition,
+  type RideBooking,
+  type RideBookingStatus,
+  type RideVehicleType,
 } from './game-data'
 import { LifePanel } from './life-panel'
 import { OnlinePanel } from './online-panel'
 import type { GameUser, OnlinePlayer, SaveStatus } from '@/lib/game/types'
 
-export type TravelMode = 'cab' | 'bike' | 'danfo' | 'driver' | 'drive' | 'walk'
+export type TravelMode = RideVehicleType | 'drive' | 'walk'
 
 type HudProps = {
   player: PlayerState
@@ -56,6 +66,10 @@ type HudProps = {
   playerPosition: { x: number; z: number }
   nearbyCharacter: (typeof CITY_CHARACTERS)[number] | null
   nearbyLocation: (typeof WORLD_LOCATIONS)[number] | null
+  nearbyInterior: InteriorDefinition | null
+  activeInterior: InteriorDefinition | null
+  canExitInterior: boolean
+  rideBooking: RideBooking | null
   waypoint: LocationId | null
   activePanel: GamePanel
   toast: { id: number; text: string } | null
@@ -71,6 +85,21 @@ const PANEL_ACTIONS: { id: Exclude<GamePanel, 'none'>; label: string; icon: Luci
   { id: 'inventory', label: 'Bag', icon: Package, shortcut: 'I' },
   { id: 'online', label: 'Online', icon: UsersRound, shortcut: 'O' },
 ]
+
+const RIDE_STATUS_LABELS: Record<RideBookingStatus, string> = {
+  dispatching: 'Finding a nearby driver',
+  approaching: 'Driver is on the way',
+  boarding: 'Your ride has arrived',
+  'en-route': 'Riding across town',
+  arrived: 'You have arrived',
+}
+
+const RIDE_MODE_LABELS: Record<RideVehicleType, string> = {
+  cab: 'City cab',
+  bike: 'Okada',
+  danfo: 'Danfo',
+  driver: 'Private driver',
+}
 
 function mapCoordinates(position: { x: number; z: number }) {
   return { x: 50 + position.x * 0.45, y: 50 + position.z * 0.45 }
@@ -88,6 +117,10 @@ export function GameHud({
   playerPosition,
   nearbyCharacter,
   nearbyLocation,
+  nearbyInterior,
+  activeInterior,
+  canExitInterior,
+  rideBooking,
   waypoint,
   activePanel,
   toast,
@@ -96,14 +129,20 @@ export function GameHud({
   onMoveKey,
 }: HudProps) {
   const mission = getMissionDetails(player.stage)
-  const currentDistrict = nearbyLocation?.district ?? 'Lagos Mainland'
+  const currentDistrict = activeInterior?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'
   const streets = [-66, -42, -18, 18, 42, 66]
   const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
-  const interactionLabel = nearbyCharacter
-    ? `Talk to ${nearbyCharacter.name}`
-    : nearbyLocation
-      ? `Explore ${nearbyLocation.name}`
-      : 'Wander the city'
+  const rideDestination = rideBooking && WORLD_LOCATIONS.find((location) => location.id === rideBooking.destinationId)
+  const RideIcon = rideBooking?.mode === 'bike' ? Bike : rideBooking?.mode === 'danfo' ? BusFront : CarFront
+  const interactionLabel = activeInterior
+    ? canExitInterior ? `Exit ${activeInterior.name}` : `Return to the door at ${activeInterior.name}`
+    : nearbyCharacter
+      ? `Talk to ${nearbyCharacter.name}`
+      : nearbyInterior
+        ? `Enter ${nearbyInterior.name}`
+        : nearbyLocation
+          ? `Explore ${nearbyLocation.name}`
+          : 'Wander the city'
 
   return (
     <div className="game-hud">
@@ -146,6 +185,17 @@ export function GameHud({
           </button>
         </div>
       </header>
+
+      {rideBooking && (
+        <div className="ride-status-card" role="status" aria-live="polite">
+          <span className="ride-status-icon"><RideIcon aria-hidden="true" /></span>
+          <span className="ride-status-copy">
+            <small>{RIDE_MODE_LABELS[rideBooking.mode]} · {RIDE_STATUS_LABELS[rideBooking.status]}</small>
+            <strong>{rideDestination?.name ?? 'Your destination'}</strong>
+          </span>
+          <span className="ride-status-fare">{formatNaira(rideBooking.fare)}</span>
+        </div>
+      )}
 
       <aside className="mission-card" aria-label="Current story objective">
         <div className="mission-card-topline">
@@ -221,11 +271,11 @@ export function GameHud({
           className="interaction-button"
           type="button"
           onClick={onInteract}
-          disabled={!nearbyCharacter && !nearbyLocation}
+          disabled={!nearbyCharacter && !nearbyLocation && !nearbyInterior && !activeInterior}
         >
           <span className="interaction-key">E</span>
           <span className="interaction-copy">
-            <small>{nearbyCharacter ? 'ROLEPLAY' : nearbyLocation ? 'LOCATION' : 'EXPLORE'}</small>
+            <small>{activeInterior ? 'INSIDE' : nearbyInterior ? 'BUILDING ENTRY' : nearbyCharacter ? 'ROLEPLAY' : nearbyLocation ? 'LOCATION' : 'EXPLORE'}</small>
             <strong>{interactionLabel}</strong>
           </span>
           <ArrowRight aria-hidden="true" />
@@ -385,7 +435,7 @@ export function GamePanels({
         </nav>
 
         <div className="panel-scroll">
-          {panel === 'map' && <MapPanel waypoint={waypoint} playerPosition={playerPosition} onSetWaypoint={onSetWaypoint} onTravel={onTravel} />}
+          {panel === 'map' && <MapPanel waypoint={waypoint} playerPosition={playerPosition} playerCash={player.cash} ownsScooter={player.ownsScooter} onSetWaypoint={onSetWaypoint} onTravel={onTravel} />}
           {panel === 'jobs' && <JobsPanel player={player} playerPosition={playerPosition} onAcceptDelivery={onAcceptDelivery} onSetWaypoint={onSetWaypoint} onApplyJob={onApplyJob} onCompleteShift={onCompleteShift} />}
           {panel === 'life' && <LifePanel player={player} onJoinFaction={onJoinFaction} onLeaseHome={onLeaseHome} onSetWaypoint={onSetWaypoint} onRegisterVoter={onRegisterVoter} onResolveCourt={onResolveCourt} />}
           {panel === 'inventory' && <InventoryPanel player={player} onBuyFood={onBuyFood} onEatFood={onEatFood} />}
@@ -409,15 +459,18 @@ export function GamePanels({
 function MapPanel({
   waypoint,
   playerPosition,
+  playerCash,
+  ownsScooter,
   onSetWaypoint,
   onTravel,
-}: Pick<GamePanelsProps, 'waypoint' | 'playerPosition' | 'onSetWaypoint' | 'onTravel'>) {
+}: Pick<GamePanelsProps, 'waypoint' | 'playerPosition' | 'onSetWaypoint' | 'onTravel'> & { playerCash: number; ownsScooter: boolean }) {
   const [selectedLocationId, setSelectedLocationId] = useState<LocationId | null>(waypoint)
   useEffect(() => { if (waypoint) setSelectedLocationId(waypoint) }, [waypoint])
   const selectedLocation = WORLD_LOCATIONS.find((location) => location.id === selectedLocationId) ?? null
   const target = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const playerPoint = mapCoordinates(playerPosition)
   const targetPoint = target ? mapCoordinates(target) : null
+  const travelDistance = selectedLocation ? distanceBetween(playerPosition, selectedLocation) : 0
   const streets = [-66, -42, -18, 18, 42, 66]
 
   return (
@@ -466,14 +519,14 @@ function MapPanel({
       </div>
       {selectedLocation && (
         <section className="travel-options" aria-label={`Travel options to ${selectedLocation.name}`}>
-          <div className="travel-options-heading"><span>GETTING THERE</span><strong>{selectedLocation.name}</strong><small>{Math.round(distanceBetween(playerPosition, selectedLocation))}m away · Choose your journey</small></div>
+          <div className="travel-options-heading"><span>GETTING THERE</span><strong>{selectedLocation.name}</strong><small>{Math.round(distanceBetween(playerPosition, selectedLocation))}m away · Wallet {formatNaira(playerCash)}</small></div>
           <div className="travel-options-grid">
-            <button type="button" onClick={() => onTravel(selectedLocation.id, 'cab')}><span>🚕</span><strong>Book a cab</strong><small>₦2,500 · on-demand</small></button>
-            <button type="button" onClick={() => onTravel(selectedLocation.id, 'bike')}><span>🏍️</span><strong>Book a bike</strong><small>₦1,200 · faster</small></button>
-            <button type="button" onClick={() => onTravel(selectedLocation.id, 'danfo')}><span>🚌</span><strong>Next danfo</strong><small>Wait for route bus</small></button>
-            <button type="button" onClick={() => onTravel(selectedLocation.id, 'driver')}><span>🚘</span><strong>Private driver</strong><small>₦5,000 · chauffeured</small></button>
-            <button type="button" onClick={() => onTravel(selectedLocation.id, 'drive')}><span>🔑</span><strong>Drive myself</strong><small>Use your vehicle</small></button>
-            <button type="button" onClick={() => onTravel(selectedLocation.id, 'walk')}><span>🚶</span><strong>Walk there</strong><small>Automatic walking</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'cab')}><span className="travel-option-icon"><CarFront aria-hidden="true" /></span><strong>Book a cab</strong><small>{formatNaira(estimateRideFare(travelDistance, 'cab'))} · on-demand</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'bike')}><span className="travel-option-icon"><Bike aria-hidden="true" /></span><strong>Book an okada</strong><small>{formatNaira(estimateRideFare(travelDistance, 'bike'))} · faster</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'danfo')}><span className="travel-option-icon"><BusFront aria-hidden="true" /></span><strong>Book a danfo</strong><small>{formatNaira(estimateRideFare(travelDistance, 'danfo'))} · shared route</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'driver')}><span className="travel-option-icon"><CarFront aria-hidden="true" /></span><strong>Private driver</strong><small>{formatNaira(estimateRideFare(travelDistance, 'driver'))} · chauffeured</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'drive')}><span className="travel-option-icon"><KeyRound aria-hidden="true" /></span><strong>Drive myself</strong><small>{ownsScooter ? 'Scooter ready · no booking fee' : 'Rent a scooter at the garage'}</small></button>
+            <button type="button" onClick={() => onTravel(selectedLocation.id, 'walk')}><span className="travel-option-icon"><Footprints aria-hidden="true" /></span><strong>Walk there</strong><small>Follow the marked route</small></button>
           </div>
         </section>
       )}

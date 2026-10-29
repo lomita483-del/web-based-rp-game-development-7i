@@ -103,9 +103,9 @@ export const WORLD_LOCATIONS = [
     name: 'University of Lagos',
     district: 'Akoka',
     x: -54,
-    z: -54,
+    z: -76,
     kind: 'university',
-    description: 'A large campus of lecture halls, libraries, and student housing.',
+    description: 'A dedicated Akoka campus with lecture halls, a library, student housing, and open courtyards.'
   },
   {
     id: 'school',
@@ -222,7 +222,7 @@ export type WorldLocation = (typeof WORLD_LOCATIONS)[number]
 
 export const CITY_BUILDINGS = [
   { id: 'canal-walkups', name: 'Canal Walk-ups', district: 'Lagos Island', x: -76, z: -76, width: 8, depth: 8, height: 12, color: '#817d75', accent: '#c89b62', interiorKind: 'apartment' },
-  { id: 'ikeja-quarters', name: 'Ikeja Staff Quarters', district: 'Ikeja', x: -54, z: -76, width: 9, depth: 8, height: 9, color: '#9b8c78', accent: '#c9845b', interiorKind: 'apartment' },
+  { id: 'ikeja-quarters', name: 'Ikeja Staff Quarters', district: 'Ikeja', x: 30, z: 9, width: 9, depth: 8, height: 9, color: '#9b8c78', accent: '#c9845b', interiorKind: 'apartment' },
   { id: 'yaba-service-flats', name: 'Yaba Service Flats', district: 'Yaba', x: -30, z: -76, width: 8, depth: 8, height: 10, color: '#767c7c', accent: '#d0a263', interiorKind: 'apartment' },
   { id: 'cargo-annex', name: 'Airport Cargo Annex', district: 'Ikeja', x: 0, z: -76, width: 8, depth: 8, height: 11, color: '#777b78', accent: '#b5a06c', interiorKind: 'office' },
   { id: 'oshodi-market-row', name: 'Oshodi Market Row', district: 'Oshodi', x: 30, z: -76, width: 8, depth: 8, height: 6, color: '#99775d', accent: '#d49c54', interiorKind: 'shop' },
@@ -443,7 +443,7 @@ export const CITY_CHARACTERS = [
     name: 'Tunde',
     role: 'Independent courier',
     x: 28,
-    z: -27,
+    z: -24.5,
     locationId: 'market',
     color: '#315b72',
     skinTone: '#754c39',
@@ -456,7 +456,7 @@ export const CITY_CHARACTERS = [
     name: 'Ada',
     role: 'Afterglow host',
     x: -28,
-    z: 27,
+    z: 36.2,
     locationId: 'club',
     color: '#763f42',
     skinTone: '#9b6a4d',
@@ -468,8 +468,8 @@ export const CITY_CHARACTERS = [
     id: 'kunle',
     name: 'Kunle',
     role: 'Mechanic & rider',
-    x: 28,
-    z: 27,
+    x: 33,
+    z: 37,
     locationId: 'garage',
     color: '#3b5261',
     skinTone: '#684332',
@@ -481,8 +481,8 @@ export const CITY_CHARACTERS = [
     id: 'sade',
     name: 'Sade',
     role: 'Palm & Pepper owner',
-    x: 1,
-    z: 27,
+    x: 3,
+    z: 36.5,
     locationId: 'cafe',
     color: '#8b5535',
     skinTone: '#9c6849',
@@ -494,8 +494,8 @@ export const CITY_CHARACTERS = [
     id: 'chika',
     name: 'Chika',
     role: 'Community police officer',
-    x: -52,
-    z: 7,
+    x: -50,
+    z: 12.3,
     locationId: 'police',
     color: '#273f58',
     skinTone: '#80533f',
@@ -508,7 +508,7 @@ export const CITY_CHARACTERS = [
     name: 'Amina',
     role: 'Hospital nurse',
     x: -28,
-    z: -4,
+    z: 1.5,
     locationId: 'hospital',
     color: '#e1ddd1',
     skinTone: '#98654a',
@@ -520,8 +520,8 @@ export const CITY_CHARACTERS = [
     id: 'wale',
     name: 'Wale',
     role: 'Stadium groundskeeper',
-    x: 52,
-    z: -28,
+    x: 51,
+    z: -20.5,
     locationId: 'stadium',
     color: '#364a43',
     skinTone: '#87583f',
@@ -533,8 +533,8 @@ export const CITY_CHARACTERS = [
     id: 'tobi',
     name: 'Tobi',
     role: 'University teaching assistant',
-    x: -52,
-    z: -52,
+    x: -51,
+    z: -68,
     locationId: 'university',
     color: '#725044',
     skinTone: '#87583f',
@@ -559,8 +559,8 @@ export const CITY_CHARACTERS = [
     id: 'emeka',
     name: 'Emeka',
     role: 'Port dispatch coordinator',
-    x: 52,
-    z: 27,
+    x: 51,
+    z: 37.5,
     locationId: 'port',
     color: '#39525c',
     skinTone: '#76503b',
@@ -572,8 +572,8 @@ export const CITY_CHARACTERS = [
     id: 'kemi',
     name: 'Kemi',
     role: 'Civic information officer',
-    x: -52,
-    z: 27,
+    x: -50,
+    z: 38,
     locationId: 'government',
     color: '#614b51',
     skinTone: '#9a694d',
@@ -586,7 +586,7 @@ export const CITY_CHARACTERS = [
     name: 'Moyo',
     role: 'Events producer',
     x: 0,
-    z: -23,
+    z: -18.5,
     locationId: 'event-center',
     color: '#574653',
     skinTone: '#87583f',
@@ -796,6 +796,26 @@ export type HomeId = (typeof CITY_HOMES)[number]['id']
 export type MissionStage = 'meet-bisi' | 'find-tunde' | 'delivery' | 'free-roam'
 export type GamePanel = 'none' | 'map' | 'jobs' | 'life' | 'inventory' | 'online'
 export type Gender = 'male' | 'female'
+export type RideVehicleType = 'cab' | 'bike' | 'danfo' | 'driver'
+export type RideBookingStatus = 'dispatching' | 'approaching' | 'boarding' | 'en-route' | 'arrived'
+export type RideBooking = {
+  id: number
+  destinationId: LocationId
+  mode: RideVehicleType
+  fare: number
+  status: RideBookingStatus
+}
+
+export function estimateRideFare(distance: number, mode: RideVehicleType) {
+  const rates: Record<RideVehicleType, { base: number; perUnit: number }> = {
+    cab: { base: 300, perUnit: 34 },
+    bike: { base: 150, perUnit: 24 },
+    danfo: { base: 80, perUnit: 9 },
+    driver: { base: 800, perUnit: 46 },
+  }
+  const fare = rates[mode].base + Math.ceil(Math.max(0, distance) * rates[mode].perUnit)
+  return Math.ceil(fare / 50) * 50
+}
 
 export type InventoryItemId = 'city-guide' | 'suya' | 'parcel'
 
@@ -887,6 +907,7 @@ export type PlayerAction =
   | { type: 'set-gender'; gender: Gender }
   | { type: 'deposit-bank'; amount: number }
   | { type: 'withdraw-bank'; amount: number }
+  | { type: 'pay-ride'; amount: number }
   | { type: 'attend-lecture' }
   | { type: 'enter-interior'; interiorId: InteriorId; returnPosition: { x: number; z: number } }
   | { type: 'exit-interior' }
@@ -947,6 +968,10 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       if (!Number.isSafeInteger(action.amount) || action.amount <= 0 || action.amount > state.bankBalance) return state
       if (state.cash + action.amount > 1_000_000) return state
       return { ...state, cash: state.cash + action.amount, bankBalance: state.bankBalance - action.amount }
+    }
+    case 'pay-ride': {
+      if (!Number.isSafeInteger(action.amount) || action.amount <= 0 || action.amount > state.cash) return state
+      return { ...state, cash: state.cash - action.amount }
     }
     case 'attend-lecture': {
       if (state.energy < 12 || state.hunger < 5) return state

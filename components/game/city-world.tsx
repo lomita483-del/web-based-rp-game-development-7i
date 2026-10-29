@@ -3,7 +3,7 @@
 import { Stars, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
-import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type PerspectiveCamera, type Texture, Vector3 } from 'three'
+import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type MeshStandardMaterial, type PerspectiveCamera, type Texture, Vector3 } from 'three'
 import {
   CITY_BUILDINGS,
   CITY_CHARACTERS,
@@ -17,6 +17,7 @@ import {
   type InteriorDefinition,
   type LocationId,
   type RemotePlayer,
+  type RideVehicleType,
 } from './game-data'
 import { InteriorScene } from './interior-scene'
 
@@ -27,6 +28,7 @@ type CityWorldProps = {
   keysRef: MutableRefObject<Set<string>>
   onPlayerPosition: (position: PlayerPosition) => void
   inVehicle: boolean
+  rideVehicle?: RideVehicleType | null
   gender: Gender
   activeInterior: InteriorDefinition | null
   paused: boolean
@@ -49,9 +51,134 @@ function cloneTiledTexture(source: Texture, repeatX: number, repeatY: number) {
 }
 
 const ROAD_LINES = [-66, -42, -18, 18, 42, 66]
+const TRAFFIC_INTERSECTIONS = [-42, -18, 18, 42]
+const TRAFFIC_CYCLE_SECONDS = 22
 
+type TrafficAxis = 'x' | 'z'
+type TrafficSegment = 'street' | 'flyover' | 'bridge'
+type TrafficVehicleKind = 'car' | 'danfo' | 'keke' | 'truck' | 'okada'
+type TrafficVehicleSpec = {
+  id: string
+  kind: TrafficVehicleKind
+  color: string
+  axis: TrafficAxis
+  direction: 1 | -1
+  routeId: string
+  road: number
+  laneOffset: number
+  segment: TrafficSegment
+  y: number
+  start: number
+  min: number
+  max: number
+  speed: number
+}
 
-function Building({ name, x, z, width, depth, height, color, accent, facadeTexture }: BuildingSpec & { facadeTexture: Texture }) {
+const TRAFFIC_PAINT_COLORS = ['#d7d2c8', '#526977', '#a95443', '#65765a', '#33434c', '#bb7647']
+const TRAFFIC_KIND_CYCLE: TrafficVehicleKind[] = ['car', 'danfo', 'car', 'keke', 'okada', 'truck']
+
+function getTrafficVehicleSpeed(kind: TrafficVehicleKind) {
+  return kind === 'okada' ? 8.5 : kind === 'keke' ? 6.2 : kind === 'truck' ? 5.8 : kind === 'danfo' ? 7.2 : 9.5
+}
+
+function createTrafficFleet(): TrafficVehicleSpec[] {
+  const vehicles: TrafficVehicleSpec[] = []
+  let sequence = 0
+
+  for (const axis of ['x', 'z'] as const) {
+    ROAD_LINES.forEach((road, roadIndex) => {
+      const roadWidth = Math.abs(road) <= 42 ? 7 : 5
+      for (const direction of [1, -1] as const) {
+        const busyApproach = axis === 'x' && road === -18 && direction === 1
+        const vehicleCount = busyApproach || road === -18 || road === 18 ? 3 : 2
+        for (let slot = 0; slot < vehicleCount; slot += 1) {
+          const kind = TRAFFIC_KIND_CYCLE[(roadIndex * 3 + slot * 2 + (axis === 'z' ? 1 : 0) + (direction < 0 ? 2 : 0)) % TRAFFIC_KIND_CYCLE.length]
+          const min = axis === 'x' ? -82 : Math.abs(road) >= 42 ? -70 : -78
+          const max = axis === 'x' ? 82 : 78
+          const length = max - min
+          const start = busyApproach
+            ? [-34, -41, -48][slot]
+            : direction === 1
+              ? min + 14 + slot * (length / vehicleCount) + roadIndex * 3
+              : max - 14 - slot * (length / vehicleCount) - roadIndex * 3
+          const color = kind === 'danfo'
+            ? '#e1bd38'
+            : kind === 'keke'
+              ? '#d69e35'
+              : kind === 'okada'
+                ? '#31464d'
+                : kind === 'truck'
+                  ? TRAFFIC_PAINT_COLORS[(roadIndex + slot) % TRAFFIC_PAINT_COLORS.length]
+                  : TRAFFIC_PAINT_COLORS[(roadIndex * 2 + slot + (axis === 'z' ? 2 : 0)) % TRAFFIC_PAINT_COLORS.length]
+          const laneOffset = direction === 1 ? -Math.min(1.45, roadWidth * 0.24) : Math.min(1.45, roadWidth * 0.24)
+          vehicles.push({
+            id: `street-${sequence++}`,
+            kind,
+            color,
+            axis,
+            direction,
+            routeId: `street-${axis}-${road}-${direction}`,
+            road,
+            laneOffset,
+            segment: 'street',
+            y: 0,
+            start: min + ((((start - min) % length) + length) % length),
+            min,
+            max,
+            speed: getTrafficVehicleSpeed(kind),
+          })
+        }
+      }
+    })
+  }
+
+  for (const segment of ['flyover', 'bridge'] as const) {
+    const countPerDirection = segment === 'flyover' ? 3 : 2
+    const road = segment === 'flyover' ? -42 : 76
+    const laneWidth = segment === 'flyover' ? 2.1 : 1.35
+    const y = segment === 'flyover' ? 6.98 : 4.68
+    for (const direction of [1, -1] as const) {
+      for (let slot = 0; slot < countPerDirection; slot += 1) {
+        const kind = TRAFFIC_KIND_CYCLE[(sequence + slot * 2 + (direction < 0 ? 1 : 0)) % TRAFFIC_KIND_CYCLE.length]
+        const min = -82
+        const max = 82
+        const length = max - min
+        const start = direction === 1
+          ? min + 12 + slot * (length / countPerDirection)
+          : max - 12 - slot * (length / countPerDirection)
+        vehicles.push({
+          id: `${segment}-${sequence++}`,
+          kind,
+          color: kind === 'danfo' ? '#e1bd38' : kind === 'keke' ? '#d69e35' : kind === 'okada' ? '#31464d' : TRAFFIC_PAINT_COLORS[sequence % TRAFFIC_PAINT_COLORS.length],
+          axis: 'x',
+          direction,
+          routeId: `${segment}-x-${direction}`,
+          road,
+          laneOffset: direction === 1 ? -laneWidth : laneWidth,
+          segment,
+          y,
+          start: min + ((((start - min) % length) + length) % length),
+          min,
+          max,
+          speed: getTrafficVehicleSpeed(kind) * (segment === 'flyover' ? 1.2 : 0.9),
+        })
+      }
+    }
+  }
+
+  return vehicles
+}
+
+const CITY_TRAFFIC = createTrafficFleet()
+
+function getTrafficSignalAspect(elapsed: number, x: number, z: number, axis: TrafficAxis) {
+  const offset = ((x * 0.13 + z * 0.09) % TRAFFIC_CYCLE_SECONDS + TRAFFIC_CYCLE_SECONDS) % TRAFFIC_CYCLE_SECONDS
+  const phase = (elapsed + offset) % TRAFFIC_CYCLE_SECONDS
+  if (axis === 'x') return phase < 8.5 ? 'green' : phase < 10.5 ? 'amber' : 'red'
+  return phase >= 11.5 && phase < 20 ? 'green' : phase >= 20 ? 'amber' : 'red'
+}
+
+function Building({ name, x, z, width, depth, height, color, accent, interiorKind, facadeTexture }: BuildingSpec & { facadeTexture: Texture }) {
   const floors = Math.max(2, Math.floor(height / 3))
   const columns = Math.max(3, Math.floor(width / 2.4))
   const windowWidth = Math.min(0.86, width / (columns * 1.65))
@@ -70,6 +197,12 @@ function Building({ name, x, z, width, depth, height, color, accent, facadeTextu
         <boxGeometry args={[width + 0.65, 0.28, depth + 0.65]} />
         <meshStandardMaterial color="#5d5d59" roughness={0.82} />
       </mesh>
+      {interiorKind === 'house' && (
+        <mesh position={[0, height + 1.15, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+          <coneGeometry args={[width * 0.58, 1.45, 4]} />
+          <meshStandardMaterial color="#755344" roughness={0.92} />
+        </mesh>
+      )}
       <mesh position={[0, 0.92, depth / 2 + 0.06]}>
         <boxGeometry args={[width * 0.26, 1.35, 0.14]} />
         <meshStandardMaterial color="#31363a" roughness={0.58} />
@@ -122,6 +255,37 @@ function Building({ name, x, z, width, depth, height, color, accent, facadeTextu
         <boxGeometry args={[1.4, 0.55, 1]} />
         <meshStandardMaterial color="#696a67" roughness={0.9} />
       </mesh>
+    </group>
+  )
+}
+
+function BuildingLot({ building }: { building: CityBuilding }) {
+  const road = ROAD_LINES.find((line) => line > building.z) ?? ROAD_LINES[ROAD_LINES.length - 1]
+  const roadWidth = Math.abs(road) <= 42 ? 7 : 5
+  const sidewalkZ = road + roadWidth / 2 + 0.8
+  const drivewayStart = building.z + building.depth / 2 + 0.75
+  const drivewayDepth = Math.max(0, sidewalkZ - drivewayStart)
+  const isResidential = building.interiorKind === 'house' || building.interiorKind === 'apartment'
+  const groundColor = building.interiorKind === 'house' ? '#55634a' : isResidential ? '#66675b' : '#746d5f'
+
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[building.x, -0.11, building.z]} receiveShadow>
+        <planeGeometry args={[building.width + 2.6, building.depth + 2.6]} />
+        <meshStandardMaterial color={groundColor} roughness={0.98} />
+      </mesh>
+      {drivewayDepth > 0.8 && (
+        <mesh position={[building.x, 0.025, drivewayStart + drivewayDepth / 2]} receiveShadow>
+          <boxGeometry args={[1.7, 0.06, drivewayDepth]} />
+          <meshStandardMaterial color={isResidential ? '#898274' : '#77746c'} roughness={0.9} />
+        </mesh>
+      )}
+      {isResidential && [-1, 1].map((side) => (
+        <mesh key={side} position={[building.x + side * (building.width / 2 + 0.72), 0.42, building.z + building.depth / 2 - 0.35]} castShadow>
+          <sphereGeometry args={[0.42, 9, 7]} />
+          <meshStandardMaterial color={side < 0 ? '#53674b' : '#67734f'} roughness={0.98} />
+        </mesh>
+      ))}
     </group>
   )
 }
@@ -185,11 +349,21 @@ function RoadGrid({
                 </mesh>
               </group>
             ))}
-            {isMainRoad && dashPositions.map((position) => (
-              <mesh key={`dash-h-${position}`} position={[position, 0.012, offset]}>
-                <boxGeometry args={[3.2, 0.026, 0.12]} />
-                <meshBasicMaterial color="#d4b877" />
+            {[-1, 1].map((side) => (
+              <mesh key={`edge-h-${side}`} position={[0, 0.014, offset + side * (width / 2 - 0.28)]}>
+                <boxGeometry args={[180, 0.024, 0.08]} />
+                <meshBasicMaterial color="#d7d1c1" />
               </mesh>
+            ))}
+            {dashPositions.map((position) => (
+              <group key={`dash-h-${position}`}>
+                {(isMainRoad ? [-0.16, 0.16] : [0]).map((lineOffset) => (
+                  <mesh key={lineOffset} position={[position, 0.016, offset + lineOffset]}>
+                    <boxGeometry args={[3.2, 0.024, isMainRoad ? 0.09 : 0.12]} />
+                    <meshBasicMaterial color={isMainRoad ? '#d4b877' : '#d4d0c4'} />
+                  </mesh>
+                ))}
+              </group>
             ))}
           </group>
         )
@@ -222,11 +396,21 @@ function RoadGrid({
                 </mesh>
               </group>
             ))}
-            {isMainRoad && verticalDashPositions.map((position) => (
-              <mesh key={`dash-v-${position}`} position={[offset, 0.014, position]}>
-                <boxGeometry args={[0.12, 0.026, 3.2]} />
-                <meshBasicMaterial color="#d4b877" />
+            {[-1, 1].map((side) => (
+              <mesh key={`edge-v-${side}`} position={[offset + side * (width / 2 - 0.28), 0.014, 0]}>
+                <boxGeometry args={[0.08, 0.024, roadLength]} />
+                <meshBasicMaterial color="#d7d1c1" />
               </mesh>
+            ))}
+            {verticalDashPositions.map((position) => (
+              <group key={`dash-v-${position}`}>
+                {(isMainRoad ? [-0.16, 0.16] : [0]).map((lineOffset) => (
+                  <mesh key={lineOffset} position={[offset + lineOffset, 0.016, position]}>
+                    <boxGeometry args={[isMainRoad ? 0.09 : 0.12, 0.024, 3.2]} />
+                    <meshBasicMaterial color={isMainRoad ? '#d4b877' : '#d4d0c4'} />
+                  </mesh>
+                ))}
+              </group>
             ))}
           </group>
         )
@@ -308,11 +492,21 @@ function Flyover() {
           <meshStandardMaterial color="#b9b2a4" roughness={0.66} metalness={0.24} />
         </mesh>
       ))}
-      {laneMarks.map((x) => (
-        <mesh key={`flyover-mark-${x}`} position={[x, 6.92, 0]}>
-          <boxGeometry args={[3.5, 0.026, 0.13]} />
-          <meshBasicMaterial color="#d6bb83" />
+      {[-1, 1].map((side) => (
+        <mesh key={`flyover-edge-${side}`} position={[0, 6.92, side * 4.5]}>
+          <boxGeometry args={[180, 0.026, 0.1]} />
+          <meshBasicMaterial color="#d7d1c1" />
         </mesh>
+      ))}
+      {laneMarks.map((x) => (
+        <group key={`flyover-mark-${x}`}>
+          {[-0.16, 0.16].map((lineOffset) => (
+            <mesh key={lineOffset} position={[x, 6.92, lineOffset]}>
+              <boxGeometry args={[3.5, 0.026, 0.09]} />
+              <meshBasicMaterial color="#e0c16d" />
+            </mesh>
+          ))}
+        </group>
       ))}
     </group>
   )
@@ -339,11 +533,21 @@ function LagoonBridge() {
           <meshStandardMaterial color="#a39d91" metalness={0.26} roughness={0.62} />
         </mesh>
       ))}
-      {laneMarks.map((x) => (
-        <mesh key={`bridge-mark-${x}`} position={[x, 4.62, 0]}>
-          <boxGeometry args={[3.1, 0.026, 0.11]} />
-          <meshBasicMaterial color="#d6bb83" />
+      {[-1, 1].map((side) => (
+        <mesh key={`bridge-edge-${side}`} position={[0, 4.62, side * 3.05]}>
+          <boxGeometry args={[180, 0.026, 0.08]} />
+          <meshBasicMaterial color="#d7d1c1" />
         </mesh>
+      ))}
+      {laneMarks.map((x) => (
+        <group key={`bridge-mark-${x}`}>
+          {[-0.15, 0.15].map((lineOffset) => (
+            <mesh key={lineOffset} position={[x, 4.62, lineOffset]}>
+              <boxGeometry args={[3.1, 0.026, 0.08]} />
+              <meshBasicMaterial color="#e0c16d" />
+            </mesh>
+          ))}
+        </group>
       ))}
     </group>
   )
@@ -407,21 +611,43 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   if (kind === 'square') {
     return (
       <group position={[x, 0, z]}>
-        {/* Eiffel-inspired landmark tower: tapered iron legs, open lattice silhouette, central mast. */}
-        <mesh position={[0, 0.3, 0]} receiveShadow><cylinderGeometry args={[6.8, 7.4, 0.6, 32]} /><meshStandardMaterial color="#6b7073" roughness={0.75} /></mesh>
-        {Array.from({ length: 4 }, (_, leg) => {
-          const angle = (leg / 4) * Math.PI * 2 + Math.PI / 4
-          return <group key={`iron-leg-${leg}`} rotation={[0, angle, 0]}>
-            <mesh position={[0, 6.4, 4.2]} rotation={[0.52, 0, 0]}><boxGeometry args={[0.42, 13.2, 0.42]} /><meshStandardMaterial color="#6e806f" metalness={0.62} roughness={0.4} /></mesh>
-            <mesh position={[0, 12, 2.5]} rotation={[0.34, 0, 0]}><boxGeometry args={[0.22, 8.4, 0.22]} /><meshStandardMaterial color="#6e806f" metalness={0.62} roughness={0.4} /></mesh>
-          </group>
-        })}
-        {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-platform-${i}`} position={[0, height, 0]}><cylinderGeometry args={[Math.max(1.2, 5.6 - i * 1.05), Math.max(1.2, 5.6 - i * 1.05), 0.24, 24]} /><meshStandardMaterial color="#596d60" metalness={0.55} roughness={0.45} /></mesh>)}
-        {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-ring-${i}`} position={[0, height, 0]}><torusGeometry args={[Math.max(1.2, 5.6 - i * 1.05), 0.12, 6, 24]} /><meshStandardMaterial color="#d9b16b" emissive="#ffb64d" emissiveIntensity={0.8} metalness={0.7} roughness={0.35} /></mesh>)}
-        {[4.8, 9.2, 14.2, 19.5, 23.4].map((height, i) => <pointLight key={`tower-glow-${i}`} position={[0, height, 0]} color={i % 2 ? "#f6d99b" : "#ffd07a"} intensity={1.1} distance={15} />)}
-        <mesh position={[0, 23.4, 0]}><cylinderGeometry args={[0.08, 0.55, 7.8, 8]} /><meshStandardMaterial color="#6e806f" metalness={0.65} roughness={0.4} /></mesh>
-        <mesh position={[0, 3.4, 3.62]}><boxGeometry args={[3.8, 1.25, 0.12]} /><meshStandardMaterial color="#17252c" /></mesh>
-        <mesh position={[0, 3.4, 3.71]}><boxGeometry args={[3.2, 0.12, 0.04]} /><meshBasicMaterial color="#e4c58b" /></mesh>
+        <mesh position={[0, 0.02, 0]} receiveShadow>
+          <boxGeometry args={[21, 0.16, 16]} />
+          <meshStandardMaterial color="#a9a18f" roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 0.24, 0]} receiveShadow>
+          <cylinderGeometry args={[4.45, 4.7, 0.34, 32]} />
+          <meshStandardMaterial color="#81796a" roughness={0.72} />
+        </mesh>
+        <mesh position={[0, 0.43, 0]}>
+          <cylinderGeometry args={[4.1, 4.25, 0.12, 32]} />
+          <meshStandardMaterial color="#3e6870" roughness={0.28} metalness={0.12} />
+        </mesh>
+        <mesh position={[0, 0.66, 0]}>
+          <cylinderGeometry args={[1.8, 2.3, 0.48, 20]} />
+          <meshStandardMaterial color="#9b907d" roughness={0.68} />
+        </mesh>
+        <mesh position={[0, 1.16, 0]}>
+          <cylinderGeometry args={[0.86, 1.12, 0.58, 16]} />
+          <meshStandardMaterial color="#6b7168" roughness={0.58} metalness={0.18} />
+        </mesh>
+        <mesh position={[0, 1.68, 0]}>
+          <cylinderGeometry args={[0.2, 0.38, 0.75, 10]} />
+          <meshStandardMaterial color="#b98b50" metalness={0.48} roughness={0.42} />
+        </mesh>
+        {[-1, 1].flatMap((xSide) => [-1, 1].map((zSide) => (
+          <mesh key={`${xSide}-${zSide}`} position={[xSide * 1.55, 1.05, zSide * 1.55]}>
+            <cylinderGeometry args={[0.045, 0.07, 0.92, 7]} />
+            <meshBasicMaterial color="#a6d5d3" transparent opacity={0.62} />
+          </mesh>
+        )))}
+        {[-1, 1].map((side) => (
+          <mesh key={`plaza-seat-${side}`} position={[side * 6, 0.5, 4]}>
+            <boxGeometry args={[3.2, 0.4, 0.7]} />
+            <meshStandardMaterial color="#6c5747" roughness={0.86} />
+          </mesh>
+        ))}
+        <pointLight position={[0, 2.5, 0]} color="#8fc4c5" intensity={0.45} distance={12} />
       </group>
     )
   }
@@ -448,6 +674,75 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
         {[-1, 1].map((side) => <mesh key={side} position={[side * 4.6, 0.42, 0]}><boxGeometry args={[0.11, 0.04, 6.6]} /><meshBasicMaterial color="#ded8c6" /></mesh>)}
         <mesh position={[0, 4.6, 0]} castShadow><boxGeometry args={[5.2, 0.46, 4.5]} /><meshStandardMaterial color="#a99c89" roughness={0.8} /></mesh>
         {[-1, 1].map((side) => <StreetLamp key={`stadium-lamp-${side}`} position={[side * 10, 0, -6]} lit={side < 0} />)}
+      </group>
+    )
+  }
+
+  if (kind === 'university') {
+    return (
+      <group position={[x, 0, z]}>
+        <mesh position={[0, -0.035, 0]} receiveShadow>
+          <boxGeometry args={[17, 0.12, 15]} />
+          <meshStandardMaterial color="#52614a" roughness={0.98} />
+        </mesh>
+        <mesh position={[0, 0.025, 5.1]} receiveShadow>
+          <boxGeometry args={[3.2, 0.06, 4.6]} />
+          <meshStandardMaterial color="#b3a995" roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 3.65, -0.6]} castShadow receiveShadow>
+          <boxGeometry args={[13, 7.2, 8]} />
+          <meshStandardMaterial map={facadeTexture} color="#b19d7f" roughness={0.84} />
+        </mesh>
+        <mesh position={[0, 7.42, -0.6]} castShadow>
+          <boxGeometry args={[13.45, 0.34, 8.45]} />
+          <meshStandardMaterial color="#716354" roughness={0.84} />
+        </mesh>
+        <mesh position={[0, 1.1, 3.46]}>
+          <boxGeometry args={[2.45, 2.2, 0.12]} />
+          <meshStandardMaterial color="#333b3b" roughness={0.46} />
+        </mesh>
+        <mesh position={[0, 2.05, 3.55]}>
+          <boxGeometry args={[9.8, 1.2, 0.12]} />
+          <meshStandardMaterial color="#456b72" metalness={0.28} roughness={0.32} />
+        </mesh>
+        {[-4.7, -2.35, 2.35, 4.7].map((windowX) => (
+          <mesh key={windowX} position={[windowX, 2.02, 3.64]}>
+            <boxGeometry args={[0.08, 1.5, 0.08]} />
+            <meshStandardMaterial color="#d0b782" metalness={0.28} roughness={0.48} />
+          </mesh>
+        ))}
+        {[-1, 1].map((side) => (
+          <mesh key={`campus-pillar-${side}`} position={[side * 2.2, 1.65, 4.02]} castShadow>
+            <cylinderGeometry args={[0.16, 0.2, 3.3, 10]} />
+            <meshStandardMaterial color="#d0c6b4" roughness={0.72} />
+          </mesh>
+        ))}
+        <mesh position={[-7, 2.5, -5.7]} castShadow receiveShadow>
+          <boxGeometry args={[3.2, 5, 3.2]} />
+          <meshStandardMaterial map={facadeTexture} color="#8a8c7d" roughness={0.9} />
+        </mesh>
+        <mesh position={[7, 2.8, -5.7]} castShadow receiveShadow>
+          <boxGeometry args={[3.2, 5.6, 3.2]} />
+          <meshStandardMaterial map={facadeTexture} color="#9c765c" roughness={0.9} />
+        </mesh>
+        {[-7, 7].map((wingX) => (
+          <mesh key={`campus-wing-window-${wingX}`} position={[wingX, 2.8, -4.04]}>
+            <boxGeometry args={[2.25, 1.2, 0.08]} />
+            <meshStandardMaterial color="#4e7078" metalness={0.2} roughness={0.35} />
+          </mesh>
+        ))}
+        {[-1, 1].map((side) => (
+          <group key={`campus-gate-${side}`} position={[side * 4.2, 0, 7.1]}>
+            <mesh position={[0, 1.05, 0]} castShadow><boxGeometry args={[0.42, 2.1, 0.42]} /><meshStandardMaterial color="#8f826e" roughness={0.82} /></mesh>
+            <mesh position={[0, 2.15, 0]}><boxGeometry args={[0.56, 0.18, 0.56]} /><meshStandardMaterial color="#d0ad6d" metalness={0.28} roughness={0.46} /></mesh>
+          </group>
+        ))}
+        <mesh position={[0, 2.4, 7.12]}><boxGeometry args={[8.6, 0.3, 0.28]} /><meshStandardMaterial color="#4d5551" roughness={0.7} /></mesh>
+        <group position={[0, 2.4, 7.28]}><WorldLabel text="AKOKA CAMPUS" width={6.2} accentColor="#d5b36f" /></group>
+        <group position={[0, 8.4, 3.58]}><WorldLabel text="UNIVERSITY OF LAGOS" width={10.2} accentColor="#d5b36f" /></group>
+        {[-1, 1].flatMap((side) => [-1, 1].map((forward) => (
+          <StreetTree key={`campus-tree-${side}-${forward}`} position={[side * 7.45, 0, forward * 5.9]} scale={0.62} />
+        )))}
       </group>
     )
   }
@@ -517,16 +812,6 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
     )
   }
 
-  if (kind === 'square') {
-    return (
-      <group position={[x, 0, z]}>
-        <mesh position={[0, 0.02, 0]} receiveShadow><boxGeometry args={[21, 0.16, 16]} /><meshStandardMaterial color="#b5aa98" roughness={0.9} /></mesh>
-        <mesh position={[0, 0.42, 0]}><cylinderGeometry args={[2.3, 2.8, 0.65, 16]} /><meshStandardMaterial color="#7b7a74" roughness={0.66} /></mesh>
-        <mesh position={[0, 0.94, 0]}><cylinderGeometry args={[1.25, 1.3, 0.38, 16]} /><meshStandardMaterial color="#4c6a70" roughness={0.32} metalness={0.18} /></mesh>
-        {[-1, 1].map((side) => <mesh key={`plaza-seat-${side}`} position={[side * 6, 0.5, 4]}><boxGeometry args={[3.2, 0.4, 0.7]} /><meshStandardMaterial color="#6c5747" roughness={0.86} /></mesh>)}
-      </group>
-    )
-  }
 
   if (kind === 'event-center') {
     return (
@@ -808,27 +1093,214 @@ function ScooterModel() {
   )
 }
 
-function TrafficVehicle({ position, color, speed, minibus = false }: { position: [number, number, number]; color: string; speed: number; minibus?: boolean }) {
-  const vehicleRef = useRef<Group>(null!)
+function TrafficVehicleModel({ kind, color, night = false }: { kind: TrafficVehicleKind; color: string; night?: boolean }) {
+  const isDanfo = kind === 'danfo'
+  const isKeke = kind === 'keke'
+  const isTruck = kind === 'truck'
+  const isOkada = kind === 'okada'
+  const wheelBase = isTruck ? [-1.75, -0.75, 1.35] : isDanfo ? [-1.28, 1.22] : [-0.9, 0.9]
+  const wheelWidth = isKeke ? 1.08 : isOkada ? 0.42 : isTruck ? 2.45 : isDanfo ? 1.95 : 1.72
+  const wheelPositions: [number, number][] = isKeke
+    ? [[-0.54, -0.55], [0.54, -0.55], [0, 0.84]]
+    : wheelBase.flatMap((wheelZ) => [-1, 1].map((side) => [side * wheelWidth / 2, wheelZ] as [number, number]))
 
-  useFrame((_, delta) => {
-    if (!vehicleRef.current) return
-    vehicleRef.current.position.x += speed * Math.min(delta, 0.05)
-    if (vehicleRef.current.position.x > 90) vehicleRef.current.position.x = -90
+  return (
+    <group>
+      {isTruck ? (
+        <>
+          <mesh position={[0, 1.18, -1.18]} castShadow><boxGeometry args={[2.3, 1.8, 3.45]} /><meshStandardMaterial color={color} roughness={0.82} /></mesh>
+          <mesh position={[0, 1.15, 1.2]} castShadow><boxGeometry args={[1.96, 1.5, 1.72]} /><meshStandardMaterial color={color} roughness={0.62} /></mesh>
+          <mesh position={[0, 1.93, -1.18]}><boxGeometry args={[2.34, 0.12, 3.5]} /><meshStandardMaterial color="#626b6b" roughness={0.78} /></mesh>
+          <mesh position={[0, 1.42, 2.08]}><boxGeometry args={[1.52, 0.67, 0.08]} /><meshStandardMaterial color="#45616b" metalness={0.2} roughness={0.3} /></mesh>
+        </>
+      ) : isDanfo ? (
+        <>
+          <mesh position={[0, 0.82, 0]} castShadow><boxGeometry args={[1.96, 1.16, 3.85]} /><meshStandardMaterial color={color} roughness={0.72} /></mesh>
+          <mesh position={[0, 1.43, -0.08]}><boxGeometry args={[1.72, 0.52, 2.7]} /><meshStandardMaterial color="#3d5056" metalness={0.16} roughness={0.34} /></mesh>
+          <mesh position={[0, 0.43, 0]}><boxGeometry args={[1.98, 0.18, 3.8]} /><meshStandardMaterial color="#873e35" roughness={0.8} /></mesh>
+          <mesh position={[0, 1.01, 1.95]}><boxGeometry args={[1.45, 0.52, 0.08]} /><meshStandardMaterial color="#435c63" metalness={0.18} roughness={0.3} /></mesh>
+          <mesh position={[0, 1.83, -0.06]}><boxGeometry args={[1.78, 0.1, 2.8]} /><meshStandardMaterial color="#d9c16d" roughness={0.74} /></mesh>
+        </>
+      ) : isKeke ? (
+        <>
+          <mesh position={[0, 0.58, 0]} castShadow><boxGeometry args={[1.3, 0.52, 1.9]} /><meshStandardMaterial color={color} roughness={0.76} /></mesh>
+          <mesh position={[0, 1.27, -0.05]}><boxGeometry args={[1.34, 0.15, 1.48]} /><meshStandardMaterial color="#d1b167" roughness={0.76} /></mesh>
+          {[-1, 1].map((side) => [-0.56, 0.5].map((z) => (
+            <mesh key={`${side}-${z}`} position={[side * 0.58, 1.0, z]}><boxGeometry args={[0.06, 0.58, 0.06]} /><meshStandardMaterial color="#39484b" metalness={0.18} roughness={0.58} /></mesh>
+          )))}
+          <mesh position={[0, 1.02, 0.77]}><boxGeometry args={[1.04, 0.56, 0.08]} /><meshStandardMaterial color="#46636b" metalness={0.2} roughness={0.32} /></mesh>
+        </>
+      ) : isOkada ? (
+        <>
+          {[-0.7, 0.72].map((z) => (
+            <mesh key={`okada-wheel-${z}`} position={[0, 0.34, z]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.27, 0.085, 7, 12]} />
+              <meshStandardMaterial color="#171b1c" roughness={0.98} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.72, 0]}><boxGeometry args={[0.18, 0.22, 1.12]} /><meshStandardMaterial color="#bd8247" metalness={0.18} roughness={0.58} /></mesh>
+          <mesh position={[0, 1.27, -0.12]}><capsuleGeometry args={[0.18, 0.42, 4, 7]} /><meshStandardMaterial color="#425967" roughness={0.82} /></mesh>
+          <mesh position={[0, 1.77, -0.08]}><sphereGeometry args={[0.16, 10, 8]} /><meshStandardMaterial color="#80543e" roughness={0.86} /></mesh>
+          <mesh position={[0, 1.25, 0.68]}><boxGeometry args={[0.66, 0.08, 0.08]} /><meshStandardMaterial color="#30383b" metalness={0.48} roughness={0.42} /></mesh>
+        </>
+      ) : (
+        <>
+          <mesh position={[0, 0.58, 0]} castShadow><boxGeometry args={[1.72, 0.52, 3.25]} /><meshStandardMaterial color={color} metalness={0.12} roughness={0.62} /></mesh>
+          <mesh position={[0, 1.02, -0.1]}><boxGeometry args={[1.42, 0.54, 1.72]} /><meshStandardMaterial color="#435860" metalness={0.26} roughness={0.3} /></mesh>
+          <mesh position={[0, 1.04, 0.79]}><boxGeometry args={[1.2, 0.4, 0.08]} /><meshStandardMaterial color="#47626a" metalness={0.18} roughness={0.3} /></mesh>
+        </>
+      )}
+      {!isOkada && wheelPositions.map(([wheelX, wheelZ]) => (
+        <mesh key={`${wheelX}-${wheelZ}`} position={[wheelX, 0.31, wheelZ]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[isTruck ? 0.34 : 0.27, isTruck ? 0.34 : 0.27, 0.16, 12]} />
+          <meshStandardMaterial color="#1c2021" roughness={0.98} />
+        </mesh>
+      ))}
+      {[-1, 1].map((side) => (
+        <group key={`lamps-${side}`}>
+          <mesh position={[side * 0.58, 0.72, isTruck ? 2.08 : isDanfo ? 1.96 : isKeke ? 1.02 : 1.68]}>
+            <boxGeometry args={[0.17, 0.18, 0.1]} />
+            <meshBasicMaterial color={night ? '#ffe7b5' : '#d6d0bd'} />
+          </mesh>
+          <mesh position={[side * 0.58, 0.63, isTruck ? -2.94 : isDanfo ? -1.96 : isKeke ? -0.99 : -1.68]}>
+            <boxGeometry args={[0.16, 0.14, 0.08]} />
+            <meshBasicMaterial color="#d75c4b" />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
+function getTrafficPosition(vehicle: TrafficVehicleSpec, coordinate: number): [number, number, number] {
+  return vehicle.axis === 'x'
+    ? [coordinate, vehicle.y, vehicle.road + vehicle.laneOffset]
+    : [vehicle.road + vehicle.laneOffset, vehicle.y, coordinate]
+}
+
+function getTrafficHeading(vehicle: TrafficVehicleSpec) {
+  if (vehicle.axis === 'x') return vehicle.direction === 1 ? Math.PI / 2 : -Math.PI / 2
+  return vehicle.direction === 1 ? 0 : Math.PI
+}
+
+function getNextSignal(vehicle: TrafficVehicleSpec, coordinate: number) {
+  if (vehicle.segment !== 'street') return null
+  const ahead = TRAFFIC_INTERSECTIONS
+    .map((intersection) => ({
+      intersection,
+      distance: vehicle.direction * (intersection - coordinate),
+    }))
+    .filter(({ distance }) => distance > 0)
+    .sort((a, b) => a.distance - b.distance)[0]
+  if (!ahead) return null
+  return vehicle.axis === 'x'
+    ? { ...ahead, x: ahead.intersection, z: vehicle.road }
+    : { ...ahead, x: vehicle.road, z: ahead.intersection }
+}
+
+function TrafficFleet({ night }: { night: boolean }) {
+  const vehicleRefs = useRef<(Group | null)[]>([])
+  const positionsRef = useRef(CITY_TRAFFIC.map((vehicle) => vehicle.start))
+
+  useFrame(({ clock }, delta) => {
+    const step = Math.min(delta, 0.05)
+    const currentPositions = positionsRef.current
+    const nextPositions = currentPositions.slice()
+
+    CITY_TRAFFIC.forEach((vehicle, index) => {
+      const coordinate = currentPositions[index]
+      const routeLength = vehicle.max - vehicle.min
+      let desiredSpeed = vehicle.speed
+      let leadDistance = Number.POSITIVE_INFINITY
+
+      CITY_TRAFFIC.forEach((other, otherIndex) => {
+        if (otherIndex === index || other.routeId !== vehicle.routeId) return
+        let distance = vehicle.direction * (currentPositions[otherIndex] - coordinate)
+        if (distance <= 0) distance += routeLength
+        if (distance > 0.05) leadDistance = Math.min(leadDistance, distance)
+      })
+
+      if (leadDistance < 15) {
+        const safeGap = vehicle.kind === 'truck' ? 8.2 : vehicle.kind === 'danfo' ? 7.2 : 5.4
+        desiredSpeed = Math.min(desiredSpeed, Math.max(0, (leadDistance - safeGap) * 1.35))
+      }
+
+      const nextSignal = getNextSignal(vehicle, coordinate)
+      if (nextSignal) {
+        const aspect = getTrafficSignalAspect(clock.elapsedTime, nextSignal.x, nextSignal.z, vehicle.axis)
+        const distanceToStopLine = nextSignal.distance - 4.8
+        if (aspect !== 'green' && distanceToStopLine > 0 && distanceToStopLine < 14) {
+          desiredSpeed = Math.min(desiredSpeed, Math.sqrt(5.2 * distanceToStopLine))
+        }
+      }
+
+      const length = vehicle.max - vehicle.min
+      nextPositions[index] = vehicle.min + ((((coordinate + vehicle.direction * desiredSpeed * step - vehicle.min) % length) + length) % length)
+    })
+
+    positionsRef.current = nextPositions
+    CITY_TRAFFIC.forEach((vehicle, index) => {
+      const group = vehicleRefs.current[index]
+      if (!group) return
+      group.position.set(...getTrafficPosition(vehicle, nextPositions[index]))
+      group.rotation.y = getTrafficHeading(vehicle)
+    })
   })
 
   return (
-    <group ref={vehicleRef} position={position} rotation={[0, Math.PI / 2, 0]}>
-      <mesh position={[0, 0.65, 0]} castShadow><boxGeometry args={minibus ? [1.85, 1.15, 3.6] : [1.72, 0.72, 3.4]} /><meshStandardMaterial color={color} metalness={0.15} roughness={0.58} /></mesh>
-      <mesh position={[0, minibus ? 1.38 : 1.12, -0.08]} castShadow><boxGeometry args={minibus ? [1.55, 0.55, 2.4] : [1.38, 0.48, 1.75]} /><meshStandardMaterial color="#526a73" metalness={0.28} roughness={0.29} /></mesh>
-      <mesh position={[0, 0.42, 1.73]}><boxGeometry args={[1.45, 0.16, 0.14]} /><meshStandardMaterial color="#4a4e50" metalness={0.34} roughness={0.48} /></mesh>
-      {[-1, 1].map((side) => (
-        <group key={`wheels-${side}`}>
-          {[-1.1, 1.1].map((wheelZ) => <mesh key={wheelZ} position={[side * 0.86, 0.36, wheelZ]} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.28, 0.28, 0.16, 12]} /><meshStandardMaterial color="#1b1d1f" roughness={0.98} /></mesh>)}
-          <mesh position={[side * 0.58, 0.76, 1.68]}><boxGeometry args={[0.16, 0.2, 0.12]} /><meshStandardMaterial color="#f4d59a" emissive="#c58f51" emissiveIntensity={0.72} /></mesh>
+    <group>
+      {CITY_TRAFFIC.map((vehicle, index) => (
+        <group
+          key={vehicle.id}
+          ref={(node) => { vehicleRefs.current[index] = node }}
+          position={getTrafficPosition(vehicle, vehicle.start)}
+          rotation={[0, getTrafficHeading(vehicle), 0]}
+        >
+          <TrafficVehicleModel kind={vehicle.kind} color={vehicle.color} night={night} />
         </group>
       ))}
-      {minibus && <mesh position={[0, 1.05, 0.54]}><boxGeometry args={[1.88, 0.13, 0.12]} /><meshStandardMaterial color="#e9d08c" roughness={0.75} /></mesh>}
+    </group>
+  )
+}
+
+function TrafficSignal({ position, intersectionX, intersectionZ, axis }: { position: [number, number, number]; intersectionX: number; intersectionZ: number; axis: TrafficAxis }) {
+  const red = useRef<MeshStandardMaterial>(null!)
+  const amber = useRef<MeshStandardMaterial>(null!)
+  const green = useRef<MeshStandardMaterial>(null!)
+
+  useFrame(({ clock }) => {
+    const aspect = getTrafficSignalAspect(clock.elapsedTime, intersectionX, intersectionZ, axis)
+    const materials = [red.current, amber.current, green.current]
+    const active = [aspect === 'red', aspect === 'amber', aspect === 'green']
+    materials.forEach((material, index) => {
+      if (!material) return
+      material.emissive.set(active[index] ? ['#f34a3f', '#f1b94d', '#58c786'][index] : '#000000')
+      material.emissiveIntensity = active[index] ? 1.5 : 0.02
+    })
+  })
+
+  return (
+    <group position={position}>
+      <mesh position={[0, 2.05, 0]}><cylinderGeometry args={[0.07, 0.11, 4.1, 7]} /><meshStandardMaterial color="#555b5c" metalness={0.46} roughness={0.52} /></mesh>
+      <group position={[0, 4.02, 0]} rotation={[0, axis === 'x' ? Math.PI / 2 : 0, 0]}>
+        <mesh><boxGeometry args={[0.54, 1.38, 0.5]} /><meshStandardMaterial color="#252d2f" metalness={0.22} roughness={0.62} /></mesh>
+        <mesh position={[0, 0.42, 0.27]}><sphereGeometry args={[0.145, 10, 8]} /><meshStandardMaterial ref={red} color="#8b403a" emissive="#000000" /></mesh>
+        <mesh position={[0, 0, 0.27]}><sphereGeometry args={[0.145, 10, 8]} /><meshStandardMaterial ref={amber} color="#997538" emissive="#000000" /></mesh>
+        <mesh position={[0, -0.42, 0.27]}><sphereGeometry args={[0.145, 10, 8]} /><meshStandardMaterial ref={green} color="#42684f" emissive="#000000" /></mesh>
+      </group>
+    </group>
+  )
+}
+
+function TrafficSignals() {
+  return (
+    <group>
+      {TRAFFIC_INTERSECTIONS.flatMap((x) => TRAFFIC_INTERSECTIONS.map((z) => (
+        <group key={`signals-${x}-${z}`}>
+          <TrafficSignal position={[x - 4.8, 0, z + 4.8]} intersectionX={x} intersectionZ={z} axis="x" />
+          <TrafficSignal position={[x + 4.8, 0, z - 4.8]} intersectionX={x} intersectionZ={z} axis="z" />
+        </group>
+      )))}
     </group>
   )
 }
@@ -844,6 +1316,7 @@ function PlayerController({
   keysRef,
   onPlayerPosition,
   inVehicle,
+  rideVehicle,
   gender,
   paused,
   spawnPosition,
@@ -851,7 +1324,7 @@ function PlayerController({
   cameraLookRef,
   autoWalkTarget,
 
-}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & { cameraLookRef: MutableRefObject<CameraLook>; autoWalkTarget: LocationId | null }) {
+}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'rideVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & { cameraLookRef: MutableRefObject<CameraLook>; autoWalkTarget: LocationId | null }) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
   const cameraTarget = useRef(new Vector3())
@@ -875,13 +1348,15 @@ function PlayerController({
     const position = playerRef.current.position
     const direction = movement.current.set(0, 0, 0)
 
-    if (!paused) {
+    if (!paused && !rideVehicle) {
       if (keys.has('w') || keys.has('arrowup')) direction.z -= 1
       if (keys.has('s') || keys.has('arrowdown')) direction.z += 1
       if (keys.has('a') || keys.has('arrowleft')) direction.x -= 1
       if (keys.has('d') || keys.has('arrowright')) direction.x += 1
       if (direction.lengthSq() === 0 && autoWalkTarget) {
-        const destination = WORLD_LOCATIONS.find((location) => location.id === autoWalkTarget)
+        const location = WORLD_LOCATIONS.find((entry) => entry.id === autoWalkTarget)
+        const entrance = location && getLocationEntrancePosition(location.id)
+        const destination = entrance ?? location
         if (destination) {
           const dx = destination.x - position.x
           const dz = destination.z - position.z
@@ -924,7 +1399,7 @@ function PlayerController({
     const { x, z } = position
     const tallViewport = size.height > size.width * 1.15
     const perspectiveCamera = camera as PerspectiveCamera
-    const nextFov = tallViewport ? 55 : 43
+    const nextFov = tallViewport ? 50 : 46
     if (perspectiveCamera.fov !== nextFov) {
       perspectiveCamera.fov = nextFov
       perspectiveCamera.updateProjectionMatrix()
@@ -932,9 +1407,9 @@ function PlayerController({
 
     const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
     const cameraHeight = (inside
-      ? tallViewport ? 12 : 9.5
-      : tallViewport ? (inVehicle ? 16 : 17) : (inVehicle ? 8.5 : 9.5)) * zoom
-    const cameraDistance = (inside ? (tallViewport ? 14 : 11) : (tallViewport ? 22 : 16)) * zoom
+      ? tallViewport ? 4.8 : 4.2
+      : tallViewport ? (inVehicle || rideVehicle ? 12.6 : 13.4) : (inVehicle || rideVehicle ? 7.6 : 8.5)) * zoom
+    const cameraDistance = (inside ? (tallViewport ? 4.4 : 3.8) : (tallViewport ? 19 : 14.5)) * zoom
     const look = cameraLookRef.current
     const yaw = look.yaw
     const pitch = look.pitch
@@ -945,8 +1420,8 @@ function PlayerController({
     )
     cameraLookAt.current.set(
       x - Math.sin(yaw) * 7,
-      position.y + (inside ? 1.6 : inVehicle ? 1.8 : 2) + Math.sin(pitch) * 5,
-      z - Math.cos(yaw) * (inside ? 1.2 : 7),
+      position.y + (inside ? 1.6 : inVehicle || rideVehicle ? 1.8 : 2) + Math.sin(pitch) * 5,
+      z - Math.cos(yaw) * (inside ? 1.2 : 4.5),
     )
     camera.position.lerp(cameraTarget.current, 1 - Math.exp(-step * 3.8))
     camera.lookAt(cameraLookAt.current)
@@ -960,7 +1435,13 @@ function PlayerController({
 
   return (
     <group ref={playerRef} position={[spawnPosition.x, 0, spawnPosition.z]}>
-      {inVehicle ? <ScooterModel /> : <AvatarModel keysRef={keysRef} paused={paused} gender={gender} />}
+      {rideVehicle ? (
+        <TrafficVehicleModel
+          kind={rideVehicle === 'bike' ? 'okada' : rideVehicle === 'danfo' ? 'danfo' : 'car'}
+          color={rideVehicle === 'danfo' ? '#e1bd38' : rideVehicle === 'bike' ? '#31464d' : '#ddd7c9'}
+          night
+        />
+      ) : inVehicle ? <ScooterModel /> : <AvatarModel keysRef={keysRef} paused={paused} gender={gender} />}
     </group>
   )
 }
@@ -983,21 +1464,37 @@ function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
 
 function PassbyPedestrian({ index }: { index: number }) {
   const ref = useRef<Group>(null!)
-  const lane = index % 2 === 0 ? 1 : -1
-  const sidewalkRoad = ROAD_LINES[Math.floor(index / 2) % ROAD_LINES.length]
+  const axis: TrafficAxis = index % 2 === 0 ? 'x' : 'z'
+  const direction: 1 | -1 = Math.floor(index / 2) % 2 === 0 ? 1 : -1
+  const sidewalkRoad = ROAD_LINES[Math.floor(index / 4) % ROAD_LINES.length]
   const sidewalkWidth = Math.abs(sidewalkRoad) <= 42 ? 7 : 5
-  const startZ = sidewalkRoad + lane * (sidewalkWidth / 2 + 1.35)
+  const sidewalkOffset = direction * (sidewalkWidth / 2 + 1.35)
+  const track = sidewalkRoad + sidewalkOffset
+  const min = axis === 'x' ? -80 : -70
+  const max = axis === 'x' ? 80 : 76
+  const start = direction === 1 ? min + ((index * 17) % 132) : max - ((index * 17) % 132)
   const speed = 1.15 + (index % 4) * 0.28
+
   useFrame((_, delta) => {
     if (!ref.current) return
-    ref.current.position.x += lane * speed * Math.min(delta, 0.05)
-    if (ref.current.position.x > 80) ref.current.position.x = -80
-    if (ref.current.position.x < -80) ref.current.position.x = 80
-    ref.current.rotation.y = lane > 0 ? Math.PI / 2 : -Math.PI / 2
+    const step = direction * speed * Math.min(delta, 0.05)
+    if (axis === 'x') {
+      ref.current.position.x += step
+      if (ref.current.position.x > max) ref.current.position.x = min
+      if (ref.current.position.x < min) ref.current.position.x = max
+      ref.current.rotation.y = direction > 0 ? Math.PI / 2 : -Math.PI / 2
+    } else {
+      ref.current.position.z += step
+      if (ref.current.position.z > max) ref.current.position.z = min
+      if (ref.current.position.z < min) ref.current.position.z = max
+      ref.current.rotation.y = direction > 0 ? 0 : Math.PI
+    }
   })
+
   const female = index % 2 === 1
   const shirts = ['#8c4d3f', '#d1a05b', '#456b72', '#65764d', '#6c587e', '#c5c0b4']
-  return <group ref={ref} position={[lane * (index % 3) * 1.2, 0, startZ]} scale={0.88}>
+  const position: [number, number, number] = axis === 'x' ? [start, 0, track] : [track, 0, start]
+  return <group ref={ref} position={position} scale={0.88}>
     <HumanoidModel skinTone={index % 3 === 0 ? '#69432f' : '#87583f'} hairColor={female ? '#211817' : '#30221b'} clothing={shirts[index % shirts.length]} accentColor="#d2b17a" gender={female ? 'female' : 'male'} walking />
   </group>
 }
@@ -1012,14 +1509,14 @@ function CitySignBoards({ night }: { night: boolean }) {
     {signs.map((sign, index) => <group key={sign.text} position={[sign.x, 0, sign.z]} rotation={[0, index === 1 ? -Math.PI / 2 : 0, 0]}>
       <mesh position={[0, 3.4, 0]}><boxGeometry args={[0.22, 6.8, 0.22]} /><meshStandardMaterial color="#555b5c" metalness={0.5} /></mesh>
       <mesh position={[0, 6.1, 0]}><boxGeometry args={[8.5, 1.8, 0.25]} /><meshStandardMaterial color={sign.color} emissive={sign.color} emissiveIntensity={night ? 0.35 : 0.05} /></mesh>
-      <mesh position={[0, 6.1, 0.15]}><planeGeometry args={[7.9, 1.25]} /><meshBasicMaterial color="#fff0c8" /></mesh>
+      <group position={[0, 6.1, 0.2]}><WorldLabel text={sign.text} width={7.8} accentColor="#d8b56c" /></group>
       <pointLight position={[0, 6.2, 1]} color="#ffda91" intensity={night ? 0.75 : 0.08} distance={12} />
     </group>)}
     <group position={[52, 0, -18]} rotation={[0, -0.22, 0]}>
       <mesh position={[0, 7, 0]}><boxGeometry args={[0.45, 14, 0.45]} /><meshStandardMaterial color="#4a5054" metalness={0.7} /></mesh>
       <mesh position={[0, 12, 0.3]}><boxGeometry args={[12, 7, 0.7]} /><meshStandardMaterial color="#101d28" emissive="#1b6b78" emissiveIntensity={night ? 1.1 : 0.4} metalness={0.3} /></mesh>
-      <mesh position={[0, 12, 0.68]}><planeGeometry args={[11.4, 6.4]} /><meshBasicMaterial color={night ? '#4de1df' : '#2b7d9d'} /></mesh>
-      <mesh position={[0, 12, 0.7]}><planeGeometry args={[10.6, 5.7]} /><meshBasicMaterial color={night ? '#f5d58a' : '#d5f1ff'} /></mesh>
+      <mesh position={[0, 12, 0.68]}><planeGeometry args={[11.4, 6.4]} /><meshBasicMaterial color={night ? '#17454d' : '#25657a'} /></mesh>
+      <group position={[0, 12, 0.72]}><WorldLabel text="EKÓ CITY · MOVE WITH THE CITY" width={10.5} accentColor={night ? '#5ce1df' : '#d9b56e'} /></group>
       {night && <pointLight position={[0, 12, 2]} color="#57dce8" intensity={2.2} distance={24} />}
     </group>
   </>
@@ -1050,15 +1547,16 @@ function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps
     <>
       <color attach="background" args={[night ? '#172640' : dawn || dusk ? '#c58e79' : '#8ec9f0']} />
       <fog attach="fog" args={[night ? '#263650' : dawn || dusk ? '#d7a18a' : '#a8d2df', 90, 245]} />
-      <ambientLight intensity={night ? 0.62 : dawn || dusk ? 0.72 : 1.0} color={night ? '#a6bce4' : dawn || dusk ? '#ffd0a3' : '#fff5df'} />
-      <hemisphereLight args={[night ? '#526c9b' : '#c4e8ff', night ? '#343b4b' : '#514b3d', night ? 0.65 : 1.0]} />
-      <directionalLight position={[28, 40, 12]} intensity={night ? 0.32 : dawn || dusk ? 0.82 : 1.8} color={night ? '#a0b9ef' : dawn || dusk ? '#ffd0a3' : '#fff4d6'} />
+      <ambientLight intensity={night ? 0.82 : dawn || dusk ? 0.8 : 1.05} color={night ? '#b6c3dd' : dawn || dusk ? '#ffd0a3' : '#fff5df'} />
+      <hemisphereLight args={[night ? '#647aa0' : '#c4e8ff', night ? '#4b514d' : '#514b3d', night ? 0.78 : 1.0]} />
+      <directionalLight position={[28, 40, 12]} intensity={night ? 0.5 : dawn || dusk ? 0.88 : 1.8} color={night ? '#b1c6f2' : dawn || dusk ? '#ffd0a3' : '#fff4d6'} />
       {!night && <group position={[45, 42, -75]}><mesh><sphereGeometry args={[5, 20, 16]} /><meshBasicMaterial color={dawn || dusk ? '#ffb56e' : '#fff0a3'} /></mesh><pointLight intensity={0.8} color="#ffe2a0" distance={100} /></group>}
       {night && <Stars radius={180} depth={100} count={1600} factor={3.4} saturation={0.15} fade speed={0.22} />}
       {night && <mesh position={[0, 78, -110]}><sphereGeometry args={[2.6, 16, 12]} /><meshBasicMaterial color="#fff3cc" /></mesh>}
       <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
       <Flyover />
       <LagoonBridge />
+      {CITY_BUILDINGS.map((building) => <BuildingLot key={`lot-${building.id}`} building={building} />)}
       {CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
       {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
       {CITY_BUILDINGS.map((building) => (
@@ -1087,16 +1585,10 @@ function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps
         return <StreetLamp key={`avenue-lamp-${index}`} position={[x, 0, z]} lit={night} />
       })}
       <CitySignBoards night={night} />
-      {Array.from({ length: 24 }, (_, index) => {
-        const roadZ = ROAD_LINES[index % ROAD_LINES.length]
-        const roadWidth = Math.abs(roadZ) <= 42 ? 7 : 5
-        const laneOffset = index % 2 === 0 ? -roadWidth * 0.24 : roadWidth * 0.24
-        const startX = -86 + ((index * 37) % 172)
-        const colors = ['#d2a342', '#5a6870', '#823f3c', '#c0b18f', '#d6d1c4', '#435a68', '#ad713e']
-        return <TrafficVehicle key={`traffic-${index}`} position={[startX, 0, roadZ + laneOffset]} color={colors[index % colors.length]} speed={8 + (index % 5) * 2.2} minibus={index % 4 === 0} />
-      })}
+      <TrafficSignals />
+      <TrafficFleet night={night} />
       {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
-      {Array.from({ length: 10 }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
+      {Array.from({ length: 24 }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
       {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
       <LandmarkMarkers waypoint={waypoint} />
     </>
@@ -1143,7 +1635,7 @@ export function CityWorld(props: CityWorldProps) {
     drag.x = event.clientX
     drag.y = event.clientY
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
-    cameraLookRef.current.yaw = MathUtils.clamp(cameraLookRef.current.yaw - dx * 0.003, -Math.PI * 0.92, Math.PI * 0.92)
+    cameraLookRef.current.yaw = MathUtils.euclideanModulo(cameraLookRef.current.yaw - dx * 0.003 + Math.PI, Math.PI * 2) - Math.PI
     cameraLookRef.current.pitch = MathUtils.clamp(cameraLookRef.current.pitch - dy * 0.002, -0.48, 0.48)
   }
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -1193,6 +1685,7 @@ export function CityWorld(props: CityWorldProps) {
           keysRef={props.keysRef}
           onPlayerPosition={props.onPlayerPosition}
           inVehicle={props.inVehicle}
+          rideVehicle={props.rideVehicle ?? null}
           gender={props.gender}
           paused={props.paused}
           spawnPosition={props.spawnPosition}
