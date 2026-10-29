@@ -1350,10 +1350,25 @@ function PlayerController({
     const direction = movement.current.set(0, 0, 0)
 
     if (!paused && !rideVehicle) {
-      if (keys.has('w') || keys.has('arrowup')) direction.z -= 1
-      if (keys.has('s') || keys.has('arrowdown')) direction.z += 1
-      if (keys.has('a') || keys.has('arrowleft')) direction.x -= 1
-      if (keys.has('d') || keys.has('arrowright')) direction.x += 1
+      // Convert input from camera-relative controls into world-space movement.
+      // At yaw 0 the camera sits behind the avatar and looks toward -Z.
+      const forwardInput = (keys.has('w') || keys.has('arrowup') ? 1 : 0)
+        - (keys.has('s') || keys.has('arrowdown') ? 1 : 0)
+      const rightInput = (keys.has('d') || keys.has('arrowright') ? 1 : 0)
+        - (keys.has('a') || keys.has('arrowleft') ? 1 : 0)
+      const cameraYaw = cameraLookRef.current.yaw
+      const forwardX = -Math.sin(cameraYaw)
+      const forwardZ = -Math.cos(cameraYaw)
+      const rightX = Math.cos(cameraYaw)
+      const rightZ = -Math.sin(cameraYaw)
+
+      if (forwardInput !== 0 || rightInput !== 0) {
+        direction.set(
+          forwardX * forwardInput + rightX * rightInput,
+          0,
+          forwardZ * forwardInput + rightZ * rightInput,
+        )
+      }
       if (direction.lengthSq() === 0 && autoWalkTarget) {
         const location = WORLD_LOCATIONS.find((entry) => entry.id === autoWalkTarget)
         const entrance = location && getLocationEntrancePosition(location.id)
