@@ -22,13 +22,19 @@ import {
   CITY_FACTIONS,
   CITY_HOMES,
   CITY_JOBS,
+  INTERIOR_DOOR_Z,
+  INTERIOR_SPAWN,
   STARTING_PLAYER,
   WORLD_LOCATIONS,
   distanceBetween,
+  findNearbyEntrance,
   formatNaira,
+  getInteriorDefinition,
+  getLocationEntrancePosition,
   getMissionDetails,
   playerReducer,
   type CharacterId,
+  type EntranceTarget,
   type FactionId,
   type GamePanel,
   type HomeId,
@@ -37,6 +43,7 @@ import {
   type PlayerState,
 } from './game-data'
 import { GameHud, GamePanels, NpcDialogue, type TravelMode } from './game-hud'
+import { ServiceSheet } from './interior-ui'
 
 const CityWorld = dynamic(() => import('./city-world').then((module) => module.CityWorld), {
   ssr: false,
@@ -49,16 +56,26 @@ type Position = GamePosition
 type ToastState = { id: number; text: string } | null
 
 const fetchGameSave = ([url]: readonly [string, string]) => gameFetcher<GameSaveResponse>(url)
-const fetchPresence = ([url]: readonly [string, string]) => gameFetcher<PresenceResponse>(url)
+const fetchPresence = ([url, , roomId]: readonly [string, string, string]) =>
+  gameFetcher<PresenceResponse>(`${url}?roomId=${encodeURIComponent(roomId)}`)
+
+const CITY_ROOM_ID = 'eko-mainland'
 
 function createGameSavePayload(player: PlayerState, position: Position, gameMinutes: number): GameSavePayload {
   return {
     playerState: {
+      gender: player.gender,
       cash: player.cash,
+      bankBalance: player.bankBalance,
       reputation: player.reputation,
       level: player.level,
       energy: player.energy,
       hunger: player.hunger,
+      educationCredits: player.educationCredits,
+      shiftStarted: player.shiftStarted,
+      completedShiftTasks: [...player.completedShiftTasks],
+      currentInteriorId: player.currentInteriorId,
+      returnPosition: player.returnPosition ? { ...player.returnPosition } : null,
       stage: player.stage,
       inventory: player.inventory.map((item) => ({ ...item })),
       ownsScooter: player.ownsScooter,
@@ -86,6 +103,10 @@ export default function GameShell() {
   const [pinnedWaypoint, setPinnedWaypoint] = useState<LocationId | null>(null)
   const [autoWalkTarget, setAutoWalkTarget] = useState<LocationId | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
+  const [fadeActive, setFadeActive] = useState(false)
+  const [serviceOpen, setServiceOpen] = useState(false)
+  const fadeRef = useRef(false)
+  const transitionTimers = useRef<number[]>([])
   const keysRef = useRef(new Set<string>())
   const toastId = useRef(0)
   const { data: sessionResponse, isLoading: sessionLoading, mutate: refreshSession } = useSWR<GameSessionResponse>(
@@ -101,7 +122,8 @@ export default function GameShell() {
     error: saveLoadError,
     isLoading: saveLoading,
   } = useSWR(saveKey, fetchGameSave, { revalidateOnFocus: false, revalidateOnReconnect: true })
-  const presenceKey = currentUserId ? (['/api/game/presence', currentUserId] as const) : null
+  const presenceRoomId = player.currentInteriorId ? `interior:${player.currentInteriorId}` : CITY_ROOM_ID
+  const presenceKey = currentUserId ? (['/api/game/presence', currentUserId, presenceRoomId] as const) : null
   const {
     data: presenceResponse,
     error: presenceLoadError,
@@ -132,7 +154,7 @@ export default function GameShell() {
   const latestSavePayloadRef = useRef<GameSavePayload>(
     createGameSavePayload(STARTING_PLAYER, { x: -6, z: 4 }, 21 * 60 + 42),
   )
-  const latestPresenceRef = useRef<PresenceUpdate>({ x: -6, z: 4, inVehicle: false })
+  const latestPresenceRef = useRef<PresenceUpdate>({ x: -6, z: 4, inVehicle: false, roomId: CITY_ROOM_ID })
 
   useEffect(() => {
     if (!currentUserId) {
@@ -149,8 +171,9 @@ export default function GameShell() {
       const restoredPosition = { ...savedGame.save.position }
       const restoredPlayer = { ...savedGame.save.playerState, name: currentUser?.name ?? STARTING_PLAYER.name }
       dispatch({ type: 'restore', player: restoredPlayer })
-      setPlayerPosition(restoredPosition)
-      setSpawnPosition(restoredPosition)
+      const restoredInside = Boolean(restoredPlayer.currentInteriorId && restoredPlayer.returnPosition)
+      setPlayerPosition(restoredInside ? { ...INTERIOR_SPAWN } : restoredPosition)
+      setSpawnPosition(restoredInside ? { ...INTERIOR_SPAWN } : restoredPosition)
       setGameMinutes(savedGame.save.gameMinutes)
       lastSavedPayloadRef.current = JSON.stringify(
         createGameSavePayload(restoredPlayer, restoredPosition, savedGame.save.gameMinutes),
@@ -180,8 +203,8 @@ export default function GameShell() {
   }, [gameMinutes, player, playerPosition])
 
   useEffect(() => {
-    latestPresenceRef.current = { ...playerPosition, inVehicle: player.inVehicle }
-  }, [player.inVehicle, playerPosition])
+    latestPresenceRef.current = { ...playerPosition, inVehicle: player.inVehicle, roomId: presenceRoomId }
+  }, [player.inVehicle, playerPosition, presenceRoomId])
 
   const saveCurrentGame = useCallback(async () => {
     if (!currentUserId || saveReadyUserId !== currentUserId || saveInFlightRef.current) return
@@ -262,23 +285,38 @@ export default function GameShell() {
     await refreshSession()
   }, [changePresence, refreshSession])
 
+  const activeInterior = useMemo(
+    () => (player.currentInteriorId ? getInteriorDefinition(player.currentInteriorId) : null),
+    [player.currentInteriorId],
+  )
+  const insideInterior = activeInterior !== null
+
   const nearbyCharacter = useMemo(() => {
+    if (insideInterior) return null
     const closest = CITY_CHARACTERS
       .map((character) => ({ character, distance: distanceBetween(playerPosition, character) }))
       .sort((a, b) => a.distance - b.distance)[0]
     return closest && closest.distance < 4.8 ? closest.character : null
-  }, [playerPosition])
+  }, [insideInterior, playerPosition])
+
+  const nearbyEntrance = useMemo(
+    () => (insideInterior ? null : findNearbyEntrance(playerPosition)),
+    [insideInterior, playerPosition],
+  )
+  const nearInteriorAction = activeInterior ? distanceBetween(playerPosition, activeInterior.actionPoint) < 3.4 : false
+  const nearInteriorExit = insideInterior && playerPosition.z > 5.6
 
   const nearbyLocation = useMemo(() => {
+    if (insideInterior) return null
     const closest = WORLD_LOCATIONS
       .map((location) => ({ location, distance: distanceBetween(playerPosition, location) }))
       .sort((a, b) => a.distance - b.distance)[0]
     return closest && closest.distance < 7.5 ? closest.location : null
-  }, [playerPosition])
+  }, [insideInterior, playerPosition])
 
   const mission = getMissionDetails(player.stage)
   const waypoint = pinnedWaypoint ?? mission.targetLocation
-  const paused = activePanel !== 'none' || activeCharacter !== null
+  const paused = activePanel !== 'none' || activeCharacter !== null || serviceOpen || fadeActive
 
   const notify = useCallback((text: string) => {
     toastId.current += 1
@@ -394,15 +432,75 @@ export default function GameShell() {
     if (location) notify(`${location.name}: ${location.description}`)
   }, [notify, player.cash, player.inVehicle, player.ownsScooter, player.home, player.voterRegistered, player.wantedLevel])
 
+  const runTransition = useCallback((midpoint: () => void) => {
+    transitionTimers.current.forEach((timer) => window.clearTimeout(timer))
+    fadeRef.current = true
+    setFadeActive(true)
+    transitionTimers.current = [
+      window.setTimeout(midpoint, 260),
+      window.setTimeout(() => {
+        fadeRef.current = false
+        setFadeActive(false)
+      }, 380),
+    ]
+  }, [])
+
+  useEffect(() => () => transitionTimers.current.forEach((timer) => window.clearTimeout(timer)), [])
+
+  const enterInterior = useCallback((entrance: EntranceTarget) => {
+    if (fadeRef.current || player.currentInteriorId) return
+    keysRef.current.clear()
+    setAutoWalkTarget(null)
+    setActiveCharacter(null)
+    setActivePanel('none')
+    runTransition(() => {
+      dispatch({ type: 'enter-interior', interiorId: entrance.id, returnPosition: { x: entrance.x, z: entrance.z + 1.2 } })
+      setSpawnPosition({ ...INTERIOR_SPAWN })
+      setPlayerPosition({ ...INTERIOR_SPAWN })
+      notify(`Welcome to ${entrance.name}.`)
+    })
+  }, [notify, player.currentInteriorId, runTransition])
+
+  const exitInterior = useCallback(() => {
+    if (fadeRef.current || !player.currentInteriorId) return
+    const target = player.returnPosition ?? { x: -6, z: 4 }
+    keysRef.current.clear()
+    setServiceOpen(false)
+    runTransition(() => {
+      dispatch({ type: 'exit-interior' })
+      setSpawnPosition({ ...target })
+      setPlayerPosition({ ...target })
+    })
+  }, [player.currentInteriorId, player.returnPosition, runTransition])
+
+  useEffect(() => {
+    if (insideInterior && !serviceOpen && playerPosition.z > INTERIOR_DOOR_Z && Math.abs(playerPosition.x) < 1.7) exitInterior()
+  }, [exitInterior, insideInterior, playerPosition.x, playerPosition.z, serviceOpen])
+
   const handleInteract = useCallback(() => {
-    if (activeCharacter) return
+    if (activeCharacter || serviceOpen || fadeRef.current) return
+    if (insideInterior) {
+      if (nearInteriorAction) {
+        keysRef.current.clear()
+        setServiceOpen(true)
+      } else if (nearInteriorExit) {
+        exitInterior()
+      } else {
+        notify('Walk to the glowing service point, or step onto the EXIT mat to leave.')
+      }
+      return
+    }
     if (nearbyCharacter) {
       keysRef.current.clear()
       setActiveCharacter(nearbyCharacter.id)
       return
     }
+    if (nearbyEntrance) {
+      enterInterior(nearbyEntrance)
+      return
+    }
     if (nearbyLocation) handleLocationAction(nearbyLocation.id)
-  }, [activeCharacter, handleLocationAction, nearbyCharacter, nearbyLocation])
+  }, [activeCharacter, enterInterior, exitInterior, handleLocationAction, insideInterior, nearInteriorAction, nearInteriorExit, nearbyCharacter, nearbyEntrance, nearbyLocation, notify, serviceOpen])
 
   const handleCharacterAction = useCallback(() => {
     if (!activeCharacter) return
@@ -553,15 +651,62 @@ export default function GameShell() {
     const job = CITY_JOBS.find((entry) => entry.id === jobId)
     const workplace = job && WORLD_LOCATIONS.find((entry) => entry.id === job.locationId)
     if (!job || !workplace || player.job !== jobId) return
-    if (distanceBetween(playerPosition, workplace) > 8) {
+    if (player.currentInteriorId !== job.locationId) {
       setPinnedWaypoint(job.locationId)
-      notify(`Clock in at ${job.employer} to complete the shift.`)
+      closePanel()
+      notify(`Head inside ${job.employer} and use the service point to work your shift.`)
       return
     }
-    dispatch({ type: 'complete-shift', jobId })
+    setServiceOpen(true)
+    closePanel()
+  }, [closePanel, notify, player.currentInteriorId, player.job])
+
+  const serviceDeposit = useCallback((amount: number) => {
+    dispatch({ type: 'deposit-bank', amount })
+    notify(`Deposited ${formatNaira(amount)}.`)
+  }, [notify])
+
+  const serviceWithdraw = useCallback((amount: number) => {
+    dispatch({ type: 'withdraw-bank', amount })
+    notify(`Withdrew ${formatNaira(amount)}.`)
+  }, [notify])
+
+  const serviceLecture = useCallback(() => {
+    dispatch({ type: 'attend-lecture' })
     setGameMinutes((minutes) => minutes + 120)
+    notify('Lecture attended · +8 REP and a study credit.')
+  }, [notify])
+
+  const serviceStartShift = useCallback((jobId: JobId) => {
+    dispatch({ type: 'start-shift', jobId })
+    notify('Shift started. Work through the task list.')
+  }, [notify])
+
+  const serviceWorkTask = useCallback((jobId: JobId, taskIndex: number) => {
+    dispatch({ type: 'complete-work-task', jobId, taskIndex })
+    setGameMinutes((minutes) => minutes + 25)
+  }, [])
+
+  const serviceClockOut = useCallback((jobId: JobId) => {
+    const job = CITY_JOBS.find((entry) => entry.id === jobId)
+    if (!job) return
+    dispatch({ type: 'complete-shift', jobId })
+    setGameMinutes((minutes) => minutes + 30)
     notify(`Shift complete · +${formatNaira(job.pay)} · +${job.reputation} REP.`)
-  }, [notify, player.job, playerPosition])
+  }, [notify])
+
+  const serviceRest = useCallback(() => {
+    if (activeInterior) handleLocationAction(activeInterior.id as LocationId)
+  }, [activeInterior, handleLocationAction])
+
+  const serviceAction = useCallback(() => {
+    if (!activeInterior) return
+    if (WORLD_LOCATIONS.some((entry) => entry.id === activeInterior.id)) {
+      handleLocationAction(activeInterior.id as LocationId)
+    } else {
+      notify(`${activeInterior.name}: ${activeInterior.actionLabel}. The staff nod and get on with it.`)
+    }
+  }, [activeInterior, handleLocationAction, notify])
 
   const joinFaction = useCallback((factionId: FactionId | null) => {
     if (factionId && !CITY_FACTIONS.some((faction) => faction.id === factionId)) return
@@ -655,6 +800,7 @@ export default function GameShell() {
         openPanel('life')
       } else if (key === 'escape') {
         keysRef.current.clear()
+        setServiceOpen(false)
         setActiveCharacter(null)
         closePanel()
       }
@@ -680,7 +826,8 @@ export default function GameShell() {
         onPlayerPosition={handlePlayerPosition}
         inVehicle={player.inVehicle}
         gender={player.gender}
-        activeInterior={null}
+        activeInterior={activeInterior}
+        onAutoWalkEnd={() => setAutoWalkTarget(null)}
         paused={paused}
         waypoint={waypoint}
         autoWalkTarget={autoWalkTarget}
@@ -696,6 +843,10 @@ export default function GameShell() {
         playerPosition={playerPosition}
         nearbyCharacter={nearbyCharacter}
         nearbyLocation={nearbyLocation}
+        nearbyEntrance={nearbyEntrance}
+        interior={activeInterior}
+        nearInteriorAction={nearInteriorAction}
+        nearInteriorExit={nearInteriorExit}
         waypoint={waypoint}
         activePanel={activePanel}
         toast={toast}
@@ -731,6 +882,23 @@ export default function GameShell() {
           onSignOut={handleSignOut}
         />
       )}
+      {serviceOpen && activeInterior && (
+        <ServiceSheet
+          interior={activeInterior}
+          player={player}
+          onClose={() => setServiceOpen(false)}
+          onDeposit={serviceDeposit}
+          onWithdraw={serviceWithdraw}
+          onLecture={serviceLecture}
+          onStartShift={serviceStartShift}
+          onWorkTask={serviceWorkTask}
+          onClockOut={serviceClockOut}
+          onRest={serviceRest}
+          onBuyFood={buyFood}
+          onServiceAction={serviceAction}
+        />
+      )}
+      <div className={`scene-fade${fadeActive ? ' is-active' : ''}`} aria-hidden="true" />
       {activeCharacter && (
         <NpcDialogue
           characterId={activeCharacter}

@@ -43,6 +43,8 @@ import {
   type LocationId,
   type PlayerState,
 } from './game-data'
+import { CAMPUS_BOUNDS, GRID_LINES, worldToMapPercent } from '@/lib/game/world'
+import type { EntranceTarget, InteriorDefinition } from './game-data'
 import { LifePanel } from './life-panel'
 import { OnlinePanel } from './online-panel'
 import type { GameUser, OnlinePlayer, SaveStatus } from '@/lib/game/types'
@@ -56,6 +58,10 @@ type HudProps = {
   playerPosition: { x: number; z: number }
   nearbyCharacter: (typeof CITY_CHARACTERS)[number] | null
   nearbyLocation: (typeof WORLD_LOCATIONS)[number] | null
+  nearbyEntrance: EntranceTarget | null
+  interior: InteriorDefinition | null
+  nearInteriorAction: boolean
+  nearInteriorExit: boolean
   waypoint: LocationId | null
   activePanel: GamePanel
   toast: { id: number; text: string } | null
@@ -73,7 +79,13 @@ const PANEL_ACTIONS: { id: Exclude<GamePanel, 'none'>; label: string; icon: Luci
 ]
 
 function mapCoordinates(position: { x: number; z: number }) {
-  return { x: 50 + position.x * 0.45, y: 50 + position.z * 0.45 }
+  return worldToMapPercent(position)
+}
+
+function campusMapStyle(): CSSProperties {
+  const topLeft = worldToMapPercent({ x: CAMPUS_BOUNDS.minX, z: CAMPUS_BOUNDS.minZ })
+  const bottomRight = worldToMapPercent({ x: CAMPUS_BOUNDS.maxX, z: CAMPUS_BOUNDS.maxZ })
+  return { left: `${topLeft.x}%`, top: `${topLeft.y}%`, width: `${bottomRight.x - topLeft.x}%`, height: `${bottomRight.y - topLeft.y}%` }
 }
 
 function mapPoint(position: { x: number; z: number }) {
@@ -88,6 +100,10 @@ export function GameHud({
   playerPosition,
   nearbyCharacter,
   nearbyLocation,
+  nearbyEntrance,
+  interior,
+  nearInteriorAction,
+  nearInteriorExit,
   waypoint,
   activePanel,
   toast,
@@ -96,14 +112,26 @@ export function GameHud({
   onMoveKey,
 }: HudProps) {
   const mission = getMissionDetails(player.stage)
-  const currentDistrict = nearbyLocation?.district ?? 'Lagos Mainland'
-  const streets = [-66, -42, -18, 18, 42, 66]
+  const currentDistrict = interior?.district ?? nearbyEntrance?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'
+  const streets = GRID_LINES
   const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
-  const interactionLabel = nearbyCharacter
-    ? `Talk to ${nearbyCharacter.name}`
-    : nearbyLocation
-      ? `Explore ${nearbyLocation.name}`
-      : 'Wander the city'
+  const interactionLabel = interior
+    ? nearInteriorAction
+      ? interior.actionLabel
+      : nearInteriorExit
+        ? 'Leave the building'
+        : `Inside ${interior.name}`
+    : nearbyCharacter
+      ? `Talk to ${nearbyCharacter.name}`
+      : nearbyEntrance
+        ? `Enter ${nearbyEntrance.name}`
+        : nearbyLocation
+          ? `Explore ${nearbyLocation.name}`
+          : 'Wander the city'
+  const interactionEyebrow = interior
+    ? nearInteriorAction ? 'SERVICE' : nearInteriorExit ? 'EXIT' : 'INSIDE'
+    : nearbyCharacter ? 'ROLEPLAY' : nearbyEntrance ? 'ENTER' : nearbyLocation ? 'LOCATION' : 'EXPLORE'
+  const interactionEnabled = interior ? nearInteriorAction || nearInteriorExit : Boolean(nearbyCharacter || nearbyEntrance || nearbyLocation)
 
   return (
     <div className="game-hud">
@@ -189,8 +217,9 @@ export function GameHud({
         </div>
         <div className="minimap" role="button" tabIndex={0} onClick={() => onOpenPanel('map')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenPanel('map') } }} aria-label="Open detailed city map">
           <span className="minimap-water" aria-hidden="true" />
-          {streets.map((street) => <span className="minimap-road minimap-road-horizontal" key={`h-${street}`} style={{ top: `${50 + street * 0.45}%` }} />)}
-          {streets.map((street) => <span className="minimap-road minimap-road-vertical" key={`v-${street}`} style={{ left: `${50 + street * 0.45}%` }} />)}
+          {streets.map((street) => <span className="minimap-road minimap-road-horizontal" key={`h-${street}`} style={{ top: `${worldToMapPercent({ x: 0, z: street }).y}%` }} />)}
+          {streets.map((street) => <span className="minimap-road minimap-road-vertical" key={`v-${street}`} style={{ left: `${worldToMapPercent({ x: street, z: 0 }).x}%` }} />)}
+          <span className="minimap-campus" style={campusMapStyle()} aria-hidden="true" />
           <span className="minimap-flyover" aria-hidden="true" />
           {WORLD_LOCATIONS.map((location) => (
             <span
@@ -221,11 +250,11 @@ export function GameHud({
           className="interaction-button"
           type="button"
           onClick={onInteract}
-          disabled={!nearbyCharacter && !nearbyLocation}
+          disabled={!interactionEnabled}
         >
           <span className="interaction-key">E</span>
           <span className="interaction-copy">
-            <small>{nearbyCharacter ? 'ROLEPLAY' : nearbyLocation ? 'LOCATION' : 'EXPLORE'}</small>
+            <small>{interactionEyebrow}</small>
             <strong>{interactionLabel}</strong>
           </span>
           <ArrowRight aria-hidden="true" />
@@ -418,7 +447,7 @@ function MapPanel({
   const target = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const playerPoint = mapCoordinates(playerPosition)
   const targetPoint = target ? mapCoordinates(target) : null
-  const streets = [-66, -42, -18, 18, 42, 66]
+  const streets = GRID_LINES
 
   return (
     <div className="map-panel-content">
@@ -426,11 +455,12 @@ function MapPanel({
       <div className="full-map" aria-label="Lagos metropolitan district map">
         <span className="full-map-water" aria-hidden="true" />
         {streets.map((street) => (
-          <span className="full-map-road full-map-road-horizontal" key={`h-${street}`} style={{ top: `${50 + street * 0.45}%` }} />
+          <span className="full-map-road full-map-road-horizontal" key={`h-${street}`} style={{ top: `${worldToMapPercent({ x: 0, z: street }).y}%` }} />
         ))}
         {streets.map((street) => (
-          <span className="full-map-road full-map-road-vertical" key={`v-${street}`} style={{ left: `${50 + street * 0.45}%` }} />
+          <span className="full-map-road full-map-road-vertical" key={`v-${street}`} style={{ left: `${worldToMapPercent({ x: street, z: 0 }).x}%` }} />
         ))}
+        <span className="full-map-campus" style={campusMapStyle()} aria-hidden="true"><em>UNIVERSITY OF LAGOS</em></span>
         <span className="full-map-flyover" aria-hidden="true" />
         {CITY_BUILDINGS.map((building) => (
           <span key={building.id} className="full-map-building" style={{ ...mapPoint(building), width: `${Math.max(0.8, building.width * 0.26)}%`, height: `${Math.max(0.7, building.depth * 0.26)}%` }} title={building.name}><span>{building.name}</span></span>
@@ -535,7 +565,7 @@ function JobsPanel({
               <div className="job-employer-row"><Building2 aria-hidden="true" /><span>{job.employer}</span></div>
               <div className="job-reward-row"><span><Wallet aria-hidden="true" /> {formatNaira(job.pay)}</span><span><Sparkles aria-hidden="true" /> +{job.reputation} rep</span></div>
               <button className={isAssigned ? 'secondary-action' : 'primary-action'} type="button" onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}>
-                {isAssigned ? atWork ? 'CLOCK OUT · CLAIM PAY' : 'ROUTE TO WORKPLACE' : player.job ? 'SWITCH TO THIS JOB' : 'TAKE THIS SHIFT'}
+                {isAssigned ? atWork ? 'GO INSIDE TO WORK' : 'ROUTE TO WORKPLACE' : player.job ? 'SWITCH TO THIS JOB' : 'TAKE THIS SHIFT'}
                 <ArrowRight aria-hidden="true" />
               </button>
               {isAssigned && <small className="job-active-note"><span className="status-live-dot" /> ACTIVE ROLE · {atWork ? 'WORKPLACE IN RANGE' : 'ROUTE MARKED'}</small>}

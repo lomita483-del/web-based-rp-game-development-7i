@@ -1,3 +1,5 @@
+import { CAMPUS_WALLS } from '@/lib/game/world'
+
 export const WORLD_LOCATIONS = [
   {
     id: 'square',
@@ -102,10 +104,10 @@ export const WORLD_LOCATIONS = [
     id: 'university',
     name: 'University of Lagos',
     district: 'Akoka',
-    x: -54,
-    z: -54,
+    x: -120,
+    z: -28,
     kind: 'university',
-    description: 'A large campus of lecture halls, libraries, and student housing.',
+    description: 'The main building of a walled campus with a quad, a library, lecture halls, and student housing.',
   },
   {
     id: 'school',
@@ -241,6 +243,11 @@ export const CITY_BUILDINGS = [
   { id: 'yaba-creative-studio', name: 'Yaba Creative Studio', district: 'Yaba', x: 0, z: -54, width: 8, depth: 8, height: 9, color: '#777b7a', accent: '#d1a266', interiorKind: 'office' },
   { id: 'ikeja-market-arcade', name: 'Ikeja Market Arcade', district: 'Ikeja', x: 30, z: -54, width: 8, depth: 8, height: 6, color: '#987252', accent: '#d49a4d', interiorKind: 'shop' },
   { id: 'waterfront-offices', name: 'Waterfront Offices', district: 'Apapa', x: 54, z: 0, width: 8, depth: 8, height: 12, color: '#6f7a80', accent: '#d2ad68', interiorKind: 'office' },
+  { id: 'unilag-engineering', name: 'Faculty of Engineering', district: 'Akoka', x: -138, z: -28, width: 9, depth: 8, height: 10, color: '#a0674b', accent: '#e0c48a', interiorKind: 'university' },
+  { id: 'unilag-library', name: 'UNILAG Main Library', district: 'Akoka', x: -102, z: -28, width: 9, depth: 8, height: 9, color: '#b49478', accent: '#6b8f94', interiorKind: 'school' },
+  { id: 'unilag-sports-centre', name: 'UNILAG Sports Centre', district: 'Akoka', x: -138, z: 26, width: 9, depth: 8, height: 6, color: '#7f8b88', accent: '#d9a85a', interiorKind: 'clubhouse' },
+  { id: 'unilag-jaja-hall', name: 'Jaja Hall Hostel', district: 'Akoka', x: -120, z: 26, width: 9, depth: 8, height: 11, color: '#a8785a', accent: '#e0c48a', interiorKind: 'apartment' },
+  { id: 'unilag-student-union', name: 'Student Union Building', district: 'Akoka', x: -102, z: 26, width: 9, depth: 8, height: 6, color: '#8f6f58', accent: '#d97c4f', interiorKind: 'cafe' },
 ] as const
 
 export type CityBuildingId = (typeof CITY_BUILDINGS)[number]['id']
@@ -375,6 +382,68 @@ export function getBuildingEntrancePosition(building: CityBuilding) {
   return { x: building.x, z: building.z + building.depth / 2 + 1.1 }
 }
 
+export type EntranceTarget = {
+  id: InteriorId
+  name: string
+  district: string
+  kind: InteriorKind
+  /** Door position outside the building, where the ENTER beacon stands. */
+  x: number
+  z: number
+  /** Set when the building is also a world location (bank, hospital, ...). */
+  locationId: LocationId | null
+}
+
+/** Every named building that can be entered, with the position of its door. */
+export const ENTRANCES: readonly EntranceTarget[] = [
+  ...WORLD_LOCATIONS.flatMap((location): EntranceTarget[] => {
+    if (!Object.prototype.hasOwnProperty.call(LOCATION_INTERIOR_KINDS, location.id)) return []
+    const door = getLocationEntrancePosition(location.id)
+    if (!door) return []
+    return [{
+      id: location.id as InteriorId,
+      name: location.name,
+      district: location.district,
+      kind: LOCATION_INTERIOR_KINDS[location.id as InteriorLocationId],
+      x: door.x,
+      z: door.z,
+      locationId: location.id,
+    }]
+  }),
+  ...CITY_BUILDINGS.map((building): EntranceTarget => {
+    const door = getBuildingEntrancePosition(building)
+    return {
+      id: building.id,
+      name: building.name,
+      district: building.district,
+      kind: building.interiorKind,
+      x: door.x,
+      z: door.z,
+      locationId: null,
+    }
+  }),
+]
+
+export const ENTRANCE_RADIUS = 3.4
+
+/** The closest enterable door within reach of the player, if any. */
+export function findNearbyEntrance(position: { x: number; z: number }, radius = ENTRANCE_RADIUS): EntranceTarget | null {
+  let best: EntranceTarget | null = null
+  let bestDistance = radius
+  for (const entrance of ENTRANCES) {
+    const distance = Math.hypot(entrance.x - position.x, entrance.z - position.z)
+    if (distance < bestDistance) {
+      best = entrance
+      bestDistance = distance
+    }
+  }
+  return best
+}
+
+/** Where the player appears inside a room, and where the door mat is. */
+export const INTERIOR_SPAWN = { x: 0, z: 4.6 } as const
+export const INTERIOR_DOOR_Z = 6.45
+
 export function isInteriorId(value: unknown): value is InteriorId {
   return typeof value === 'string' && (
     Object.prototype.hasOwnProperty.call(LOCATION_INTERIOR_KINDS, value) ||
@@ -412,6 +481,8 @@ export function getInteriorDefinition(id: string): InteriorDefinition | null {
 
 export const CITY_COLLISION_BLOCKS = [
   ...CITY_BUILDINGS.map(({ id, x, z, width, depth }) => ({ id, x, z, width, depth })),
+  ...CAMPUS_WALLS,
+  { id: 'campus-fountain', x: -120, z: -2, width: 5.4, depth: 5.4 },
   ...WORLD_LOCATIONS.flatMap((location) => {
     const footprint = LOCATION_FOOTPRINTS[location.id]
     return footprint ? [{
@@ -533,8 +604,8 @@ export const CITY_CHARACTERS = [
     id: 'tobi',
     name: 'Tobi',
     role: 'University teaching assistant',
-    x: -52,
-    z: -52,
+    x: -112,
+    z: -13,
     locationId: 'university',
     color: '#725044',
     skinTone: '#87583f',

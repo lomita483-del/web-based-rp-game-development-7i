@@ -10,7 +10,7 @@ import type { PresenceUpdate } from '@/lib/game/types'
 
 const DEFAULT_ROOM_ID = 'eko-mainland'
 const ACTIVE_WINDOW_MS = 30_000
-const POSITION_LIMITS = { minX: -82, maxX: 82, minZ: -82, maxZ: 78 } as const
+const POSITION_LIMITS = { minX: -145, maxX: 82, minZ: -82, maxZ: 78 } as const
 
 function parseRoomId(value: unknown): string | null {
   if (value === undefined || value === null) return DEFAULT_ROOM_ID

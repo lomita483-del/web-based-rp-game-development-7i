@@ -3,7 +3,7 @@
 import { Stars, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
-import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type PerspectiveCamera, type Texture, Vector3 } from 'three'
+import { MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type PerspectiveCamera, type Texture, Vector3 } from 'three'
 import {
   CITY_BUILDINGS,
   CITY_CHARACTERS,
@@ -18,7 +18,11 @@ import {
   type LocationId,
   type RemotePlayer,
 } from './game-data'
+import { Campus } from './campus'
+import { HumanoidModel } from './humanoid'
 import { InteriorScene } from './interior-scene'
+import { WorldLabel } from './world-label'
+import { WORLD_BOUNDS, planRoute, type Point } from '@/lib/game/world'
 
 type PlayerPosition = { x: number; z: number }
 type CameraLook = { yaw: number; pitch: number; zoom: number }
@@ -32,6 +36,7 @@ type CityWorldProps = {
   paused: boolean
   waypoint: LocationId | null
   autoWalkTarget: LocationId | null
+  onAutoWalkEnd: () => void
   spawnPosition: PlayerPosition
   remotePlayers: RemotePlayer[]
   gameMinutes: number
@@ -594,40 +599,6 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   )
 }
 
-function WorldLabel({ text, width, accentColor }: { text: string; width: number; accentColor: string }) {
-  const texture = useMemo(() => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 512
-    canvas.height = 128
-    const context = canvas.getContext('2d')
-    if (!context) return null
-
-    context.fillStyle = 'rgba(16, 23, 30, 0.94)'
-    context.fillRect(0, 0, canvas.width, canvas.height)
-    context.strokeStyle = accentColor
-    context.lineWidth = 4
-    context.strokeRect(3, 3, canvas.width - 6, canvas.height - 6)
-    context.fillStyle = '#f2e8d7'
-    context.font = '600 40px Arial, sans-serif'
-    context.textAlign = 'center'
-    context.textBaseline = 'middle'
-    context.fillText(text, canvas.width / 2, canvas.height / 2, canvas.width - 36)
-
-    const labelTexture = new CanvasTexture(canvas)
-    labelTexture.colorSpace = SRGBColorSpace
-    return labelTexture
-  }, [accentColor, text])
-
-  if (!texture) return null
-
-  return (
-    <mesh>
-      <planeGeometry args={[width, width / 4]} />
-      <meshBasicMaterial map={texture} transparent toneMapped={false} />
-    </mesh>
-  )
-}
-
 function EntryBeacon({ position, label }: { position: { x: number; z: number }; label: string }) {
   return (
     <group position={[position.x, 0, position.z]}>
@@ -680,99 +651,6 @@ function LandmarkMarkers({ waypoint }: { waypoint: LocationId | null }) {
           </group>
         </group>
       )}
-    </group>
-  )
-}
-
-function HumanoidModel({
-  skinTone,
-  hairColor,
-  clothing,
-  accentColor,
-  keysRef,
-  paused = false,
-  walking = false,
-  gender = 'male',
-}: {
-  skinTone: string
-  hairColor: string
-  clothing: string
-  accentColor: string
-  keysRef?: MutableRefObject<Set<string>>
-  paused?: boolean
-  walking?: boolean
-  gender?: Gender
-}) {
-  const leftArm = useRef<Group>(null!)
-  const rightArm = useRef<Group>(null!)
-  const leftLeg = useRef<Group>(null!)
-  const rightLeg = useRef<Group>(null!)
-
-  useFrame((state) => {
-    const isMoving = (walking || Boolean(keysRef?.current.size)) && !paused
-    const stride = isMoving ? Math.sin(state.clock.elapsedTime * 10) * 0.44 : 0
-    const idle = Math.sin(state.clock.elapsedTime * 1.5) * 0.035
-    leftArm.current.rotation.x = isMoving ? stride : idle
-    rightArm.current.rotation.x = isMoving ? -stride : -idle
-    leftLeg.current.rotation.x = isMoving ? -stride : 0
-    rightLeg.current.rotation.x = isMoving ? stride : 0
-  })
-
-  return (
-    <group>
-      <mesh position={[0, 1.03, 0]} castShadow>
-        <capsuleGeometry args={gender === 'female' ? [0.24, 0.48, 5, 10] : [0.27, 0.48, 5, 10]} />
-        <meshStandardMaterial color={clothing} roughness={0.77} />
-      </mesh>
-      <mesh position={[0, 1.42, 0.015]}>
-        <boxGeometry args={[0.45, 0.13, 0.32]} />
-        <meshStandardMaterial color={accentColor} roughness={0.76} />
-      </mesh>
-      <mesh position={[0, 1.54, 0]}>
-        <cylinderGeometry args={[0.1, 0.13, 0.25, 10]} />
-        <meshStandardMaterial color={skinTone} roughness={0.92} />
-      </mesh>
-      <mesh position={[0, 1.86, 0]} castShadow>
-        <sphereGeometry args={[0.2, 18, 14]} />
-        <meshStandardMaterial color={skinTone} roughness={0.82} />
-      </mesh>
-      <mesh position={[0, 1.99, -0.035]}>
-        <sphereGeometry args={[0.205, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={hairColor} roughness={0.96} />
-      </mesh>
-      {gender === 'female' && (
-        <mesh position={[0, 1.67, -0.19]} rotation={[0.2, 0, 0]}>
-          <capsuleGeometry args={[0.09, 0.38, 4, 8]} />
-          <meshStandardMaterial color={hairColor} roughness={0.96} />
-        </mesh>
-      )}
-      {[-1, 1].map((side) => (
-        <group key={`face-side-${side}`}>
-          <mesh position={[side * 0.205, 1.86, 0.01]}><sphereGeometry args={[0.038, 10, 8]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
-          <mesh position={[side * 0.072, 1.88, 0.17]}><sphereGeometry args={[0.019, 10, 8]} /><meshStandardMaterial color="#f0e8dc" roughness={0.5} /></mesh>
-          <mesh position={[side * 0.072, 1.88, 0.188]}><sphereGeometry args={[0.009, 8, 6]} /><meshStandardMaterial color="#211c19" roughness={0.5} /></mesh>
-          <mesh position={[side * 0.072, 1.93, 0.16]} rotation={[0, 0, side * -0.1]}><boxGeometry args={[0.08, 0.016, 0.02]} /><meshStandardMaterial color={hairColor} roughness={0.9} /></mesh>
-        </group>
-      ))}
-      <mesh position={[0, 1.82, 0.194]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.035, 0.085, 6]} /><meshStandardMaterial color={skinTone} roughness={0.88} /></mesh>
-      <mesh position={[0, 1.73, 0.18]}><boxGeometry args={[0.075, 0.014, 0.018]} /><meshStandardMaterial color="#57392f" roughness={0.82} /></mesh>
-      <group ref={leftArm} position={[-0.33, 1.28, 0]}>
-        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.09, 0.36, 5, 8]} /><meshStandardMaterial color={clothing} roughness={0.8} /></mesh>
-        <mesh position={[0, -0.53, 0.02]}><sphereGeometry args={[0.085, 8, 7]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
-      </group>
-      <group ref={rightArm} position={[0.33, 1.28, 0]}>
-        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.09, 0.36, 5, 8]} /><meshStandardMaterial color={clothing} roughness={0.8} /></mesh>
-        <mesh position={[0, -0.53, 0.02]}><sphereGeometry args={[0.085, 8, 7]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
-      </group>
-      <group ref={leftLeg} position={[-0.13, 0.72, 0]}>
-        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.105, 0.37, 5, 8]} /><meshStandardMaterial color="#35383a" roughness={0.94} /></mesh>
-        <mesh position={[0, -0.55, 0.11]} castShadow><boxGeometry args={[0.23, 0.16, 0.38]} /><meshStandardMaterial color="#24272a" roughness={0.86} /></mesh>
-      </group>
-      <group ref={rightLeg} position={[0.13, 0.72, 0]}>
-        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.105, 0.37, 5, 8]} /><meshStandardMaterial color="#35383a" roughness={0.94} /></mesh>
-        <mesh position={[0, -0.55, 0.11]} castShadow><boxGeometry args={[0.23, 0.16, 0.38]} /><meshStandardMaterial color="#24272a" roughness={0.86} /></mesh>
-      </group>
-      {walking && <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[0.34, 0.42, 24]} /><meshBasicMaterial color="#d8aa68" transparent opacity={0.48} /></mesh>}
     </group>
   )
 }
@@ -850,8 +728,8 @@ function PlayerController({
   activeInterior,
   cameraLookRef,
   autoWalkTarget,
-
-}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & { cameraLookRef: MutableRefObject<CameraLook>; autoWalkTarget: LocationId | null }) {
+  onAutoWalkEnd,
+}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior' | 'onAutoWalkEnd'> & { cameraLookRef: MutableRefObject<CameraLook>; autoWalkTarget: LocationId | null }) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
   const cameraTarget = useRef(new Vector3())
@@ -860,6 +738,9 @@ function PlayerController({
   const publishTimer = useRef(0)
   const onPositionRef = useRef(onPlayerPosition)
   onPositionRef.current = onPlayerPosition
+  const onAutoWalkEndRef = useRef(onAutoWalkEnd)
+  onAutoWalkEndRef.current = onAutoWalkEnd
+  const routeRef = useRef<{ key: LocationId | null; points: Point[] }>({ key: null, points: [] })
   const inside = activeInterior !== null
 
   useEffect(() => {
@@ -880,14 +761,24 @@ function PlayerController({
       if (keys.has('s') || keys.has('arrowdown')) direction.z += 1
       if (keys.has('a') || keys.has('arrowleft')) direction.x -= 1
       if (keys.has('d') || keys.has('arrowright')) direction.x += 1
-      if (direction.lengthSq() === 0 && autoWalkTarget) {
-        const destination = WORLD_LOCATIONS.find((location) => location.id === autoWalkTarget)
-        if (destination) {
-          const dx = destination.x - position.x
-          const dz = destination.z - position.z
-          // Follow a street-grid route in orthogonal legs instead of cutting diagonally across blocks.
-          if (Math.abs(dx) > 2.1) direction.set(dx, 0, 0)
-          else if (Math.abs(dz) > 2.1) direction.set(0, 0, dz)
+      if (direction.lengthSq() > 0) {
+        // The player took over: drop the automatic route so it is re-planned if they set one again.
+        if (autoWalkTarget && !inside) onAutoWalkEndRef.current()
+        routeRef.current.key = null
+      } else if (autoWalkTarget && !inside) {
+        if (routeRef.current.key !== autoWalkTarget) {
+          const destination = getLocationEntrancePosition(autoWalkTarget) ?? WORLD_LOCATIONS.find((location) => location.id === autoWalkTarget)
+          routeRef.current = {
+            key: autoWalkTarget,
+            points: destination ? planRoute({ x: position.x, z: position.z }, { x: destination.x, z: destination.z }) : [],
+          }
+        }
+        const points = routeRef.current.points
+        while (points.length > 0 && Math.hypot(points[0].x - position.x, points[0].z - position.z) < 0.7) points.shift()
+        if (points.length > 0) direction.set(points[0].x - position.x, 0, points[0].z - position.z)
+        else {
+          routeRef.current.key = null
+          onAutoWalkEndRef.current()
         }
       }
 
@@ -915,8 +806,8 @@ function PlayerController({
       position.z = MathUtils.clamp(position.z, -6.7, 6.7)
       position.y = 0
     } else {
-      position.x = MathUtils.clamp(position.x, -82, 82)
-      position.z = MathUtils.clamp(position.z, -82, 78)
+      position.x = MathUtils.clamp(position.x, WORLD_BOUNDS.minX, WORLD_BOUNDS.maxX)
+      position.z = MathUtils.clamp(position.z, WORLD_BOUNDS.minZ, WORLD_BOUNDS.maxZ)
       const onBridge = position.z >= 72 && position.z <= 78
       position.y = onBridge ? 4.62 : 0
     }
@@ -1059,6 +950,7 @@ function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps
       <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
       <Flyover />
       <LagoonBridge />
+      <Campus night={night} />
       {CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
       {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
       {CITY_BUILDINGS.map((building) => (
@@ -1199,6 +1091,7 @@ export function CityWorld(props: CityWorldProps) {
           activeInterior={props.activeInterior}
           cameraLookRef={cameraLookRef}
           autoWalkTarget={props.autoWalkTarget}
+          onAutoWalkEnd={props.onAutoWalkEnd}
         />
       </Canvas>
     </div>
