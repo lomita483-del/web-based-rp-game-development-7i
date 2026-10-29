@@ -1201,11 +1201,21 @@ function getNextSignal(vehicle: TrafficVehicleSpec, coordinate: number) {
 function TrafficFleet({ night }: { night: boolean }) {
   const vehicleRefs = useRef<(Group | null)[]>([])
   const positionsRef = useRef(CITY_TRAFFIC.map((vehicle) => vehicle.start))
+  const nextPositionsRef = useRef(CITY_TRAFFIC.map((vehicle) => vehicle.start))
+  const routeGroups = useMemo(() => {
+    const groups = new Map<string, number[]>()
+    CITY_TRAFFIC.forEach((vehicle, index) => {
+      const indices = groups.get(vehicle.routeId)
+      if (indices) indices.push(index)
+      else groups.set(vehicle.routeId, [index])
+    })
+    return groups
+  }, [])
 
   useFrame(({ clock }, delta) => {
     const step = Math.min(delta, 0.05)
     const currentPositions = positionsRef.current
-    const nextPositions = currentPositions.slice()
+    const nextPositions = nextPositionsRef.current
 
     CITY_TRAFFIC.forEach((vehicle, index) => {
       const coordinate = currentPositions[index]
@@ -1213,12 +1223,13 @@ function TrafficFleet({ night }: { night: boolean }) {
       let desiredSpeed = vehicle.speed
       let leadDistance = Number.POSITIVE_INFINITY
 
-      CITY_TRAFFIC.forEach((other, otherIndex) => {
-        if (otherIndex === index || other.routeId !== vehicle.routeId) return
+      const sameRoute = routeGroups.get(vehicle.routeId) ?? []
+      for (const otherIndex of sameRoute) {
+        if (otherIndex === index) continue
         let distance = vehicle.direction * (currentPositions[otherIndex] - coordinate)
         if (distance <= 0) distance += routeLength
         if (distance > 0.05) leadDistance = Math.min(leadDistance, distance)
-      })
+      }
 
       if (leadDistance < 15) {
         const safeGap = vehicle.kind === 'truck' ? 8.2 : vehicle.kind === 'danfo' ? 7.2 : 5.4
@@ -1238,7 +1249,9 @@ function TrafficFleet({ night }: { night: boolean }) {
       nextPositions[index] = vehicle.min + ((((coordinate + vehicle.direction * desiredSpeed * step - vehicle.min) % length) + length) % length)
     })
 
+    // Swap reusable position buffers instead of allocating a new array every frame.
     positionsRef.current = nextPositions
+    nextPositionsRef.current = currentPositions
     CITY_TRAFFIC.forEach((vehicle, index) => {
       const group = vehicleRefs.current[index]
       if (!group) return
