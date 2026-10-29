@@ -350,7 +350,11 @@ export default function GameShell() {
   }, [toast])
 
   useEffect(() => {
-    const timer = window.setInterval(() => setGameMinutes((minutes) => minutes + 1), 30000)
+    // One in-game minute every five real seconds gives the full day/night cycle
+    // a playable pace while preserving the saved in-game clock.
+    const timer = window.setInterval(() => {
+      setGameMinutes((minutes) => (minutes + 1) % (24 * 60))
+    }, 5000)
     return () => window.clearInterval(timer)
   }, [])
 
