@@ -59,14 +59,15 @@ export function ServiceSheet({
   interior,
   player,
   onClose,
-  onServiceAction,
-  onBuyFood,
-  onRest,
-  onLecture,
   onDeposit,
   onWithdraw,
+  onLecture,
   onStartShift,
   onWorkTask,
+  onClockOut,
+  onRest,
+  onBuyFood,
+  onServiceAction,
 }: ServiceSheetProps) {
   const job = player.job ? CITY_JOBS.find((entry) => entry.id === player.job) ?? null : null
   const atWorkplace = job !== null && job.locationId === interior.id
