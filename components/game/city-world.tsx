@@ -1403,6 +1403,7 @@ function PlayerController({
         const nextX = position.x + direction.x * speed * step
         const nextZ = position.z + direction.z * speed * step
 
+        // Resolve axes separately so a blocked axis does not prevent sliding along a wall.
         if (inside) {
           position.x = MathUtils.clamp(nextX, -6.7, 6.7)
           position.z = MathUtils.clamp(nextZ, -6.7, 6.7)
@@ -1410,7 +1411,19 @@ function PlayerController({
           if (!collidesWithBuilding(nextX, position.z, radius)) position.x = nextX
           if (!collidesWithBuilding(position.x, nextZ, radius)) position.z = nextZ
         }
-        playerRef.current.rotation.y = MathUtils.damp(playerRef.current.rotation.y, Math.atan2(direction.x, direction.z), 10, step)
+        // Face the actual resolved travel direction, not raw keyboard/joystick input.
+        const movedX = position.x - (nextX - direction.x * speed * step)
+        const movedZ = position.z - (nextZ - direction.z * speed * step)
+        const actualX = Math.abs(movedX) > 0.0001 ? direction.x : 0
+        const actualZ = Math.abs(movedZ) > 0.0001 ? direction.z : 0
+        if (actualX !== 0 || actualZ !== 0) {
+          playerRef.current.rotation.y = MathUtils.damp(
+            playerRef.current.rotation.y,
+            Math.atan2(actualX, actualZ),
+            10,
+            step,
+          )
+        }
       }
     }
 
