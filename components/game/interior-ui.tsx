@@ -69,6 +69,7 @@ export function ServiceSheet({
   onBuyFood,
   onServiceAction,
 }: ServiceSheetProps) {
+  const kind = interior.kind
   const job = player.job ? CITY_JOBS.find((entry) => entry.id === player.job) ?? null : null
   const atWorkplace = job !== null && job.locationId === interior.id
   const home = player.home ? CITY_HOMES.find((entry) => entry.id === player.home) ?? null : null
