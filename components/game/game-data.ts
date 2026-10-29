@@ -426,6 +426,19 @@ export const CITY_COLLISION_BLOCKS = [
 
 export const CITY_CHARACTERS = [
   {
+    id: 'admin',
+    name: 'Adebayo R.',
+    role: 'City admin',
+    x: 0,
+    z: 0,
+    locationId: 'square',
+    color: '#d8b46f',
+    skinTone: '#8f6748',
+    hairColor: '#261d1a',
+    accentColor: '#e5cc8d',
+    intro: 'I manage the city systems, road safety, and world flow. Ask me for admin tools.',
+  },
+  {
     id: 'bisi',
     name: 'Bisi',
     role: 'Neighborhood regular',
@@ -794,7 +807,7 @@ export const CITY_HOMES = [
 export type HomeId = (typeof CITY_HOMES)[number]['id']
 
 export type MissionStage = 'meet-bisi' | 'find-tunde' | 'delivery' | 'free-roam'
-export type GamePanel = 'none' | 'map' | 'jobs' | 'life' | 'inventory' | 'online'
+export type GamePanel = 'none' | 'map' | 'jobs' | 'life' | 'inventory' | 'online' | 'admin'
 export type Gender = 'male' | 'female'
 export type RideVehicleType = 'cab' | 'bike' | 'danfo' | 'driver'
 export type RideBookingStatus = 'dispatching' | 'approaching' | 'boarding' | 'en-route' | 'arrived'
@@ -851,6 +864,7 @@ export type PlayerState = {
   home: HomeId | null
   voterRegistered: boolean
   wantedLevel: number
+  adminMode: boolean
 }
 
 export type RemotePlayer = {
@@ -899,6 +913,7 @@ export const STARTING_PLAYER: PlayerState = {
   home: null,
   voterRegistered: false,
   wantedLevel: 0,
+  adminMode: false,
 }
 
 export type PlayerAction =
@@ -927,6 +942,8 @@ export type PlayerAction =
   | { type: 'lease-home'; homeId: HomeId }
   | { type: 'register-voter' }
   | { type: 'resolve-court' }
+  | { type: 'toggle-admin'; enabled?: boolean }
+  | { type: 'admin-grant'; amount: number }
 
 function updateReputation(state: PlayerState, reputation: number): Pick<PlayerState, 'reputation' | 'level'> {
   return {
@@ -1118,6 +1135,22 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       const fine = state.wantedLevel * 300
       if (state.cash < fine) return state
       return { ...state, cash: state.cash - fine, wantedLevel: 0 }
+    }
+    case 'toggle-admin': {
+      return { ...state, adminMode: action.enabled ?? !state.adminMode }
+    }
+    case 'admin-grant': {
+      const grant = Math.max(0, action.amount)
+      return {
+        ...state,
+        cash: state.cash + grant,
+        bankBalance: state.bankBalance + grant,
+        reputation: Math.max(100, state.reputation + 20),
+        energy: 100,
+        hunger: 100,
+        wantedLevel: 0,
+        adminMode: true,
+      }
     }
   }
 }

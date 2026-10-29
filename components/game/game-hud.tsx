@@ -53,6 +53,8 @@ import {
   type RideBookingStatus,
   type RideVehicleType,
 } from './game-data'
+import { CAMPUS_BOUNDS, GRID_LINES, worldToMapPercent } from '@/lib/game/world'
+import type { EntranceTarget, InteriorDefinition } from './game-data'
 import { LifePanel } from './life-panel'
 import { OnlinePanel } from './online-panel'
 import type { GameUser, OnlinePlayer, SaveStatus } from '@/lib/game/types'
@@ -72,6 +74,10 @@ type HudProps = {
   nearInteriorAction: boolean
   canExitInterior: boolean
   rideBooking: RideBooking | null
+  nearbyEntrance: EntranceTarget | null
+  interior: InteriorDefinition | null
+  nearInteriorAction: boolean
+  nearInteriorExit: boolean
   waypoint: LocationId | null
   activePanel: GamePanel
   toast: { id: number; text: string } | null
@@ -104,7 +110,13 @@ const RIDE_MODE_LABELS: Record<RideVehicleType, string> = {
 }
 
 function mapCoordinates(position: { x: number; z: number }) {
-  return { x: 50 + position.x * 0.45, y: 50 + position.z * 0.45 }
+  return worldToMapPercent(position)
+}
+
+function campusMapStyle(): CSSProperties {
+  const topLeft = worldToMapPercent({ x: CAMPUS_BOUNDS.minX, z: CAMPUS_BOUNDS.minZ })
+  const bottomRight = worldToMapPercent({ x: CAMPUS_BOUNDS.maxX, z: CAMPUS_BOUNDS.maxZ })
+  return { left: `${topLeft.x}%`, top: `${topLeft.y}%`, width: `${bottomRight.x - topLeft.x}%`, height: `${bottomRight.y - topLeft.y}%` }
 }
 
 function mapPoint(position: { x: number; z: number }) {
@@ -125,6 +137,10 @@ export function GameHud({
   nearInteriorAction,
   canExitInterior,
   rideBooking,
+  nearbyEntrance,
+  interior,
+  nearInteriorAction,
+  nearInteriorExit,
   waypoint,
   activePanel,
   toast,
@@ -149,6 +165,26 @@ export function GameHud({
           : nearbyLocation
             ? `Explore ${nearbyLocation.name}`
             : 'Wander the city'
+  const currentDistrict = interior?.district ?? nearbyEntrance?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'
+  const streets = GRID_LINES
+  const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
+  const interactionLabel = interior
+    ? nearInteriorAction
+      ? interior.actionLabel
+      : nearInteriorExit
+        ? 'Leave the building'
+        : `Inside ${interior.name}`
+    : nearbyCharacter
+      ? `Talk to ${nearbyCharacter.name}`
+      : nearbyEntrance
+        ? `Enter ${nearbyEntrance.name}`
+        : nearbyLocation
+          ? `Explore ${nearbyLocation.name}`
+          : 'Wander the city'
+  const interactionEyebrow = interior
+    ? nearInteriorAction ? 'SERVICE' : nearInteriorExit ? 'EXIT' : 'INSIDE'
+    : nearbyCharacter ? 'ROLEPLAY' : nearbyEntrance ? 'ENTER' : nearbyLocation ? 'LOCATION' : 'EXPLORE'
+  const interactionEnabled = interior ? nearInteriorAction || nearInteriorExit : Boolean(nearbyCharacter || nearbyEntrance || nearbyLocation)
 
   return (
     <div className="game-hud">
@@ -245,8 +281,9 @@ export function GameHud({
         </div>
         <div className="minimap" role="button" tabIndex={0} onClick={() => onOpenPanel('map')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenPanel('map') } }} aria-label="Open detailed city map">
           <span className="minimap-water" aria-hidden="true" />
-          {streets.map((street) => <span className="minimap-road minimap-road-horizontal" key={`h-${street}`} style={{ top: `${50 + street * 0.45}%` }} />)}
-          {streets.map((street) => <span className="minimap-road minimap-road-vertical" key={`v-${street}`} style={{ left: `${50 + street * 0.45}%` }} />)}
+          {streets.map((street) => <span className="minimap-road minimap-road-horizontal" key={`h-${street}`} style={{ top: `${worldToMapPercent({ x: 0, z: street }).y}%` }} />)}
+          {streets.map((street) => <span className="minimap-road minimap-road-vertical" key={`v-${street}`} style={{ left: `${worldToMapPercent({ x: street, z: 0 }).x}%` }} />)}
+          <span className="minimap-campus" style={campusMapStyle()} aria-hidden="true" />
           <span className="minimap-flyover" aria-hidden="true" />
           {WORLD_LOCATIONS.map((location) => (
             <span
@@ -282,6 +319,11 @@ export function GameHud({
           <span className="interaction-key">E</span>
           <span className="interaction-copy">
             <small>{activeInterior ? nearInteriorAction ? 'SERVICE' : canExitInterior ? 'EXIT' : 'INSIDE' : nearbyInterior && prioritizeInterior ? 'BUILDING ENTRY' : nearbyCharacter ? 'ROLEPLAY' : nearbyInterior ? 'BUILDING ENTRY' : nearbyLocation ? 'LOCATION' : 'EXPLORE'}</small>
+          disabled={!interactionEnabled}
+        >
+          <span className="interaction-key">E</span>
+          <span className="interaction-copy">
+            <small>{interactionEyebrow}</small>
             <strong>{interactionLabel}</strong>
           </span>
           <ArrowRight aria-hidden="true" />
@@ -296,7 +338,33 @@ export function GameHud({
         <span><kbd>P</kbd> CITY LIFE</span>
       </div>
 
-      <div className="movement-joystick" role="group" aria-label="Circular movement joystick" onPointerDown={(event) => { event.preventDefault(); updateJoystick(event, onMoveKey) }} onPointerMove={(event) => updateJoystick(event, onMoveKey)} onPointerUp={() => clearJoystick(onMoveKey)} onPointerCancel={() => clearJoystick(onMoveKey)} onLostPointerCapture={() => clearJoystick(onMoveKey)}>
+      <div
+        className="movement-joystick"
+        role="group"
+        aria-label="Circular movement joystick"
+        onContextMenu={(event) => event.preventDefault()}
+        onPointerDown={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          if (event.pointerType !== 'mouse') event.currentTarget.setPointerCapture(event.pointerId)
+          updateJoystick(event, onMoveKey)
+        }}
+        onPointerMove={(event) => {
+          if (event.buttons === 0 && event.pointerType === 'mouse') return
+          if (event.currentTarget.hasPointerCapture(event.pointerId) || event.pointerType === 'mouse') {
+            event.preventDefault()
+            event.stopPropagation()
+            updateJoystick(event, onMoveKey)
+          }
+        }}
+        onPointerUp={(event) => {
+          event.preventDefault()
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+          clearJoystick(onMoveKey)
+        }}
+        onPointerCancel={() => clearJoystick(onMoveKey)}
+        onLostPointerCapture={() => clearJoystick(onMoveKey)}
+      >
         <span className="movement-joystick-ring" aria-hidden="true" />
         <span className="movement-joystick-knob" aria-hidden="true" />
       </div>
@@ -319,7 +387,6 @@ function updateJoystick(event: PointerEvent<HTMLDivElement>, onMoveKey: (key: st
   const threshold = 0.2
   onMoveKey('a', dx < -threshold); onMoveKey('d', dx > threshold)
   onMoveKey('w', dy < -threshold); onMoveKey('s', dy > threshold)
-  if (event.pointerType !== 'mouse') event.currentTarget.setPointerCapture?.(event.pointerId)
 }
 function clearJoystick(onMoveKey: (key: string, pressed: boolean) => void) {
   for (const key of ['w', 'a', 's', 'd']) onMoveKey(key, false)
@@ -478,6 +545,7 @@ function MapPanel({
   const targetPoint = target ? mapCoordinates(target) : null
   const travelDistance = selectedLocation ? distanceBetween(playerPosition, selectedLocation) : 0
   const streets = [-66, -42, -18, 18, 42, 66]
+  const streets = GRID_LINES
 
   return (
     <div className="map-panel-content">
@@ -485,11 +553,12 @@ function MapPanel({
       <div className="full-map" aria-label="Lagos metropolitan district map">
         <span className="full-map-water" aria-hidden="true" />
         {streets.map((street) => (
-          <span className="full-map-road full-map-road-horizontal" key={`h-${street}`} style={{ top: `${50 + street * 0.45}%` }} />
+          <span className="full-map-road full-map-road-horizontal" key={`h-${street}`} style={{ top: `${worldToMapPercent({ x: 0, z: street }).y}%` }} />
         ))}
         {streets.map((street) => (
-          <span className="full-map-road full-map-road-vertical" key={`v-${street}`} style={{ left: `${50 + street * 0.45}%` }} />
+          <span className="full-map-road full-map-road-vertical" key={`v-${street}`} style={{ left: `${worldToMapPercent({ x: street, z: 0 }).x}%` }} />
         ))}
+        <span className="full-map-campus" style={campusMapStyle()} aria-hidden="true"><em>UNIVERSITY OF LAGOS</em></span>
         <span className="full-map-flyover" aria-hidden="true" />
         {CITY_BUILDINGS.map((building) => (
           <span key={building.id} className="full-map-building" style={{ ...mapPoint(building), width: `${Math.max(0.8, building.width * 0.26)}%`, height: `${Math.max(0.7, building.depth * 0.26)}%` }} title={building.name}><span>{building.name}</span></span>
@@ -618,6 +687,8 @@ function JobsPanel({
                 onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}
               >
                 {actionLabel}
+              <button className={isAssigned ? 'secondary-action' : 'primary-action'} type="button" onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}>
+                {isAssigned ? atWork ? 'GO INSIDE TO WORK' : 'ROUTE TO WORKPLACE' : player.job ? 'SWITCH TO THIS JOB' : 'TAKE THIS SHIFT'}
                 <ArrowRight aria-hidden="true" />
               </button>
               {isAssigned && <small className="job-active-note"><span className="status-live-dot" /> ACTIVE ROLE · {activeRoleStatus}</small>}

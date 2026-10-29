@@ -1,8 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
-import { CanvasTexture, SRGBColorSpace } from 'three'
+import { useFrame } from '@react-three/fiber'
+import { useMemo, useRef } from 'react'
+import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Group } from 'three'
 import type { InteriorDefinition, InteriorKind } from './game-data'
+import { HumanoidModel, type IdleStyle } from './humanoid'
 
 type InteriorSceneProps = {
   interior: InteriorDefinition
@@ -198,29 +200,23 @@ function DoorFrame({ accent }: { accent: string }) {
         <boxGeometry args={[2.88, 0.18, 0.28]} />
         <meshStandardMaterial color={accent} metalness={0.18} roughness={0.48} />
       </mesh>
-      <mesh position={[0, 2, 0.06]}>
-        <boxGeometry args={[2.52, 3.9, 0.06]} />
-        <meshStandardMaterial color="#66787a" metalness={0.24} roughness={0.28} transparent opacity={0.34} />
-      </mesh>
     </group>
   )
+}
+
+const STAFF_OUTFITS: Partial<Record<InteriorKind, string>> = {
+  hospital: '#e4e4d9',
+  police: '#27495d',
+  bank: '#385a66',
+  garage: '#8a6a3c',
+  market: '#935d37',
+  cafe: '#8b5436',
 }
 
 function ServiceWorker({ color, position = [0, 0, -5.5] }: { color: string; position?: [number, number, number] }) {
   return (
     <group position={position}>
-      <mesh position={[0, 1.05, 0]} castShadow>
-        <capsuleGeometry args={[0.29, 0.58, 4, 8]} />
-        <meshStandardMaterial color={color} roughness={0.82} />
-      </mesh>
-      <mesh position={[0, 1.91, 0]} castShadow>
-        <sphereGeometry args={[0.21, 14, 12]} />
-        <meshStandardMaterial color="#8d5c43" roughness={0.85} />
-      </mesh>
-      <mesh position={[0, 2.04, -0.035]}>
-        <sphereGeometry args={[0.21, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#211b18" roughness={0.96} />
-      </mesh>
+      <HumanoidModel skinTone="#8d5c43" hairColor="#211b18" clothing={color} accentColor="#d5ba8b" idle="work" />
     </group>
   )
 }
@@ -379,47 +375,290 @@ function RoomFurniture({ kind, palette }: { kind: InteriorKind; palette: RoomPal
   )
 }
 
+function hashString(value: string) {
+  let hash = 7
+  for (const character of value) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
+  return hash
+}
+
+function shade(hex: string, factor: number) {
+  const value = parseInt(hex.slice(1), 16)
+  const channel = (shift: number) => Math.max(0, Math.min(255, Math.round(((value >> shift) & 255) * factor)))
+  return `#${((1 << 24) | (channel(16) << 16) | (channel(8) << 8) | channel(0)).toString(16).slice(1)}`
+}
+
+const PLANK_KINDS = new Set<InteriorKind>(['hotel', 'bungalow', 'estate', 'apartment', 'house', 'cafe', 'village', 'farm', 'club', 'clubhouse'])
+
+function useFloorTexture(floor: string, kind: InteriorKind, seed: number) {
+  return useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 512
+    canvas.height = 512
+    const context = canvas.getContext('2d')
+    if (!context) return null
+    let state = seed || 1
+    const random = () => {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0
+      return state / 4294967296
+    }
+    context.fillStyle = floor
+    context.fillRect(0, 0, 512, 512)
+    if (PLANK_KINDS.has(kind)) {
+      const rows = 10
+      const rowHeight = 512 / rows
+      for (let row = 0; row < rows; row += 1) {
+        let x = -random() * 160
+        while (x < 512) {
+          const length = 120 + random() * 150
+          context.fillStyle = shade(floor, 0.88 + random() * 0.22)
+          context.fillRect(x, row * rowHeight, length, rowHeight)
+          context.strokeStyle = 'rgba(0,0,0,0.22)'
+          context.lineWidth = 2
+          context.strokeRect(x, row * rowHeight, length, rowHeight)
+          x += length
+        }
+      }
+    } else {
+      const tiles = 8
+      const size = 512 / tiles
+      for (let row = 0; row < tiles; row += 1) {
+        for (let column = 0; column < tiles; column += 1) {
+          context.fillStyle = shade(floor, (row + column) % 2 === 0 ? 1.06 : 0.92 + random() * 0.04)
+          context.fillRect(column * size, row * size, size, size)
+        }
+      }
+      context.strokeStyle = 'rgba(0,0,0,0.25)'
+      context.lineWidth = 2
+      for (let line = 0; line <= tiles; line += 1) {
+        context.beginPath()
+        context.moveTo(line * size, 0)
+        context.lineTo(line * size, 512)
+        context.moveTo(0, line * size)
+        context.lineTo(512, line * size)
+        context.stroke()
+      }
+    }
+    const texture = new CanvasTexture(canvas)
+    texture.colorSpace = SRGBColorSpace
+    texture.wrapS = RepeatWrapping
+    texture.wrapT = RepeatWrapping
+    return texture
+  }, [floor, kind, seed])
+}
+
+function FloorText({ text, color, position, width, height }: { text: string; color: string; position: [number, number, number]; width: number; height: number }) {
+  const texture = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 256
+    canvas.height = 96
+    const context = canvas.getContext('2d')
+    if (!context) return null
+    context.clearRect(0, 0, 256, 96)
+    context.fillStyle = color
+    context.font = '800 54px Arial, sans-serif'
+    context.textAlign = 'center'
+    context.textBaseline = 'middle'
+    context.fillText(text, 128, 50)
+    const map = new CanvasTexture(canvas)
+    map.colorSpace = SRGBColorSpace
+    return map
+  }, [color, text])
+  if (!texture) return null
+  return (
+    <mesh position={position} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial map={texture} transparent toneMapped={false} />
+    </mesh>
+  )
+}
+
+function ActionMarker({ x, z, color }: { x: number; z: number; color: string }) {
+  const gem = useRef<Group>(null!)
+  useFrame((state) => {
+    if (!gem.current) return
+    gem.current.position.y = 1.9 + Math.sin(state.clock.elapsedTime * 2.2) * 0.12
+    gem.current.rotation.y = state.clock.elapsedTime * 1.4
+  })
+  return (
+    <group position={[x, 0, z]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+        <ringGeometry args={[0.7, 0.95, 32]} />
+        <meshBasicMaterial color={color} transparent opacity={0.85} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+        <circleGeometry args={[0.7, 32]} />
+        <meshBasicMaterial color={color} transparent opacity={0.18} />
+      </mesh>
+      <group ref={gem}>
+        <mesh>
+          <octahedronGeometry args={[0.22, 0]} />
+          <meshStandardMaterial color="#ffe1a1" emissive="#bd8244" emissiveIntensity={1.4} />
+        </mesh>
+      </group>
+    </group>
+  )
+}
+
+function FloorLamp({ position, color }: { position: [number, number, number]; color: string }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.06, 0]}><cylinderGeometry args={[0.3, 0.34, 0.12, 12]} /><meshStandardMaterial color="#3b3a37" roughness={0.7} /></mesh>
+      <mesh position={[0, 1.35, 0]}><cylinderGeometry args={[0.05, 0.05, 2.6, 8]} /><meshStandardMaterial color="#4b4a45" metalness={0.5} roughness={0.5} /></mesh>
+      <mesh position={[0, 2.78, 0]}><sphereGeometry args={[0.3, 14, 10]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.15} roughness={0.4} /></mesh>
+    </group>
+  )
+}
+
+function Plant({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 0.34, 0]}><cylinderGeometry args={[0.36, 0.28, 0.68, 10]} /><meshStandardMaterial color="#8a5a3c" roughness={0.9} /></mesh>
+      <mesh position={[0, 1.15, 0]}><sphereGeometry args={[0.62, 12, 10]} /><meshStandardMaterial color="#4f6b43" roughness={0.95} /></mesh>
+      <mesh position={[0.28, 1.55, 0.08]}><sphereGeometry args={[0.38, 10, 8]} /><meshStandardMaterial color="#5f7d4e" roughness={0.95} /></mesh>
+    </group>
+  )
+}
+
+function WallArt({ position, rotation = [0, 0, 0], width = 1.8, height = 1.2, color }: { position: [number, number, number]; rotation?: [number, number, number]; width?: number; height?: number; color: string }) {
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh><boxGeometry args={[width + 0.18, height + 0.18, 0.08]} /><meshStandardMaterial color="#3d352d" roughness={0.7} /></mesh>
+      <mesh position={[0, 0, 0.05]}><boxGeometry args={[width, height, 0.04]} /><meshStandardMaterial color={color} roughness={0.8} /></mesh>
+      <mesh position={[width * 0.12, -height * 0.1, 0.075]}><boxGeometry args={[width * 0.4, height * 0.4, 0.02]} /><meshStandardMaterial color={shade(color, 1.35)} roughness={0.8} /></mesh>
+    </group>
+  )
+}
+
+const SKINS = ['#6b4430', '#87583f', '#80543e', '#925d43', '#5a3a2a']
+const OUTFITS = ['#8c4d3f', '#d1a05b', '#456b72', '#65764d', '#6c587e', '#c5c0b4', '#3f5f7a', '#a0623d']
+const HAIRS = ['#211817', '#30221b', '#1d1917', '#2b201b']
+const IDLES: IdleStyle[] = ['talk', 'stand', 'wave', 'stand']
+const CUSTOMER_SPOTS: [number, number][] = [[-6.0, 0.6], [6.0, 0.2], [-4.4, -1.6], [4.6, 2.0]]
+
+function pick<T>(items: readonly T[], seed: number): T {
+  return items[seed % items.length]
+}
+
+function InteriorPeople({ id, kind }: { id: string; kind: InteriorKind }) {
+  const seed = hashString(id)
+  const customers = ['market', 'club', 'cafe', 'airport', 'event-center', 'hospital', 'bank', 'court'].includes(kind) ? 3 : 2
+  return (
+    <>
+      {Array.from({ length: customers }, (_, index) => {
+        const [x, z] = CUSTOMER_SPOTS[(index + (seed % 2)) % CUSTOMER_SPOTS.length]
+        const personSeed = seed + index * 97
+        return (
+          <group key={`customer-${index}`} position={[x, 0, z]} rotation={[0, Math.atan2(-x * 0.6, -3 - z), 0]}>
+            <HumanoidModel
+              skinTone={pick(SKINS, personSeed)}
+              hairColor={pick(HAIRS, personSeed >> 2)}
+              clothing={pick(OUTFITS, personSeed >> 1)}
+              accentColor="#d2b17a"
+              gender={personSeed % 2 === 0 ? 'male' : 'female'}
+              idle={pick(IDLES, personSeed >> 3)}
+              phase={index * 1.7 + (seed % 7)}
+            />
+          </group>
+        )
+      })}
+    </>
+  )
+}
+
 export function InteriorScene({ interior }: InteriorSceneProps) {
   const palette = ROOM_PALETTES[interior.kind]
+  const seed = hashString(interior.id)
+  const floorTexture = useFloorTexture(palette.floor, interior.kind, seed)
+  const baseboard = shade(palette.wall, 0.55)
+  const showRug = interior.kind !== 'garage' && interior.kind !== 'port' && interior.kind !== 'stadium'
+  const artColors = ['#7b5e45', '#4f6b73', '#8a6a3c', '#6a4f68']
 
   return (
     <>
       <color attach="background" args={[palette.background]} />
-      <fog attach="fog" args={[palette.background, 18, 52]} />
-      <ambientLight intensity={0.86} color="#e5dfd1" />
-      <hemisphereLight args={[palette.light, '#51453b', 0.92]} />
-      <directionalLight position={[4, 13, 7]} intensity={1.1} color={palette.light} castShadow />
-      <pointLight position={[-5, 3.6, -3]} intensity={0.5} color={palette.light} distance={18} />
+      <fog attach="fog" args={[palette.background, 24, 64]} />
+      <ambientLight intensity={0.95} color="#e5dfd1" />
+      <hemisphereLight args={[palette.light, '#51453b', 0.95]} />
+      <directionalLight position={[4, 13, 7]} intensity={1.05} color={palette.light} />
+      <pointLight position={[-5, 3.6, -3]} intensity={0.55} color={palette.light} distance={18} />
+      <pointLight position={[5, 3.6, 2]} intensity={0.4} color={palette.light} distance={16} />
+
+      {/* Floor */}
       <mesh position={[0, -0.16, 0]} receiveShadow>
         <boxGeometry args={[16, 0.3, 16]} />
-        <meshStandardMaterial color={palette.floor} roughness={0.88} />
+        <meshStandardMaterial color={floorTexture ? '#ffffff' : palette.floor} map={floorTexture ?? undefined} roughness={0.88} />
       </mesh>
+      {showRug && (
+        <mesh position={[0, 0.012, 1.0]} receiveShadow>
+          <boxGeometry args={[6.4, 0.025, 4.2]} />
+          <meshStandardMaterial color={shade(palette.trim, 0.62)} roughness={0.96} />
+        </mesh>
+      )}
+
+      {/* Walls: full back and side walls, a low front wall so the camera can see in from the street side. */}
       <mesh position={[0, 2.5, -7.92]} castShadow receiveShadow>
         <boxGeometry args={[16, 5, 0.28]} />
         <meshStandardMaterial color={palette.wall} roughness={0.89} />
       </mesh>
       {[-1, 1].map((side) => (
-        <mesh key={`side-wall-${side}`} position={[side * 7.92, 2.5, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.28, 5, 16]} />
-          <meshStandardMaterial color={palette.wall} roughness={0.89} />
-        </mesh>
+        <group key={`side-${side}`}>
+          <mesh position={[side * 7.92, 2.5, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.28, 5, 16]} />
+            <meshStandardMaterial color={palette.wall} roughness={0.89} />
+          </mesh>
+          <mesh position={[side * 7.74, 0.12, 0]}>
+            <boxGeometry args={[0.1, 0.24, 15.6]} />
+            <meshStandardMaterial color={baseboard} roughness={0.8} />
+          </mesh>
+          {[-3.8, 2.4].map((z) => (
+            <group key={`window-${z}`} position={[side * 7.74, 2.75, z]}>
+              <mesh><boxGeometry args={[0.1, 1.9, 2.6]} /><meshStandardMaterial color={baseboard} roughness={0.7} /></mesh>
+              <mesh position={[-side * 0.04, 0, 0]}>
+                <boxGeometry args={[0.08, 1.6, 2.3]} />
+                <meshStandardMaterial color="#cfe3ea" emissive="#a9cfdb" emissiveIntensity={0.55} roughness={0.2} metalness={0.1} />
+              </mesh>
+              <mesh position={[-side * 0.06, 0, 0]}><boxGeometry args={[0.06, 1.6, 0.08]} /><meshStandardMaterial color={baseboard} /></mesh>
+            </group>
+          ))}
+        </group>
       ))}
-      {[-4.8, 4.8].map((side) => (
-        <mesh key={`entry-wall-${side}`} position={[side, 2.35, 7.92]} castShadow receiveShadow>
-          <boxGeometry args={[6.4, 4.7, 0.28]} />
-          <meshStandardMaterial color={palette.wall} roughness={0.89} />
-        </mesh>
-      ))}
-      <mesh position={[0, 4.98, 0]} receiveShadow>
-        <boxGeometry args={[16, 0.18, 16]} />
-        <meshStandardMaterial color={palette.trim} roughness={0.8} side={2} />
+      <mesh position={[0, 0.12, -7.74]}>
+        <boxGeometry args={[15.6, 0.24, 0.1]} />
+        <meshStandardMaterial color={baseboard} roughness={0.8} />
       </mesh>
+      {[-4.8, 4.8].map((side) => (
+        <mesh key={`entry-wall-${side}`} position={[side, 0.5, 7.92]} castShadow receiveShadow>
+          <boxGeometry args={[6.4, 1, 0.28]} />
+          <meshStandardMaterial color={palette.wall} roughness={0.89} />
+        </mesh>
+      ))}
+      <mesh position={[0, 4.72, 7.92]}>
+        <boxGeometry args={[16, 0.5, 0.28]} />
+        <meshStandardMaterial color={palette.trim} roughness={0.7} />
+      </mesh>
+
+      {/* Dressing */}
+      <WallArt position={[-5.9, 3.55, -7.72]} color={artColors[seed % artColors.length]} />
+      <WallArt position={[5.9, 3.55, -7.72]} color={artColors[(seed >> 2) % artColors.length]} />
+      <FloorLamp position={[-6.9, 0, -6.9]} color={palette.light} />
+      <FloorLamp position={[6.9, 0, -6.9]} color={palette.light} />
+      <Plant position={[-6.8, 0, 5.8]} />
+      <Plant position={[6.8, 0, 5.6]} scale={0.88} />
+
       <RoomSign name={interior.name} accent={palette.trim} />
       <DoorFrame accent={palette.trim} />
-      <mesh position={[0, 0.02, 6.35]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.03, 6.9]}>
+        <boxGeometry args={[2.7, 0.05, 1.5]} />
+        <meshStandardMaterial color={shade(palette.trim, 0.7)} roughness={0.95} />
+      </mesh>
+      <FloorText text="EXIT" color="#f4ead8" position={[0, 0.07, 6.9]} width={1.6} height={0.6} />
+      <mesh position={[0, 0.04, 6.0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.58, 0.76, 28]} />
         <meshBasicMaterial color={palette.trim} transparent opacity={0.78} />
       </mesh>
+
+      <ActionMarker x={interior.actionPoint.x} z={interior.actionPoint.z} color={palette.trim} />
+      <InteriorPeople id={interior.id} kind={interior.kind} />
       <RoomFurniture kind={interior.kind} palette={palette} />
     </>
   )
