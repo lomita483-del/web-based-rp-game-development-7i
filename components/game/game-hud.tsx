@@ -585,25 +585,25 @@ function JobsPanel({
         {CITY_JOBS.map((job) => {
           const workplace = WORLD_LOCATIONS.find((location) => location.id === job.locationId)
           const isAssigned = player.job === job.id
-          const atWork = Boolean(workplace && distanceBetween(playerPosition, workplace) <= 8)
-          const completedTaskCount = job.tasks.reduce(
-            (count, _, index) => count + Number(player.completedShiftTasks.includes(index)),
-            0,
-          )
-          const actionLabel = !isAssigned
-            ? player.job ? 'SWITCH TO THIS JOB' : 'TAKE THIS SHIFT'
-            : !atWork
-              ? 'ROUTE TO WORKPLACE'
-              : !player.shiftStarted
-                ? 'ENTER TO START SHIFT'
-                : completedTaskCount < job.tasks.length
-                  ? `WORK TASKS · ${completedTaskCount}/${job.tasks.length}`
-                  : 'CLOCK OUT · CLAIM PAY'
-          const statusLabel = !atWork
+          const atWork = player.currentInteriorId === job.locationId || Boolean(workplace && distanceBetween(playerPosition, workplace) <= 8)
+          const completedTaskCount = job.tasks.filter((_, index) => player.completedShiftTasks.includes(index)).length
+          const cannotSwitchJob = player.shiftStarted && !isAssigned
+          const actionLabel = cannotSwitchJob
+            ? 'FINISH CURRENT SHIFT'
+            : !isAssigned
+              ? player.job ? 'SWITCH TO THIS JOB' : 'TAKE THIS SHIFT'
+              : !atWork
+                ? 'ROUTE TO WORKPLACE'
+                : !player.shiftStarted
+                  ? 'ENTER TO START SHIFT'
+                  : completedTaskCount < job.tasks.length
+                    ? `WORK TASKS · ${completedTaskCount}/${job.tasks.length}`
+                    : 'CLOCK OUT · CLAIM PAY'
+          const activeRoleStatus = !atWork
             ? 'ROUTE MARKED'
-            : player.shiftStarted
-              ? `${completedTaskCount}/${job.tasks.length} TASKS DONE`
-              : 'ENTER TO START SHIFT'
+            : !player.shiftStarted
+              ? 'ENTER TO START SHIFT'
+              : `${completedTaskCount}/${job.tasks.length} TASKS DONE`
           return (
             <article className={`job-card job-card-local${isAssigned ? ' is-assigned' : ''}`} key={job.id}>
               <div className="job-card-meta"><span className="job-category">{job.category}</span><span className="job-duration">{workplace?.district}</span></div>
@@ -611,11 +611,16 @@ function JobsPanel({
               <p>{job.description}</p>
               <div className="job-employer-row"><Building2 aria-hidden="true" /><span>{job.employer}</span></div>
               <div className="job-reward-row"><span><Wallet aria-hidden="true" /> {formatNaira(job.pay)}</span><span><Sparkles aria-hidden="true" /> +{job.reputation} rep</span></div>
-              <button className={isAssigned ? 'secondary-action' : 'primary-action'} type="button" onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}>
+              <button
+                className={isAssigned ? 'secondary-action' : 'primary-action'}
+                type="button"
+                disabled={cannotSwitchJob}
+                onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}
+              >
                 {actionLabel}
                 <ArrowRight aria-hidden="true" />
               </button>
-              {isAssigned && <small className="job-active-note"><span className="status-live-dot" /> ACTIVE ROLE · {statusLabel}</small>}
+              {isAssigned && <small className="job-active-note"><span className="status-live-dot" /> ACTIVE ROLE · {activeRoleStatus}</small>}
             </article>
           )
         })}

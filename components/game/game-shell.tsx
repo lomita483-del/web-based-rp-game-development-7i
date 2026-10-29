@@ -46,6 +46,7 @@ import {
   type RideVehicleType,
 } from './game-data'
 import { GameHud, GamePanels, NpcDialogue, type TravelMode } from './game-hud'
+import { ServiceSheet } from './interior-ui'
 
 const CityWorld = dynamic(() => import('./city-world').then((module) => module.CityWorld), {
   ssr: false,
@@ -110,6 +111,7 @@ export default function GameShell() {
   const [gameMinutes, setGameMinutes] = useState(21 * 60 + 42)
   const [activePanel, setActivePanel] = useState<GamePanel>('none')
   const [activeCharacter, setActiveCharacter] = useState<CharacterId | null>(null)
+  const [serviceSheetOpen, setServiceSheetOpen] = useState(false)
   const [pinnedWaypoint, setPinnedWaypoint] = useState<LocationId | null>(null)
   const [autoWalkTarget, setAutoWalkTarget] = useState<LocationId | null>(null)
   const [rideBooking, setRideBooking] = useState<RideBooking | null>(null)
@@ -334,7 +336,7 @@ export default function GameShell() {
 
   const mission = getMissionDetails(player.stage)
   const waypoint = pinnedWaypoint ?? mission.targetLocation
-  const paused = activePanel !== 'none' || activeCharacter !== null || worldTransitioning || Boolean(rideBooking && rideBooking.status !== 'arrived')
+  const paused = activePanel !== 'none' || activeCharacter !== null || serviceSheetOpen || worldTransitioning || Boolean(rideBooking && rideBooking.status !== 'arrived')
 
   const notify = useCallback((text: string) => {
     toastId.current += 1
@@ -360,18 +362,26 @@ export default function GameShell() {
   const openPanel = useCallback((panel: Exclude<GamePanel, 'none'>) => {
     keysRef.current.clear()
     setActiveCharacter(null)
+    setServiceSheetOpen(false)
     setActivePanel((current) => (current === panel ? 'none' : panel))
   }, [])
 
   const switchPanel = useCallback((panel: Exclude<GamePanel, 'none'>) => {
     keysRef.current.clear()
     setActiveCharacter(null)
+    setServiceSheetOpen(false)
     setActivePanel(panel)
   }, [])
 
   const closePanel = useCallback(() => {
     keysRef.current.clear()
     setActivePanel('none')
+    setServiceSheetOpen(false)
+  }, [])
+
+  const closeServiceSheet = useCallback(() => {
+    keysRef.current.clear()
+    setServiceSheetOpen(false)
   }, [])
 
   const runWorldTransition = useCallback((updateWorld: () => void) => {
@@ -475,13 +485,19 @@ export default function GameShell() {
     if (location) notify(`${location.name}: ${location.description}`)
   }, [notify, player.cash, player.inVehicle, player.ownsScooter, player.home, player.voterRegistered, player.wantedLevel])
 
+  const handleInteriorServiceAction = useCallback(() => {
+    if (!activeInterior) return
+    const location = WORLD_LOCATIONS.find((entry) => entry.id === activeInterior.id)
+    if (location) handleLocationAction(location.id)
+    else notify(`${activeInterior.name}: ${activeInterior.actionLabel} is available on site.`)
+  }, [activeInterior, handleLocationAction, notify])
+
   const handleInteract = useCallback(() => {
     if (activeCharacter || worldTransitioning) return
     if (activeInterior) {
       if (nearInteriorAction) {
-        const location = WORLD_LOCATIONS.find((entry) => entry.id === activeInterior.id)
-        if (location) handleLocationAction(location.id)
-        else notify(`${activeInterior.name}: ${activeInterior.actionLabel} is available on site.`)
+        keysRef.current.clear()
+        setServiceSheetOpen(true)
         return
       }
       if (!canExitInterior) {
@@ -509,6 +525,7 @@ export default function GameShell() {
       setAutoWalkTarget(null)
       const insidePosition = { x: 0, z: 3.2 }
       runWorldTransition(() => {
+        setServiceSheetOpen(false)
         dispatch({ type: 'enter-interior', interiorId: nearbyEntry.interior.id, returnPosition: nearbyEntry.entrance })
         setSpawnPosition(insidePosition)
         setPlayerPosition(insidePosition)
@@ -614,6 +631,104 @@ export default function GameShell() {
     notify('A warm bite restores your energy.')
   }, [notify, player.inventory])
 
+  const depositBank = useCallback((amount: number) => {
+    if (!activeInterior || activeInterior.kind !== 'bank') return
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      notify('Enter a positive whole-naira amount.')
+      return
+    }
+    if (amount > player.cash) {
+      notify('There is not enough cash in your wallet for that deposit.')
+      return
+    }
+    if (player.bankBalance + amount > 1_000_000) {
+      notify('Your bank account has a ₦1,000,000 balance limit.')
+      return
+    }
+    dispatch({ type: 'deposit-bank', amount })
+    notify(`Deposited ${formatNaira(amount)} into your account.`)
+  }, [activeInterior, notify, player.bankBalance, player.cash])
+
+  const withdrawBank = useCallback((amount: number) => {
+    if (!activeInterior || activeInterior.kind !== 'bank') return
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      notify('Enter a positive whole-naira amount.')
+      return
+    }
+    if (amount > player.bankBalance) {
+      notify('Your bank balance is too low for that withdrawal.')
+      return
+    }
+    if (player.cash + amount > 1_000_000) {
+      notify('Your wallet has a ₦1,000,000 cash limit.')
+      return
+    }
+    dispatch({ type: 'withdraw-bank', amount })
+    notify(`Withdrew ${formatNaira(amount)} to your wallet.`)
+  }, [activeInterior, notify, player.bankBalance, player.cash])
+
+  const attendLecture = useCallback(() => {
+    if (!activeInterior || (activeInterior.kind !== 'university' && activeInterior.kind !== 'school')) return
+    if (player.energy < 12 || player.hunger < 5) {
+      notify('You need at least 12 energy and 5 hunger to study.')
+      return
+    }
+    dispatch({ type: 'attend-lecture' })
+    setGameMinutes((minutes) => minutes + 60)
+    notify('Class complete · +1 study credit · +8 REP.')
+  }, [activeInterior, notify, player.energy, player.hunger])
+
+  const restAtInterior = useCallback(() => {
+    if (!activeInterior) return
+    const home = CITY_HOMES.find((entry) => entry.id === player.home)
+    const isHospital = activeInterior.kind === 'hospital'
+    const isHotel = activeInterior.kind === 'hotel'
+    const isOwnedHome = home?.locationId === activeInterior.id
+    if (!isHospital && !isHotel && !isOwnedHome) return
+
+    dispatch({ type: 'rest' })
+    setGameMinutes((minutes) => minutes + (isHospital ? 180 : 420))
+    notify(isHospital ? `Recovery complete at ${activeInterior.name}.` : isOwnedHome ? `You rested at ${home.name}.` : 'You got a few hours of rest at Marina House.')
+  }, [activeInterior, notify, player.home])
+
+  const startInteriorShift = useCallback((jobId: JobId) => {
+    const job = CITY_JOBS.find((entry) => entry.id === jobId)
+    if (!job || !activeInterior || job.locationId !== activeInterior.id) return
+    if (player.job !== jobId) {
+      notify('Apply for this role from the Work Board before starting a shift.')
+      return
+    }
+    if (player.shiftStarted) {
+      notify('Your current shift is already underway.')
+      return
+    }
+    dispatch({ type: 'start-shift', jobId })
+    notify(`Shift started at ${job.employer}. Complete all ${job.tasks.length} tasks before clocking out.`)
+  }, [activeInterior, notify, player.job, player.shiftStarted])
+
+  const completeInteriorTask = useCallback((jobId: JobId, taskIndex: number) => {
+    const job = CITY_JOBS.find((entry) => entry.id === jobId)
+    if (!job || !activeInterior || job.locationId !== activeInterior.id || player.job !== jobId || !player.shiftStarted) return
+    if (!Number.isSafeInteger(taskIndex) || taskIndex < 0 || taskIndex >= job.tasks.length || player.completedShiftTasks.includes(taskIndex)) return
+    dispatch({ type: 'complete-work-task', jobId, taskIndex })
+    notify(`Work task complete: ${job.tasks[taskIndex]}.`)
+  }, [activeInterior, notify, player.completedShiftTasks, player.job, player.shiftStarted])
+
+  const clockOutInteriorShift = useCallback((jobId: JobId) => {
+    const job = CITY_JOBS.find((entry) => entry.id === jobId)
+    if (!job || !activeInterior || job.locationId !== activeInterior.id || player.job !== jobId || !player.shiftStarted) return
+    const completedTaskCount = job.tasks.filter((_, index) => player.completedShiftTasks.includes(index)).length
+    if (completedTaskCount !== job.tasks.length) {
+      notify(`Complete all shift tasks before clocking out (${completedTaskCount}/${job.tasks.length}).`)
+      return
+    }
+    dispatch({ type: 'complete-shift', jobId })
+    setGameMinutes((minutes) => minutes + 120)
+    setPinnedWaypoint(null)
+    closeServiceSheet()
+    notify(`Shift complete · +${formatNaira(job.pay)} · +${job.reputation} REP.`)
+  }, [activeInterior, closeServiceSheet, notify, player.completedShiftTasks, player.job, player.shiftStarted])
+
   const setWaypoint = useCallback((locationId: LocationId) => {
     setPinnedWaypoint(locationId)
     const location = WORLD_LOCATIONS.find((entry) => entry.id === locationId)
@@ -689,24 +804,47 @@ export default function GameShell() {
   const applyJob = useCallback((jobId: JobId) => {
     const job = CITY_JOBS.find((entry) => entry.id === jobId)
     if (!job) return
+    if (player.shiftStarted) {
+      notify('Finish your current shift before changing roles.')
+      return
+    }
     dispatch({ type: 'apply-job', jobId })
     setPinnedWaypoint(job.locationId)
     notify(`You are on the roster at ${job.employer}. Route marked.`)
-  }, [notify])
+  }, [notify, player.shiftStarted])
 
   const completeShift = useCallback((jobId: JobId) => {
     const job = CITY_JOBS.find((entry) => entry.id === jobId)
     const workplace = job && WORLD_LOCATIONS.find((entry) => entry.id === job.locationId)
     if (!job || !workplace || player.job !== jobId) return
-    if (distanceBetween(playerPosition, workplace) > 8) {
+    const isAtWork = activeInterior
+      ? activeInterior.id === job.locationId
+      : distanceBetween(playerPosition, workplace) <= 8
+    if (!isAtWork) {
       setPinnedWaypoint(job.locationId)
       notify(`Clock in at ${job.employer} to complete the shift.`)
       return
     }
+    const completedTaskCount = job.tasks.reduce(
+      (count, _, index) => count + Number(player.completedShiftTasks.includes(index)),
+      0,
+    )
+    if (!player.shiftStarted) {
+      closePanel()
+      notify(`Use the on-site service desk at ${job.employer} to start your shift.`)
+      return
+    }
+    if (completedTaskCount < job.tasks.length) {
+      closePanel()
+      notify(`Complete the work checklist at ${job.employer} before clocking out (${completedTaskCount}/${job.tasks.length}).`)
+      return
+    }
     dispatch({ type: 'complete-shift', jobId })
     setGameMinutes((minutes) => minutes + 120)
+    setPinnedWaypoint(null)
+    closePanel()
     notify(`Shift complete · +${formatNaira(job.pay)} · +${job.reputation} REP.`)
-  }, [notify, player.job, playerPosition])
+  }, [activeInterior, closePanel, notify, player.completedShiftTasks, player.job, player.shiftStarted, playerPosition])
 
   const joinFaction = useCallback((factionId: FactionId | null) => {
     if (factionId && !CITY_FACTIONS.some((faction) => faction.id === factionId)) return
@@ -774,8 +912,18 @@ export default function GameShell() {
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (isTyping(event.target)) return
       const key = event.key.toLowerCase()
+      if (key === 'escape') {
+        if (event.repeat) return
+        keysRef.current.clear()
+        if (serviceSheetOpen) closeServiceSheet()
+        else {
+          setActiveCharacter(null)
+          closePanel()
+        }
+        return
+      }
+      if (serviceSheetOpen || isTyping(event.target)) return
       if (MOVEMENT_KEYS.has(key)) {
         if (event.cancelable) event.preventDefault()
         keysRef.current.add(key)
@@ -798,10 +946,6 @@ export default function GameShell() {
         openPanel('online')
       } else if (key === 'p') {
         openPanel('life')
-      } else if (key === 'escape') {
-        keysRef.current.clear()
-        setActiveCharacter(null)
-        closePanel()
       }
     }
 
@@ -816,7 +960,7 @@ export default function GameShell() {
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
     }
-  }, [closePanel, handleInteract, openPanel, paused])
+  }, [closePanel, closeServiceSheet, handleInteract, openPanel, paused, serviceSheetOpen])
 
   return (
     <main className="game-shell" aria-label="Eko After Hours roleplay game">
@@ -882,6 +1026,23 @@ export default function GameShell() {
           saveStatus={saveStatus}
           onAuthenticated={handleAuthenticated}
           onSignOut={handleSignOut}
+        />
+      )}
+      {serviceSheetOpen && activeInterior && (
+        <ServiceSheet
+          key={activeInterior.id}
+          interior={activeInterior}
+          player={player}
+          onClose={closeServiceSheet}
+          onServiceAction={handleInteriorServiceAction}
+          onBuyFood={buyFood}
+          onRest={restAtInterior}
+          onAttendLecture={attendLecture}
+          onDeposit={depositBank}
+          onWithdraw={withdrawBank}
+          onStartShift={startInteriorShift}
+          onCompleteTask={completeInteriorTask}
+          onClockOut={clockOutInteriorShift}
         />
       )}
       {activeCharacter && (
