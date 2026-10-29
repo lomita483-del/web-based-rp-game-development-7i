@@ -14,9 +14,9 @@ export type ServiceSheetProps = {
   onClose: () => void
   onDeposit: (amount: number) => void
   onWithdraw: (amount: number) => void
-  onLecture: () => void
+  onAttendLecture: () => void
   onStartShift: (jobId: JobId) => void
-  onWorkTask: (jobId: JobId, taskIndex: number) => void
+  onCompleteTask: (jobId: JobId, taskIndex: number) => void
   onClockOut: (jobId: JobId) => void
   onRest: () => void
   onBuyFood: () => void
@@ -61,9 +61,9 @@ export function ServiceSheet({
   onClose,
   onDeposit,
   onWithdraw,
-  onLecture,
+  onAttendLecture,
   onStartShift,
-  onWorkTask,
+  onCompleteTask,
   onClockOut,
   onRest,
   onBuyFood,
@@ -138,7 +138,7 @@ export function ServiceSheet({
                         <li key={task} className={done ? 'is-done' : undefined}>
                           <span>{done ? <Check aria-hidden="true" /> : index + 1}</span>
                           <em>{task}</em>
-                          {!done && <button type="button" onClick={() => onWorkTask(job.id, index)}>DO IT</button>}
+                          {!done && <button type="button" onClick={() => onCompleteTask(job.id, index)}>DO IT</button>}
                         </li>
                       )
                     })}
@@ -155,7 +155,7 @@ export function ServiceSheet({
             <div className="service-card">
               <div className="service-card-title"><Sparkles aria-hidden="true" /> Lecture hall</div>
               <p>Sit in on a session. Costs 12 energy and 5 hunger; earns 8 reputation and a study credit. You have {player.educationCredits} credit{player.educationCredits === 1 ? '' : 's'}.</p>
-              <button className="primary-action" type="button" disabled={player.energy < 12 || player.hunger < 5} onClick={onLecture}>
+              <button className="primary-action" type="button" disabled={player.energy < 12 || player.hunger < 5} onClick={onAttendLecture}>
                 {player.energy < 12 || player.hunger < 5 ? 'TOO TIRED OR HUNGRY' : 'ATTEND A LECTURE'} <ArrowRight aria-hidden="true" />
               </button>
             </div>
