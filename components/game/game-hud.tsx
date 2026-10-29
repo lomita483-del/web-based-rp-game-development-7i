@@ -269,7 +269,33 @@ export function GameHud({
         <span><kbd>P</kbd> CITY LIFE</span>
       </div>
 
-      <div className="movement-joystick" role="group" aria-label="Circular movement joystick" onPointerDown={(event) => { event.preventDefault(); updateJoystick(event, onMoveKey) }} onPointerMove={(event) => updateJoystick(event, onMoveKey)} onPointerUp={() => clearJoystick(onMoveKey)} onPointerCancel={() => clearJoystick(onMoveKey)} onLostPointerCapture={() => clearJoystick(onMoveKey)}>
+      <div
+        className="movement-joystick"
+        role="group"
+        aria-label="Circular movement joystick"
+        onContextMenu={(event) => event.preventDefault()}
+        onPointerDown={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          if (event.pointerType !== 'mouse') event.currentTarget.setPointerCapture(event.pointerId)
+          updateJoystick(event, onMoveKey)
+        }}
+        onPointerMove={(event) => {
+          if (event.buttons === 0 && event.pointerType === 'mouse') return
+          if (event.currentTarget.hasPointerCapture(event.pointerId) || event.pointerType === 'mouse') {
+            event.preventDefault()
+            event.stopPropagation()
+            updateJoystick(event, onMoveKey)
+          }
+        }}
+        onPointerUp={(event) => {
+          event.preventDefault()
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+          clearJoystick(onMoveKey)
+        }}
+        onPointerCancel={() => clearJoystick(onMoveKey)}
+        onLostPointerCapture={() => clearJoystick(onMoveKey)}
+      >
         <span className="movement-joystick-ring" aria-hidden="true" />
         <span className="movement-joystick-knob" aria-hidden="true" />
       </div>
@@ -292,7 +318,6 @@ function updateJoystick(event: PointerEvent<HTMLDivElement>, onMoveKey: (key: st
   const threshold = 0.2
   onMoveKey('a', dx < -threshold); onMoveKey('d', dx > threshold)
   onMoveKey('w', dy < -threshold); onMoveKey('s', dy > threshold)
-  if (event.pointerType !== 'mouse') event.currentTarget.setPointerCapture?.(event.pointerId)
 }
 function clearJoystick(onMoveKey: (key: string, pressed: boolean) => void) {
   for (const key of ['w', 'a', 's', 'd']) onMoveKey(key, false)
