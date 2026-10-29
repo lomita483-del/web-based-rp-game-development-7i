@@ -136,6 +136,7 @@ export function GameHud({
   activePanel,
   toast,
   onOpenPanel,
+  onInteract,
   onMoveKey,
 }: HudProps) {
   const mission = getMissionDetails(player.stage)
