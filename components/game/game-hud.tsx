@@ -132,9 +132,10 @@ export function GameHud({
   nearInteriorAction,
   canExitInterior,
   rideBooking,
-  nearInteriorAction,
   waypoint,
   activePanel,
+  toast,
+  onOpenPanel,
   onMoveKey,
 }: HudProps) {
   const mission = getMissionDetails(player.stage)
@@ -514,7 +515,6 @@ function MapPanel({
   const playerPoint = mapCoordinates(playerPosition)
   const targetPoint = target ? mapCoordinates(target) : null
   const travelDistance = selectedLocation ? distanceBetween(playerPosition, selectedLocation) : 0
-  const streets = [-66, -42, -18, 18, 42, 66]
   const streets = GRID_LINES
 
   return (
