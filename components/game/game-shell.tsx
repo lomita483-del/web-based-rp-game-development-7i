@@ -267,7 +267,7 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
         ? `home:${currentUserId}`
         : player.currentInteriorId ? `interior:${player.currentInteriorId}` : 'eko-mainland',
     }
-  }, [player.currentInteriorId, player.inVehicle, playerPosition])
+  }, [currentUserId, player.currentInteriorId, player.inVehicle, playerPosition])
 
   const saveCurrentGame = useCallback(async () => {
     if (!currentUserId || saveReadyUserId !== currentUserId || saveInFlightRef.current) return
