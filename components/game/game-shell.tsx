@@ -649,6 +649,21 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
 
   const nearWaitingRide = ride?.phase === 'waiting' && ride.pickup !== null && distanceBetween(playerPosition, ride.pickup) < 7
 
+  const handleApartmentAction = useCallback((action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => {
+    if (activeInterior?.id !== HOME_INTERIOR_ID || worldTransitioning) return
+    const actions = {
+      rest: { type: 'rest' as const, message: 'You rested at home. Energy restored.' },
+      shower: { type: 'shower' as const, message: 'You took a refreshing shower. Hygiene restored.' },
+      toilet: { type: 'use-toilet' as const, message: 'Bathroom used. You are ready to go.' },
+      food: { type: 'buy-food' as const, message: player.cash >= 90 ? 'Food added to your home inventory for ₦90.' : 'You need ₦90 to buy food.' },
+      cook: { type: 'eat-food' as const, message: player.inventory.some((item) => item.id === 'suya' && item.quantity > 0) ? 'You prepared a meal. Hunger and energy restored.' : 'There is no food in your inventory. Use the fridge to buy food.' },
+      tv: { type: 'socialize' as const, message: 'You relaxed with a TV programme. Fun increased.' },
+      study: { type: 'attend-lecture' as const, message: player.energy >= 12 && player.hunger >= 5 ? 'You completed a study session.' : 'You need more energy and food before studying.' },
+    }[action]
+    dispatch({ type: actions.type } as Parameters<typeof dispatch>[0])
+    notify(actions.message)
+  }, [activeInterior, notify, player.cash, player.energy, player.hunger, player.inventory, worldTransitioning])
+
   const handleGoOutside = useCallback(() => {
     if (!activeInterior || activeInterior.id !== HOME_INTERIOR_ID || worldTransitioning) return
     const outsidePosition = player.returnPosition ?? HOME_CITY_POSITION
