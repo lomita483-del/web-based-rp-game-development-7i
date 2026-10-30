@@ -4,8 +4,13 @@ import { useMemo } from 'react'
 import { CanvasTexture, SRGBColorSpace } from 'three'
 
 /** A flat text sign drawn on a canvas, used for building names, billboards and markers. */
+const labelCache = new Map<string, CanvasTexture>()
+
 export function WorldLabel({ text, width, accentColor }: { text: string; width: number; accentColor: string }) {
   const texture = useMemo(() => {
+    const cacheKey = `${text}|${accentColor}`
+    const cached = labelCache.get(cacheKey)
+    if (cached) return cached
     const canvas = document.createElement('canvas')
     canvas.width = 512
     canvas.height = 128
@@ -25,6 +30,7 @@ export function WorldLabel({ text, width, accentColor }: { text: string; width: 
 
     const labelTexture = new CanvasTexture(canvas)
     labelTexture.colorSpace = SRGBColorSpace
+    labelCache.set(cacheKey, labelTexture)
     return labelTexture
   }, [accentColor, text])
 

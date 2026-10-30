@@ -47,6 +47,10 @@ import {
 } from './game-data'
 import { GameHud, GamePanels, NpcDialogue, type TravelMode } from './game-hud'
 import { ServiceSheet } from './interior-ui'
+import { AdminPanel } from './admin-panel'
+import type { RideEvent, RideKind, RideState } from './ride-vehicle'
+import { SettingsSheet } from './settings-sheet'
+import type { AdminPowers, GraphicsQuality } from './city-world'
 
 const CityWorld = dynamic(() => import('./city-world').then((module) => module.CityWorld), {
   ssr: false,
@@ -59,6 +63,15 @@ type Position = GamePosition
 type ToastState = { id: number; text: string } | null
 
 const fetchGameSave = ([url]: readonly [string, string]) => gameFetcher<GameSaveResponse>(url)
+const fetchPresence = ([url, , roomId]: readonly [string, string, string]) =>
+  gameFetcher<PresenceResponse>(`${url}?roomId=${encodeURIComponent(roomId)}`)
+
+const CITY_ROOM_ID = 'eko-mainland'
+/** A full in-game day lasts 24 real minutes: 2 game minutes every 2 seconds. */
+const RIDE_NAMES = { cab: 'Cab', bike: 'Okada', driver: 'Private driver' } as const
+const START_GAME_MINUTES = 8 * 60 + 30
+const CLOCK_STEP_MINUTES = 2
+const CLOCK_TICK_MS = 2000
 const fetchPresence = ([url]: readonly [string, string]) => gameFetcher<PresenceResponse>(url)
 
 const ENTERABLE_INTERIORS = [
@@ -108,7 +121,7 @@ export default function GameShell() {
   const [player, dispatch] = useReducer(playerReducer, STARTING_PLAYER)
   const [playerPosition, setPlayerPosition] = useState<Position>({ x: -6, z: 4 })
   const [spawnPosition, setSpawnPosition] = useState<Position>({ x: -6, z: 4 })
-  const [gameMinutes, setGameMinutes] = useState(21 * 60 + 42)
+  const [gameMinutes, setGameMinutes] = useState(START_GAME_MINUTES)
   const [activePanel, setActivePanel] = useState<GamePanel>('none')
   const [activeCharacter, setActiveCharacter] = useState<CharacterId | null>(null)
   const [serviceSheetOpen, setServiceSheetOpen] = useState(false)
@@ -117,6 +130,23 @@ export default function GameShell() {
   const [rideBooking, setRideBooking] = useState<RideBooking | null>(null)
   const [worldTransitioning, setWorldTransitioning] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
+  const [fadeActive, setFadeActive] = useState(false)
+  const [serviceOpen, setServiceOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [ride, setRide] = useState<RideState | null>(null)
+  const rideIdRef = useRef(0)
+  const [adminOpen, setAdminOpen] = useState(false)
+  const [quality, setQuality] = useState<GraphicsQuality>('medium')
+  const [lookSensitivity, setLookSensitivity] = useState(1)
+  const [adminPowers, setAdminPowers] = useState<AdminPowers>({ speed: 1, noclip: false, fly: false })
+  const [godMode, setGodMode] = useState(false)
+  const [invisible, setInvisible] = useState(false)
+  const adminPowersRef = useRef<AdminPowers>({ speed: 1, noclip: false, fly: false })
+  const lastAnnouncementRef = useRef<string | null>(null)
+  const fadeRef = useRef(false)
+  const transitionTimers = useRef<number[]>([])
+  const joystickRef = useRef({ x: 0, y: 0 })
+  const invisibleRef = useRef(false)
   const keysRef = useRef(new Set<string>())
   const toastId = useRef(0)
   const rideSequenceRef = useRef(0)
@@ -129,6 +159,7 @@ export default function GameShell() {
   )
   const currentUser = sessionResponse?.user ?? null
   const currentUserId = currentUser?.id ?? null
+  const isAdmin = Boolean(currentUser?.isAdmin)
   const saveKey = currentUserId ? (['/api/game/save', currentUserId] as const) : null
   const {
     data: savedGame,
@@ -198,7 +229,7 @@ export default function GameShell() {
       dispatch({ type: 'restore', player: resetPlayer })
       setPlayerPosition(resetPosition)
       setSpawnPosition(resetPosition)
-      setGameMinutes(21 * 60 + 42)
+      setGameMinutes(START_GAME_MINUTES)
       setPinnedWaypoint(null)
       lastSavedPayloadRef.current = ''
     } else {
@@ -256,7 +287,7 @@ export default function GameShell() {
   }, [currentUserId, gameMinutes, player, saveCurrentGame, saveReadyUserId])
 
   const publishCurrentPresence = useCallback(async () => {
-    if (!currentUserId) return
+    if (!currentUserId || invisibleRef.current) return
     try {
       await changePresence(latestPresenceRef.current)
       setPresenceWriteFailed(false)
@@ -336,6 +367,7 @@ export default function GameShell() {
 
   const mission = getMissionDetails(player.stage)
   const waypoint = pinnedWaypoint ?? mission.targetLocation
+  const paused = activePanel !== 'none' || activeCharacter !== null || serviceOpen || fadeActive || settingsOpen || adminOpen || ride?.phase === 'riding'
   const paused = activePanel !== 'none' || activeCharacter !== null || serviceSheetOpen || worldTransitioning || Boolean(rideBooking && rideBooking.status !== 'arrived')
 
   const notify = useCallback((text: string) => {
@@ -350,6 +382,7 @@ export default function GameShell() {
   }, [toast])
 
   useEffect(() => {
+    const timer = window.setInterval(() => setGameMinutes((minutes) => minutes + CLOCK_STEP_MINUTES), CLOCK_TICK_MS)
     // One in-game minute every five real seconds gives the full day/night cycle
     // a playable pace while preserving the saved in-game clock.
     const timer = window.setInterval(() => {
@@ -496,6 +529,118 @@ export default function GameShell() {
     else notify(`${activeInterior.name}: ${activeInterior.actionLabel} is available on site.`)
   }, [activeInterior, handleLocationAction, notify])
 
+  const changeQuality = useCallback((next: GraphicsQuality) => {
+    setQuality(next)
+    try { window.localStorage.setItem('eko-quality', next) } catch { /* storage may be unavailable */ }
+  }, [])
+
+  const changeLookSensitivity = useCallback((next: number) => {
+    setLookSensitivity(next)
+    try { window.localStorage.setItem('eko-look', String(next)) } catch { /* storage may be unavailable */ }
+  }, [])
+
+  useEffect(() => {
+    try {
+      const savedQuality = window.localStorage.getItem('eko-quality')
+      if (savedQuality === 'low' || savedQuality === 'medium' || savedQuality === 'high') setQuality(savedQuality)
+      else if (window.matchMedia('(max-width: 760px)').matches) setQuality('low')
+      const savedLook = Number(window.localStorage.getItem('eko-look'))
+      if (Number.isFinite(savedLook) && savedLook >= 0.4 && savedLook <= 2) setLookSensitivity(savedLook)
+    } catch { /* storage may be unavailable */ }
+  }, [])
+
+  useEffect(() => { adminPowersRef.current = isAdmin ? adminPowers : { speed: 1, noclip: false, fly: false } }, [adminPowers, isAdmin])
+
+  const teleportTo = useCallback((x: number, z: number) => {
+    keysRef.current.clear()
+    setAutoWalkTarget(null)
+    setServiceOpen(false)
+    if (player.currentInteriorId) dispatch({ type: 'exit-interior' })
+    setSpawnPosition({ x, z })
+    setPlayerPosition({ x, z })
+  }, [player.currentInteriorId])
+
+  // God mode keeps an admin's vitals topped up.
+  useEffect(() => {
+    if (!isAdmin || !godMode) return
+    const interval = window.setInterval(() => dispatch({ type: 'admin-adjust', restore: true }), 1500)
+    return () => window.clearInterval(interval)
+  }, [godMode, isAdmin])
+
+  useEffect(() => {
+    invisibleRef.current = invisible
+    if (invisible && currentUserId) void changePresence({ method: 'DELETE' }).catch(() => undefined)
+  }, [changePresence, currentUserId, invisible])
+
+  // Poll for admin actions aimed at this player and for city announcements.
+  useEffect(() => {
+    if (!currentUserId) return
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const response = await fetch('/api/game/commands', { cache: 'no-store' })
+        if (!response.ok || cancelled) return
+        const data = (await response.json()) as import('@/lib/game/types').CommandsResponse
+        if (data.announcement && data.announcement.id !== lastAnnouncementRef.current) {
+          const first = lastAnnouncementRef.current === null && Date.now() - new Date(data.announcement.createdAt).getTime() > 60_000
+          lastAnnouncementRef.current = data.announcement.id
+          if (!first) notify(`📢 City announcement: ${data.announcement.message}`)
+        }
+        for (const command of data.commands) {
+          const payload = command.payload
+          if (command.type === 'give-cash' && typeof payload.amount === 'number') {
+            dispatch({ type: 'admin-adjust', cash: payload.amount })
+            notify(`An admin ${payload.amount >= 0 ? 'sent you' : 'took'} ${formatNaira(Math.abs(payload.amount))}.`)
+          } else if (command.type === 'heal') {
+            dispatch({ type: 'admin-adjust', restore: true })
+            notify('An admin restored your energy and hunger.')
+          } else if (command.type === 'teleport' && typeof payload.x === 'number' && typeof payload.z === 'number') {
+            teleportTo(payload.x, payload.z)
+            notify('An admin moved you.')
+          } else if (command.type === 'set-time' && typeof payload.minutes === 'number') {
+            setGameMinutes(payload.minutes)
+            notify('An admin changed the time of day.')
+          } else if (command.type === 'notify' && typeof payload.message === 'string') {
+            notify(`Admin: ${payload.message}`)
+          } else if (command.type === 'kick' && typeof payload.message === 'string') {
+            notify(payload.message)
+            void changePresence({ method: 'DELETE' }).catch(() => undefined)
+          }
+        }
+      } catch {
+        /* the next poll will try again */
+      }
+    }
+    void poll()
+    const interval = window.setInterval(() => void poll(), 6000)
+    return () => { cancelled = true; window.clearInterval(interval) }
+  }, [changePresence, currentUserId, notify, teleportTo])
+
+  const handleRideEvent = useCallback((event: RideEvent) => {
+    if (event.type === 'arrived') {
+      setRide((current) => (current && current.phase === 'arriving' ? { ...current, phase: 'waiting', pickup: event.at } : current))
+      notify('Your ride has arrived. Walk to it and press E to board.')
+    } else if (event.type === 'completed') {
+      setRide((current) => {
+        if (!current) return current
+        setSpawnPosition({ x: current.destination.x, z: current.destination.z + 1.6 })
+        setPlayerPosition({ x: current.destination.x, z: current.destination.z + 1.6 })
+        return null
+      })
+      notify('You have arrived. Thanks for riding.')
+    } else {
+      setRide(null)
+      notify('The driver could not find a route and the booking was cancelled.')
+    }
+  }, [notify])
+
+  const cancelRide = useCallback(() => {
+    setRide((current) => (current && current.phase !== 'riding' ? null : current))
+    notify('Ride cancelled.')
+  }, [notify])
+
+  const nearWaitingRide = ride?.phase === 'waiting' && ride.pickup !== null && distanceBetween(playerPosition, ride.pickup) < 7
+
   const handleInteract = useCallback(() => {
     if (activeCharacter || worldTransitioning) return
     if (activeInterior) {
@@ -519,6 +664,13 @@ export default function GameShell() {
       })
       return
     }
+    if (nearWaitingRide) {
+      keysRef.current.clear()
+      setRide((current) => (current ? { ...current, phase: 'riding' } : current))
+      notify('Boarded. Sit back and enjoy the ride.')
+      return
+    }
+    if (nearbyCharacter) {
     if (nearbyCharacter && !prioritizeEntry) {
       keysRef.current.clear()
       setActiveCharacter(nearbyCharacter.id)
@@ -538,7 +690,7 @@ export default function GameShell() {
       return
     }
     if (nearbyLocation) handleLocationAction(nearbyLocation.id)
-  }, [activeCharacter, activeInterior, canExitInterior, handleLocationAction, nearbyCharacter, nearbyEntry, nearbyLocation, nearInteriorAction, notify, player.returnPosition, playerPosition, prioritizeEntry, runWorldTransition, worldTransitioning])
+  }, [activeCharacter, enterInterior, exitInterior, handleLocationAction, insideInterior, nearInteriorAction, nearInteriorExit, nearWaitingRide, nearbyCharacter, nearbyEntrance, nearbyLocation, notify, serviceOpen])
 
   const handleCharacterAction = useCallback(() => {
     if (!activeCharacter) return
@@ -750,17 +902,21 @@ export default function GameShell() {
       notify(`Walking to ${location.name}. Your route leads to its entrance; use the controls to take over.`)
       return
     }
-
-    if (mode === 'drive') {
-      setAutoWalkTarget(null)
-      closePanel()
-      if (!player.ownsScooter) {
-        setPinnedWaypoint('garage')
-        notify('Visit Mainland Motors to rent a scooter before self-driving.')
+    setAutoWalkTarget(null)
+    if (mode === 'cab' || mode === 'bike' || mode === 'driver') {
+      if (ride) {
+        notify('You already have a ride booked. Cancel it first to book another.')
         return
       }
-      if (!player.inVehicle) dispatch({ type: 'toggle-vehicle' })
-      notify(`Scooter ready. Follow the marked route to ${location.name}.`)
+      if (player.currentInteriorId) {
+        notify('Step outside before booking a ride.')
+        return
+      }
+      const destination = getLocationEntrancePosition(locationId) ?? location
+      rideIdRef.current += 1
+      setRide({ id: rideIdRef.current, kind: mode as RideKind, phase: 'arriving', destination: { x: destination.x, z: destination.z }, pickup: null })
+      closePanel()
+      notify(`${RIDE_NAMES[mode]} booked. Watch the road: your driver is on the way. Stay where you are.`)
       return
     }
 
@@ -774,36 +930,8 @@ export default function GameShell() {
       notify(`You need ${formatNaira(fare)} for this ride.`)
       return
     }
-
-    setAutoWalkTarget(null)
-    keysRef.current.clear()
-    closePanel()
-    const rideId = rideSequenceRef.current + 1
-    rideSequenceRef.current = rideId
-    dispatch({ type: 'pay-ride', amount: fare })
-    const rideName = mode === 'bike' ? 'Okada' : mode === 'danfo' ? 'Danfo' : mode === 'driver' ? 'Private driver' : 'City cab'
-    setRideBooking({ id: rideId, destinationId: locationId, mode, fare, status: 'dispatching' })
-    notify(`${rideName} requested for ${formatNaira(fare)}. A driver is finding your pickup.`)
-
-    const updateStatus = (status: RideBookingStatus) => {
-      setRideBooking((current) => current?.id === rideId ? { ...current, status } : current)
-    }
-    scheduleRideTimer(1400, () => updateStatus('approaching'))
-    scheduleRideTimer(2600, () => updateStatus('boarding'))
-    scheduleRideTimer(4100, () => updateStatus('en-route'))
-    scheduleRideTimer(6600, () => {
-      const destination = getLocationEntrancePosition(locationId) ?? { x: location.x, z: location.z }
-      runWorldTransition(() => {
-        setSpawnPosition(destination)
-        setPlayerPosition(destination)
-        updateStatus('arrived')
-        notify(`You arrived at ${location.name}. Fare paid: ${formatNaira(fare)}.`)
-      })
-    })
-    scheduleRideTimer(10800, () => {
-      setRideBooking((current) => current?.id === rideId ? null : current)
-    })
-  }, [closePanel, notify, player.cash, player.inVehicle, player.ownsScooter, playerPosition, rideBooking, runWorldTransition, scheduleRideTimer])
+    notify(messages[mode])
+  }, [closePanel, notify, player.currentInteriorId, ride])
 
   const applyJob = useCallback((jobId: JobId) => {
     const job = CITY_JOBS.find((entry) => entry.id === jobId)
@@ -950,6 +1078,13 @@ export default function GameShell() {
         openPanel('online')
       } else if (key === 'p') {
         openPanel('life')
+      } else if (key === 'escape') {
+        keysRef.current.clear()
+        setServiceOpen(false)
+        setSettingsOpen(false)
+        setAdminOpen(false)
+        setActiveCharacter(null)
+        closePanel()
       }
     }
 
@@ -970,6 +1105,13 @@ export default function GameShell() {
     <main className="game-shell" aria-label="Eko After Hours roleplay game">
       <CityWorld
         keysRef={keysRef}
+        joystickRef={joystickRef}
+        quality={quality}
+        ride={ride}
+        onRideEvent={handleRideEvent}
+        isAdmin={isAdmin}
+        adminPowersRef={adminPowersRef}
+        lookSensitivity={lookSensitivity}
         onPlayerPosition={handlePlayerPosition}
         inVehicle={player.inVehicle}
         rideVehicle={rideBooking && (rideBooking.status === 'boarding' || rideBooking.status === 'en-route') ? rideBooking.mode : null}
@@ -1003,6 +1145,13 @@ export default function GameShell() {
         onOpenPanel={openPanel}
         onInteract={handleInteract}
         onMoveKey={setMoveKey}
+        joystickRef={joystickRef}
+        rideStatus={ride ? (ride.phase === 'arriving' ? 'Your ride is on its way' : ride.phase === 'waiting' ? (nearWaitingRide ? 'Your ride is here: press E to board' : 'Your ride is waiting nearby') : 'On the way to your destination') : null}
+        canCancelRide={ride !== null && ride.phase !== 'riding'}
+        onCancelRide={cancelRide}
+        nearWaitingRide={nearWaitingRide}
+        isAdmin={isAdmin}
+        onOpenSettings={() => { keysRef.current.clear(); setSettingsOpen(true) }}
       />
       {activePanel !== 'none' && (
         <GamePanels
@@ -1032,7 +1181,36 @@ export default function GameShell() {
           onSignOut={handleSignOut}
         />
       )}
-      {serviceSheetOpen && activeInterior && (
+      {settingsOpen && (
+        <SettingsSheet
+          quality={quality}
+          lookSensitivity={lookSensitivity}
+          isAdmin={isAdmin}
+          onQuality={changeQuality}
+          onLookSensitivity={changeLookSensitivity}
+          onOpenAdmin={() => { setSettingsOpen(false); setAdminOpen(true) }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+      {adminOpen && isAdmin && (
+        <AdminPanel
+          onClose={() => setAdminOpen(false)}
+          playerPosition={playerPosition}
+          gameMinutes={gameMinutes}
+          powers={adminPowers}
+          godMode={godMode}
+          invisible={invisible}
+          onPowers={(next) => setAdminPowers((current) => ({ ...current, ...next }))}
+          onGodMode={setGodMode}
+          onInvisible={setInvisible}
+          onTeleport={teleportTo}
+          onGiveSelf={(cash) => { dispatch({ type: 'admin-adjust', cash }); notify(`Added ${formatNaira(cash)}.`) }}
+          onRestoreSelf={() => { dispatch({ type: 'admin-adjust', restore: true }); notify('Vitals restored.') }}
+          onSetOwnTime={(minutes) => { setGameMinutes(minutes); notify('Time changed for you.') }}
+          notify={notify}
+        />
+      )}
+      {serviceOpen && activeInterior && (
         <ServiceSheet
           key={activeInterior.id}
           interior={activeInterior}
