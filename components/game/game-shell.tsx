@@ -92,6 +92,9 @@ function createGameSavePayload(player: PlayerState, position: Position, gameMinu
       level: player.level,
       energy: player.energy,
       hunger: player.hunger,
+      fun: player.fun,
+      hygiene: player.hygiene,
+      bladder: player.bladder,
       educationCredits: player.educationCredits,
       stage: player.stage,
       inventory: player.inventory.map((item) => ({ ...item })),
@@ -381,6 +384,7 @@ export default function GameShell() {
     // Two in-game minutes pass every two real seconds: one full day takes 24 minutes.
     const timer = window.setInterval(() => {
       setGameMinutes((minutes) => (minutes + CLOCK_STEP_MINUTES) % (24 * 60))
+      dispatch({ type: 'decay-needs' })
     }, CLOCK_TICK_MS)
     return () => window.clearInterval(timer)
   }, [])
