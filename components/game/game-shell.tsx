@@ -170,7 +170,9 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
     error: saveLoadError,
     isLoading: saveLoading,
   } = useSWR(saveKey, fetchGameSave, { revalidateOnFocus: false, revalidateOnReconnect: true })
-  const presenceRoomId = player.currentInteriorId ? `interior:${player.currentInteriorId}` : 'eko-mainland'
+  const presenceRoomId = player.currentInteriorId === 'marina-apartments' && currentUserId
+    ? `home:${currentUserId}`
+    : player.currentInteriorId ? `interior:${player.currentInteriorId}` : 'eko-mainland'
   const presenceKey = currentUserId
     ? ([`/api/game/presence?roomId=${encodeURIComponent(presenceRoomId)}`, currentUserId] as const)
     : null
@@ -261,7 +263,9 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
     latestPresenceRef.current = {
       ...playerPosition,
       inVehicle: player.inVehicle,
-      roomId: player.currentInteriorId ? `interior:${player.currentInteriorId}` : 'eko-mainland',
+      roomId: player.currentInteriorId === 'marina-apartments' && currentUserId
+        ? `home:${currentUserId}`
+        : player.currentInteriorId ? `interior:${player.currentInteriorId}` : 'eko-mainland',
     }
   }, [player.currentInteriorId, player.inVehicle, playerPosition])
 
