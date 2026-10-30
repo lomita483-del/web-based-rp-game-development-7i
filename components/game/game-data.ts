@@ -848,6 +848,9 @@ export type PlayerState = {
   level: number
   energy: number
   hunger: number
+  fun: number
+  hygiene: number
+  bladder: number
   educationCredits: number
   stage: MissionStage
   inventory: InventoryItem[]
@@ -885,6 +888,9 @@ export const STARTING_PLAYER: PlayerState = {
   level: 1,
   energy: 83,
   hunger: 64,
+  fun: 76,
+  hygiene: 88,
+  bladder: 18,
   educationCredits: 0,
   stage: 'meet-bisi',
   inventory: [
@@ -934,6 +940,10 @@ export type PlayerAction =
   | { type: 'rent-scooter' }
   | { type: 'toggle-vehicle' }
   | { type: 'rest' }
+  | { type: 'decay-needs'; ticks?: number }
+  | { type: 'shower' }
+  | { type: 'use-toilet' }
+  | { type: 'socialize' }
   | { type: 'buy-food' }
   | { type: 'eat-food' }
   | { type: 'apply-job'; jobId: JobId }
@@ -1070,7 +1080,24 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       if (!state.ownsScooter) return state
       return { ...state, inVehicle: !state.inVehicle }
     case 'rest':
-      return { ...state, energy: 100, hunger: Math.max(state.hunger, 78), inVehicle: false }
+      return { ...state, energy: 100, hunger: Math.max(state.hunger, 78), fun: Math.min(100, state.fun + 12), inVehicle: false }
+    case 'decay-needs': {
+      const ticks = Math.max(1, Math.min(10, action.ticks ?? 1))
+      return {
+        ...state,
+        hunger: Math.max(0, state.hunger - 0.075 * ticks),
+        energy: Math.max(0, state.energy - 0.035 * ticks),
+        fun: Math.max(0, state.fun - 0.055 * ticks),
+        hygiene: Math.max(0, state.hygiene - 0.012 * ticks),
+        bladder: Math.min(100, state.bladder + 0.045 * ticks),
+      }
+    }
+    case 'shower':
+      return { ...state, hygiene: 100, fun: Math.min(100, state.fun + 3) }
+    case 'use-toilet':
+      return { ...state, bladder: 0 }
+    case 'socialize':
+      return { ...state, fun: Math.min(100, state.fun + 18), energy: Math.max(0, state.energy - 2) }
     case 'buy-food': {
       if (state.cash < 90) return state
       return {
@@ -1090,6 +1117,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         ...state,
         energy: Math.min(100, state.energy + 12),
         hunger: Math.min(100, state.hunger + 28),
+        fun: Math.min(100, state.fun + 3),
         inventory: updateInventory(state.inventory, 'suya', -1, {
           id: 'suya',
           name: 'Suya wrap',
