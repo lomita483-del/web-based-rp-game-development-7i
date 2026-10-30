@@ -375,6 +375,110 @@ function RoomFurniture({ kind, palette }: { kind: InteriorKind; palette: RoomPal
   )
 }
 
+
+function StarterApartmentLayout() {
+  const wall = '#16745f'
+  const trim = '#d5c7a5'
+  const wood = '#80583b'
+  const tile = '#e7e5dc'
+  return (
+    <>
+      <color attach="background" args={['#071321']} />
+      <ambientLight intensity={1.15} color="#e8f1eb" />
+      <hemisphereLight args={['#e8f5ff', '#233b31', 1.05]} />
+      <directionalLight position={[-9, 22, 12]} intensity={1.65} castShadow />
+      <pointLight position={[-5, 5, -4]} intensity={0.65} color="#fff0cf" distance={18} />
+      <pointLight position={[5, 5, -4]} intensity={0.55} color="#fff0cf" distance={18} />
+      {/* Private circular garden plot and tiled approach */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.55, 0]} receiveShadow>
+        <circleGeometry args={[19, 64]} /><meshStandardMaterial color="#315b3d" roughness={1} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
+        <circleGeometry args={[15.8, 64]} /><meshStandardMaterial color="#47744b" roughness={1} />
+      </mesh>
+      <mesh position={[0, -0.22, 0]} receiveShadow>
+        <boxGeometry args={[17, 0.42, 17]} /><meshStandardMaterial color="#d0cfc4" roughness={0.94} />
+      </mesh>
+      {/* Four-room open-top cutaway home */}
+      <mesh position={[-4.1, 0.02, -4.1]}><boxGeometry args={[8.45, 0.12, 8.45]} /><meshStandardMaterial color={tile} roughness={0.88} /></mesh>
+      <mesh position={[4.1, 0.02, -4.1]}><boxGeometry args={[8.45, 0.12, 8.45]} /><meshStandardMaterial color={wood} roughness={0.86} /></mesh>
+      <mesh position={[-4.1, 0.02, 4.1]}><boxGeometry args={[8.45, 0.12, 8.45]} /><meshStandardMaterial color="#b7b8ae" roughness={0.9} /></mesh>
+      <mesh position={[4.1, 0.02, 4.1]}><boxGeometry args={[8.45, 0.12, 8.45]} /><meshStandardMaterial color="#c7c9c2" roughness={0.9} /></mesh>
+      {/* Emerald exterior walls; front and roof stay open for the isometric view */}
+      <mesh position={[0, 1.45, -8.45]}><boxGeometry args={[17, 2.9, 0.28]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
+      <mesh position={[-8.45, 1.45, 0]}><boxGeometry args={[0.28, 2.9, 17]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
+      <mesh position={[8.45, 1.45, 0]}><boxGeometry args={[0.28, 2.9, 17]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
+      <mesh position={[0, 1.45, 8.45]}><boxGeometry args={[17, 2.9, 0.28]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
+      {/* Interior partitions with open door gaps */}
+      <mesh position={[0, 1.05, -4.15]}><boxGeometry args={[0.18, 2.1, 8.2]} /><meshStandardMaterial color={wall} /></mesh>
+      <mesh position={[-4.15, 1.05, 0]}><boxGeometry args={[8.2, 2.1, 0.18]} /><meshStandardMaterial color={wall} /></mesh>
+      <mesh position={[4.15, 1.05, 0]}><boxGeometry args={[8.2, 2.1, 0.18]} /><meshStandardMaterial color={wall} /></mesh>
+      {/* Living room: sectional sofa, coffee table and television */}
+      <group position={[-4.3, 0.12, -4.2]}>
+        <mesh position={[0, 0.55, 1.6]}><boxGeometry args={[4.4, 0.72, 1.35]} /><meshStandardMaterial color="#287d69" /></mesh>
+        <mesh position={[0, 1.05, 1.05]}><boxGeometry args={[4.4, 0.55, 0.35]} /><meshStandardMaterial color="#216753" /></mesh>
+        <mesh position={[0, 0.45, -1.2]}><boxGeometry args={[2.2, 0.14, 1.25]} /><meshStandardMaterial color="#72543b" /></mesh>
+        <mesh position={[0, 1.55, -3.5]}><boxGeometry args={[2.8, 1.55, 0.16]} /><meshStandardMaterial color="#17242a" metalness={0.25} /></mesh>
+        <mesh position={[0, 1.55, -3.39]}><boxGeometry args={[2.55, 1.28, 0.03]} /><meshStandardMaterial color="#1d4850" emissive="#173e46" emissiveIntensity={0.35} /></mesh>
+      </group>
+      {/* Bedroom and study */}
+      <group position={[4.1, 0.12, -4.1]}>
+        <mesh position={[0.4, 0.42, 0.4]}><boxGeometry args={[3.2, 0.55, 4.2]} /><meshStandardMaterial color="#5b402d" /></mesh>
+        <mesh position={[0.4, 0.76, 0.4]}><boxGeometry args={[3.05, 0.2, 4.05]} /><meshStandardMaterial color="#e9e4d8" /></mesh>
+        <mesh position={[0.4, 0.91, -1.05]}><boxGeometry args={[2.9, 0.18, 1]} /><meshStandardMaterial color="#789b91" /></mesh>
+        <mesh position={[-2.7, 0.72, -2.6]}><boxGeometry args={[1.5, 0.12, 2.5]} /><meshStandardMaterial color="#694a31" /></mesh>
+        <mesh position={[-2.7, 1.2, -2.6]}><boxGeometry args={[1.45, 0.8, 0.08]} /><meshStandardMaterial color="#202e32" /></mesh>
+        <mesh position={[-2.7, 1.64, -2.55]}><boxGeometry args={[1.1, 0.04, 0.7]} /><meshStandardMaterial color="#77b8c1" emissive="#245d66" emissiveIntensity={0.45} /></mesh>
+      </group>
+      {/* Kitchen with fridge, counters and cooker */}
+      <group position={[-4.1, 0.12, 4.1]}>
+        <mesh position={[0, 0.58, -2.9]}><boxGeometry args={[6.6, 1.05, 1.05]} /><meshStandardMaterial color="#9b8b72" /></mesh>
+        <mesh position={[0, 1.15, -2.9]}><boxGeometry args={[6.7, 0.12, 1.15]} /><meshStandardMaterial color="#e6e2d8" /></mesh>
+        <mesh position={[-2.6, 1.27, -2.9]}><boxGeometry args={[1.1, 0.08, 1]} /><meshStandardMaterial color="#252a2b" metalness={0.5} /></mesh>
+        <mesh position={[2.7, 1.25, -2.9]}><boxGeometry args={[1.35, 2.35, 1.25]} /><meshStandardMaterial color="#d9dedb" metalness={0.16} /></mesh>
+        <mesh position={[2.7, 1.4, -2.22]}><boxGeometry args={[0.9, 0.55, 0.04]} /><meshStandardMaterial color="#9bb8b5" /></mesh>
+      </group>
+      {/* Attached bathroom */}
+      <group position={[4.1, 0.12, 4.1]}>
+        <mesh position={[1.9, 0.45, -2.2]}><boxGeometry args={[2.1, 0.85, 1.8]} /><meshStandardMaterial color="#f0eee7" /></mesh>
+        <mesh position={[1.9, 0.92, -2.2]}><boxGeometry args={[1.8, 0.08, 1.5]} /><meshStandardMaterial color="#d9e6e4" /></mesh>
+        <mesh position={[-2.1, 0.5, 2.1]}><cylinderGeometry args={[0.55, 0.55, 0.9, 20]} /><meshStandardMaterial color="#f3f0e8" /></mesh>
+        <mesh position={[-2.1, 1.0, 2.1]}><cylinderGeometry args={[0.45, 0.45, 0.12, 20]} /><meshStandardMaterial color="#d6e4e1" /></mesh>
+      </group>
+      {/* Overhead spotlights */}
+      {[-5.5, -2.5, 2.5, 5.5].map((x) => [-5.5, 5.5].map((z) => (
+        <group key={x + ':' + z} position={[x, 3.15, z]}>
+          <mesh><cylinderGeometry args={[0.28, 0.38, 0.12, 16]} /><meshStandardMaterial color="#f2e5c7" emissive="#f7dfac" emissiveIntensity={0.3} /></mesh>
+          <pointLight position={[0, -0.25, 0]} intensity={0.38} color="#ffe8bd" distance={8} />
+        </group>
+      )))}
+      {/* Front steps and tiled garden path */}
+      <mesh position={[0, -0.05, 9.3]}><boxGeometry args={[3.2, 0.24, 1.3]} /><meshStandardMaterial color={trim} /></mesh>
+      <mesh position={[0, -0.2, 10.1]}><boxGeometry args={[3.8, 0.18, 1.3]} /><meshStandardMaterial color="#b7b4a8" /></mesh>
+      <mesh position={[0, -0.28, 12.4]}><boxGeometry args={[2.8, 0.12, 4.2]} /><meshStandardMaterial color="#c8c7bd" /></mesh>
+      {/* Carport with a parked starter car */}
+      <mesh position={[12.3, 2.5, 4.2]}><boxGeometry args={[6.5, 0.22, 8]} /><meshStandardMaterial color="#536a60" /></mesh>
+      {[9.3, 15.3].map((x) => [-0.1, 8.2].map((z) => <mesh key={x + ':' + z} position={[x, 1.2, z]}><cylinderGeometry args={[0.12, 0.12, 2.4, 8]} /><meshStandardMaterial color="#d2c9b1" /></mesh>))}
+      <group position={[12.3, 0.12, 4.5]}>
+        <mesh position={[0, 0.75, 0]}><boxGeometry args={[2.7, 1.05, 4.8]} /><meshStandardMaterial color="#d8dfd8" metalness={0.28} roughness={0.42} /></mesh>
+        <mesh position={[0, 1.35, -0.2]}><boxGeometry args={[2.25, 0.65, 2.4]} /><meshStandardMaterial color="#35525a" metalness={0.35} roughness={0.25} /></mesh>
+        {[-1.05, 1.05].flatMap((x) => [-1.55, 1.55].map((z) => <mesh key={x + ':' + z} position={[x, 0.38, z]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.4, 0.4, 0.18, 16]} /><meshStandardMaterial color="#171b1d" /></mesh>))}
+      </group>
+      {/* Small garden trees and hedges */}
+      {[-13, 13].map((x) => [-11, 11].map((z) => (
+        <group key={x + ':' + z} position={[x, 0, z]}>
+          <mesh position={[0, 1.1, 0]}><cylinderGeometry args={[0.18, 0.25, 2.2, 8]} /><meshStandardMaterial color="#65452e" /></mesh>
+          <mesh position={[0, 2.5, 0]}><sphereGeometry args={[1.2, 12, 10]} /><meshStandardMaterial color="#315b3e" roughness={1} /></mesh>
+        </group>
+      ))}
+      <FloorText text="LIVING ROOM" color="#f5f0e3" position={[-4.1, 0.11, -6.9]} width={3.2} height={0.65} />
+      <FloorText text="BEDROOM / STUDY" color="#f5f0e3" position={[4.1, 0.11, -6.9]} width={3.5} height={0.65} />
+      <FloorText text="KITCHEN" color="#f5f0e3" position={[-4.1, 0.11, 6.9]} width={2.2} height={0.55} />
+      <FloorText text="BATHROOM" color="#f5f0e3" position={[4.1, 0.11, 6.9]} width={2.4} height={0.55} />
+    </>
+  )
+}
+
 function hashString(value: string) {
   let hash = 7
   for (const character of value) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
@@ -566,6 +670,7 @@ function InteriorPeople({ id, kind }: { id: string; kind: InteriorKind }) {
 }
 
 export function InteriorScene({ interior }: InteriorSceneProps) {
+  if (interior.id === 'marina-apartments') return <StarterApartmentLayout />
   const palette = ROOM_PALETTES[interior.kind]
   const seed = hashString(interior.id)
   const floorTexture = useFloorTexture(palette.floor, interior.kind, seed)
