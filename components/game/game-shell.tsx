@@ -63,9 +63,6 @@ type Position = GamePosition
 type ToastState = { id: number; text: string } | null
 
 const fetchGameSave = ([url]: readonly [string, string]) => gameFetcher<GameSaveResponse>(url)
-const fetchPresence = ([url, , roomId]: readonly [string, string, string]) =>
-  gameFetcher<PresenceResponse>(`${url}?roomId=${encodeURIComponent(roomId)}`)
-
 const CITY_ROOM_ID = 'eko-mainland'
 /** A full in-game day lasts 24 real minutes: 2 game minutes every 2 seconds. */
 const RIDE_NAMES = { cab: 'Cab', bike: 'Okada', driver: 'Private driver' } as const
@@ -367,8 +364,7 @@ export default function GameShell() {
 
   const mission = getMissionDetails(player.stage)
   const waypoint = pinnedWaypoint ?? mission.targetLocation
-  const paused = activePanel !== 'none' || activeCharacter !== null || serviceOpen || fadeActive || settingsOpen || adminOpen || ride?.phase === 'riding'
-  const paused = activePanel !== 'none' || activeCharacter !== null || serviceSheetOpen || worldTransitioning || Boolean(rideBooking && rideBooking.status !== 'arrived')
+    const paused = activePanel !== 'none' || activeCharacter !== null || serviceSheetOpen || worldTransitioning || Boolean(rideBooking && rideBooking.status !== 'arrived')
 
   const notify = useCallback((text: string) => {
     toastId.current += 1
@@ -382,12 +378,10 @@ export default function GameShell() {
   }, [toast])
 
   useEffect(() => {
-    const timer = window.setInterval(() => setGameMinutes((minutes) => minutes + CLOCK_STEP_MINUTES), CLOCK_TICK_MS)
-    // One in-game minute every five real seconds gives the full day/night cycle
-    // a playable pace while preserving the saved in-game clock.
+    // Two in-game minutes pass every two real seconds: one full day takes 24 minutes.
     const timer = window.setInterval(() => {
-      setGameMinutes((minutes) => (minutes + 1) % (24 * 60))
-    }, 5000)
+      setGameMinutes((minutes) => (minutes + CLOCK_STEP_MINUTES) % (24 * 60))
+    }, CLOCK_TICK_MS)
     return () => window.clearInterval(timer)
   }, [])
 
