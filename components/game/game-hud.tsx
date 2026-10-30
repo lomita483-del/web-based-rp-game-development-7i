@@ -335,9 +335,10 @@ export function GameHud({
           className="interaction-button"
           type="button"
           onClick={onInteract}
+          aria-label={`${interactionLabel}. Tap to interact.`}
           disabled={!interactionEnabled}
         >
-          <span className="interaction-key">E</span>
+          <span className="interaction-key" aria-hidden="true"><span className="interaction-touch-label">TAP</span><span className="interaction-key-label">E</span></span>
           <span className="interaction-copy">
             <small>{interactionEyebrow}</small>
             <strong>{interactionLabel}</strong>
