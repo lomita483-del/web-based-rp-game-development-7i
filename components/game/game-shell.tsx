@@ -119,8 +119,12 @@ function createGameSavePayload(player: PlayerState, position: Position, gameMinu
 
 export default function GameShell() {
   const [player, dispatch] = useReducer(playerReducer, STARTING_PLAYER)
-  const [playerPosition, setPlayerPosition] = useState<Position>({ x: -6, z: 4 })
-  const [spawnPosition, setSpawnPosition] = useState<Position>({ x: -6, z: 4 })
+  const HOME_INTERIOR_ID = 'marina-apartments' as const
+const HOME_INTERIOR_POSITION: Position = { x: 0, z: 3.2 }
+const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
+
+  const [playerPosition, setPlayerPosition] = useState<Position>(HOME_INTERIOR_POSITION)
+  const [spawnPosition, setSpawnPosition] = useState<Position>(HOME_INTERIOR_POSITION)
   const [gameMinutes, setGameMinutes] = useState(START_GAME_MINUTES)
   const [activePanel, setActivePanel] = useState<GamePanel>('none')
   const [activeCharacter, setActiveCharacter] = useState<CharacterId | null>(null)
@@ -198,7 +202,7 @@ export default function GameShell() {
   const saveInFlightRef = useRef(false)
   const lastSavedPayloadRef = useRef('')
   const latestSavePayloadRef = useRef<GameSavePayload>(
-    createGameSavePayload(STARTING_PLAYER, { x: -6, z: 4 }, 21 * 60 + 42),
+    createGameSavePayload(STARTING_PLAYER, HOME_INTERIOR_POSITION, 21 * 60 + 42),
   )
   const latestPresenceRef = useRef<PresenceUpdate>({ x: -6, z: 4, inVehicle: false, roomId: 'eko-mainland' })
 
@@ -216,15 +220,21 @@ export default function GameShell() {
     if (savedGame.save) {
       const restoredPosition = { ...savedGame.save.position }
       const restoredPlayer = { ...savedGame.save.playerState, name: currentUser?.name ?? STARTING_PLAYER.name }
+      const homeSpawn = !restoredPlayer.currentInteriorId
+      if (homeSpawn) {
+        restoredPlayer.currentInteriorId = HOME_INTERIOR_ID
+        restoredPlayer.returnPosition = HOME_CITY_POSITION
+      }
+      const effectivePosition = homeSpawn ? HOME_INTERIOR_POSITION : restoredPosition
       dispatch({ type: 'restore', player: restoredPlayer })
-      setPlayerPosition(restoredPosition)
-      setSpawnPosition(restoredPosition)
+      setPlayerPosition(effectivePosition)
+      setSpawnPosition(effectivePosition)
       setGameMinutes(savedGame.save.gameMinutes)
       lastSavedPayloadRef.current = JSON.stringify(
-        createGameSavePayload(restoredPlayer, restoredPosition, savedGame.save.gameMinutes),
+        createGameSavePayload(restoredPlayer, effectivePosition, savedGame.save.gameMinutes),
       )
     } else if (previousAccountId && previousAccountId !== currentUserId) {
-      const resetPosition = { x: -6, z: 4 }
+      const resetPosition = HOME_INTERIOR_POSITION
       const resetPlayer = { ...STARTING_PLAYER, name: currentUser?.name ?? STARTING_PLAYER.name }
       dispatch({ type: 'restore', player: resetPlayer })
       setPlayerPosition(resetPosition)
@@ -638,6 +648,19 @@ export default function GameShell() {
   }, [notify])
 
   const nearWaitingRide = ride?.phase === 'waiting' && ride.pickup !== null && distanceBetween(playerPosition, ride.pickup) < 7
+
+  const handleGoOutside = useCallback(() => {
+    if (!activeInterior || activeInterior.id !== HOME_INTERIOR_ID || worldTransitioning) return
+    const outsidePosition = player.returnPosition ?? HOME_CITY_POSITION
+    keysRef.current.clear()
+    setAutoWalkTarget(null)
+    runWorldTransition(() => {
+      dispatch({ type: 'exit-interior' })
+      setSpawnPosition(outsidePosition)
+      setPlayerPosition(outsidePosition)
+      notify('Welcome outside. The city is yours to explore.')
+    })
+  }, [activeInterior, notify, player.returnPosition, runWorldTransition, worldTransitioning])
 
   const handleInteract = useCallback(() => {
     if (activeCharacter || worldTransitioning) return
@@ -1135,6 +1158,7 @@ export default function GameShell() {
         activeInterior={activeInterior}
         nearInteriorAction={nearInteriorAction}
         canExitInterior={canExitInterior}
+        onGoOutside={handleGoOutside}
         rideBooking={rideBooking}
         waypoint={waypoint}
         activePanel={activePanel}
