@@ -309,7 +309,9 @@ function RoadGrid({
         <meshStandardMaterial map={pavementTexture} color="#c1b8a9" roughness={1} />
       </mesh>
       {ROAD_LINES.map((offset) => {
-        const width = Math.abs(offset) <= 42 ? 7 : 5
+        const isMainRoad = Math.abs(offset) <= 42
+        const width = isMainRoad ? 7 : 5
+        const dashPositions = Array.from({ length: 18 }, (_, index) => -84 + index * 9.5)
         const sidewalkOffset = width / 2 + 0.8
         return (
           <group key={`road-${offset}`}>
@@ -349,7 +351,9 @@ function RoadGrid({
         )
       })}
       {ROAD_LINES.map((offset) => {
-        const width = Math.abs(offset) <= 42 ? 7 : 5
+        const isMainRoad = Math.abs(offset) <= 42
+        const width = isMainRoad ? 7 : 5
+        const verticalDashPositions = Array.from({ length: 18 }, (_, index) => -84 + index * 9.5)
         const airportNorthRoute = Math.abs(offset) >= 42
         const roadLength = airportNorthRoute ? 160 : 180
         const roadCenterZ = airportNorthRoute ? 10 : 0
