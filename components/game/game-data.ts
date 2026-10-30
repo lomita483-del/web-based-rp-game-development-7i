@@ -910,6 +910,7 @@ export type RemotePlayer = {
   x: number
   z: number
   inVehicle: boolean
+  isAdmin?: boolean
 }
 
 export const STARTING_PLAYER: PlayerState = {
@@ -961,6 +962,7 @@ export type PlayerAction =
   | { type: 'attend-lecture' }
   | { type: 'enter-interior'; interiorId: InteriorId; returnPosition: { x: number; z: number } }
   | { type: 'exit-interior' }
+  | { type: 'admin-adjust'; cash?: number; restore?: boolean; reputation?: number }
   | { type: 'meet-bisi' }
   | { type: 'accept-delivery' }
   | { type: 'complete-delivery' }
@@ -1033,6 +1035,17 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
     case 'enter-interior':
       if (state.currentInteriorId) return state
       return { ...state, currentInteriorId: action.interiorId, returnPosition: action.returnPosition, inVehicle: false }
+    case 'admin-adjust': {
+      const cash = Math.max(0, Math.min(1_000_000, state.cash + Math.round(action.cash ?? 0)))
+      const reputation = Math.max(0, state.reputation + Math.round(action.reputation ?? 0))
+      return {
+        ...state,
+        cash,
+        energy: action.restore ? 100 : state.energy,
+        hunger: action.restore ? 100 : state.hunger,
+        ...updateReputation(state, reputation),
+      }
+    }
     case 'exit-interior':
       return state.currentInteriorId ? { ...state, currentInteriorId: null, returnPosition: null } : state
     case 'meet-bisi': {

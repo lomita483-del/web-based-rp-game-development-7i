@@ -180,7 +180,8 @@ export function laneIndexById(world: TrafficWorld, id: string) {
   return world.lanes.findIndex((lane) => lane.id === id)
 }
 
-export function createTrafficWorld(seed = 7): TrafficWorld {
+/** `density` scales how many vehicles each lane carries (graphics setting); lanes always keep at least two. */
+export function createTrafficWorld(seed = 7, density = 1): TrafficWorld {
   const rng = mulberry32(seed)
   const lanes = buildLanes()
   const vehicles: Vehicle[] = []
@@ -193,9 +194,9 @@ export function createTrafficWorld(seed = 7): TrafficWorld {
   lanes.forEach((lane, laneIndex) => {
     const core = lane.roadId.length > 0 && /^[hv](-?\d+)$/.test(lane.roadId) && Math.abs(Number(lane.roadId.slice(1))) <= 42
     const spacing = lane.elevated ? 42 : core ? 46 : 60
-    let count = Math.max(2, Math.round(lane.length / spacing))
+    let count = Math.max(2, Math.round((lane.length / spacing) * density))
     // Extra demand on the two roads that jam.
-    if (lane.id === 'bridge:+' || lane.id === 'h-18:+') count += 3
+    if (lane.id === 'bridge:+' || lane.id === 'h-18:+') count += Math.round(3 * density)
     const slot = lane.length / count
     for (let i = 0; i < count; i += 1) {
       const kind = pickKind(rng, lane.allowed)

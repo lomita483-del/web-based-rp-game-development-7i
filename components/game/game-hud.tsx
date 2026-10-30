@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type PointerEvent } from 'react'
 import {
   Activity,
   ArrowRight,
@@ -18,6 +18,8 @@ import {
   MapPin,
   Package,
   Radio,
+  ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Utensils,
   UsersRound,
@@ -68,6 +70,13 @@ type HudProps = {
   onOpenPanel: (panel: Exclude<GamePanel, 'none'>) => void
   onInteract: () => void
   onMoveKey: (key: string, pressed: boolean) => void
+  joystickRef: MutableRefObject<{ x: number; y: number }>
+  isAdmin: boolean
+  onOpenSettings: () => void
+  rideStatus: string | null
+  canCancelRide: boolean
+  onCancelRide: () => void
+  nearWaitingRide: boolean
 }
 
 const PANEL_ACTIONS: { id: Exclude<GamePanel, 'none'>; label: string; icon: LucideIcon; shortcut: string }[] = [
@@ -110,12 +119,41 @@ export function GameHud({
   onOpenPanel,
   onInteract,
   onMoveKey,
+  joystickRef,
+  isAdmin,
+  onOpenSettings,
+  rideStatus,
+  canCancelRide,
+  onCancelRide,
+  nearWaitingRide,
 }: HudProps) {
+  const knobRef = useRef<HTMLSpanElement>(null)
+  const stickPointer = useRef<number | null>(null)
+  const moveStick = (event: PointerEvent<HTMLDivElement>) => {
+    if (stickPointer.current !== event.pointerId) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const radius = rect.width / 2
+    let dx = (event.clientX - (rect.left + radius)) / radius
+    let dy = (event.clientY - (rect.top + radius)) / radius
+    const length = Math.hypot(dx, dy)
+    if (length > 1) { dx /= length; dy /= length }
+    joystickRef.current.x = dx
+    joystickRef.current.y = dy
+    if (knobRef.current) knobRef.current.style.transform = `translate(${dx * 32}%, ${dy * 32}%)`
+  }
+  const releaseStick = (event: PointerEvent<HTMLDivElement>) => {
+    if (stickPointer.current !== event.pointerId) return
+    stickPointer.current = null
+    joystickRef.current.x = 0
+    joystickRef.current.y = 0
+    if (knobRef.current) knobRef.current.style.transform = ''
+  }
+  useEffect(() => () => { joystickRef.current.x = 0; joystickRef.current.y = 0 }, [joystickRef])
   const mission = getMissionDetails(player.stage)
   const currentDistrict = interior?.district ?? nearbyEntrance?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'
   const streets = GRID_LINES
   const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
-  const interactionLabel = interior
+  const interactionLabel = nearWaitingRide ? 'Board your ride' : interior
     ? nearInteriorAction
       ? interior.actionLabel
       : nearInteriorExit
@@ -128,10 +166,10 @@ export function GameHud({
         : nearbyLocation
           ? `Explore ${nearbyLocation.name}`
           : 'Wander the city'
-  const interactionEyebrow = interior
+  const interactionEyebrow = nearWaitingRide ? 'RIDE' : interior
     ? nearInteriorAction ? 'SERVICE' : nearInteriorExit ? 'EXIT' : 'INSIDE'
     : nearbyCharacter ? 'ROLEPLAY' : nearbyEntrance ? 'ENTER' : nearbyLocation ? 'LOCATION' : 'EXPLORE'
-  const interactionEnabled = interior ? nearInteriorAction || nearInteriorExit : Boolean(nearbyCharacter || nearbyEntrance || nearbyLocation)
+  const interactionEnabled = nearWaitingRide ? true : interior ? nearInteriorAction || nearInteriorExit : Boolean(nearbyCharacter || nearbyEntrance || nearbyLocation)
 
   return (
     <div className="game-hud">
@@ -208,6 +246,10 @@ export function GameHud({
             <kbd>{shortcut}</kbd>
           </button>
         ))}
+        <button className="quick-action" type="button" onClick={onOpenSettings} aria-label={isAdmin ? 'Settings and admin tools' : 'Settings'}>
+          {isAdmin ? <ShieldCheck aria-hidden="true" /> : <SlidersHorizontal aria-hidden="true" />}
+          <span>{isAdmin ? 'Admin' : 'Settings'}</span>
+        </button>
       </div>
 
       <div className="minimap-card" aria-label="Mini map">
@@ -245,6 +287,13 @@ export function GameHud({
         <span className="radio-eq" aria-hidden="true"><i /><i /><i /><i /><i /></span>
       </div>
 
+      {rideStatus && (
+        <div className="ride-banner" role="status">
+          <span className="status-live-dot" />
+          <strong>{rideStatus}</strong>
+          {canCancelRide && <button type="button" onClick={onCancelRide}>CANCEL</button>}
+        </div>
+      )}
       <div className="interaction-wrap">
         <button
           className="interaction-button"
@@ -269,9 +318,25 @@ export function GameHud({
         <span><kbd>P</kbd> CITY LIFE</span>
       </div>
 
-      <div className="movement-joystick" role="group" aria-label="Circular movement joystick" onPointerDown={(event) => { event.preventDefault(); updateJoystick(event, onMoveKey) }} onPointerMove={(event) => updateJoystick(event, onMoveKey)} onPointerUp={() => clearJoystick(onMoveKey)} onPointerCancel={() => clearJoystick(onMoveKey)} onLostPointerCapture={() => clearJoystick(onMoveKey)}>
+      <div
+        className="movement-joystick"
+        role="group"
+        aria-label="Circular movement joystick"
+        onPointerDown={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          if (stickPointer.current !== null) return
+          stickPointer.current = event.pointerId
+          try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* ignore */ }
+          moveStick(event)
+        }}
+        onPointerMove={moveStick}
+        onPointerUp={releaseStick}
+        onPointerCancel={releaseStick}
+        onLostPointerCapture={releaseStick}
+      >
         <span className="movement-joystick-ring" aria-hidden="true" />
-        <span className="movement-joystick-knob" aria-hidden="true" />
+        <span className="movement-joystick-knob" ref={knobRef} aria-hidden="true" />
       </div>
       <button className="run-button" type="button" onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); onMoveKey('shift', true) }} onPointerUp={() => onMoveKey('shift', false)} onPointerCancel={() => onMoveKey('shift', false)} onLostPointerCapture={() => onMoveKey('shift', false)} aria-label="Run while moving">RUN</button>
 

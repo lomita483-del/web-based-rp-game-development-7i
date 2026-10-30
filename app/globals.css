@@ -4140,3 +4140,59 @@ button:focus-visible {
   letter-spacing: 0.1em;
   text-align: center;
 }
+
+/* The HUD layer ignores pointer events, so the touch controls must opt back in or touches fall through to the camera. */
+.movement-joystick,
+.run-button {
+  pointer-events: auto;
+  touch-action: none;
+}
+.movement-joystick-knob { will-change: transform; transition: transform 40ms linear; }
+
+/* Admin panel and settings */
+.admin-sheet { max-height: min(38rem, calc(100% - 3rem)); }
+.admin-tabs { display: flex; gap: 0.3rem; padding: 0.5rem 0.7rem 0; }
+.admin-tabs button { flex: 1; min-height: 2.2rem; border: 1px solid transparent; border-radius: 0.6rem 0.6rem 0 0; background: transparent; color: var(--game-muted); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.admin-tabs button.is-active { border-color: var(--game-border); border-bottom-color: transparent; background: rgb(223 180 109 / 12%); color: var(--game-gold); }
+.service-chip-row button.is-on { border-color: var(--game-gold); background: rgb(223 180 109 / 32%); color: #fff3d6; }
+.admin-input { width: 5.4rem; min-height: 2.1rem; padding: 0 0.6rem; border: 1px solid rgb(223 180 109 / 30%); border-radius: 0.6rem; background: rgb(0 0 0 / 28%); color: var(--game-cream); font-size: 0.72rem; }
+.admin-input-wide { flex: 1; width: auto; min-width: 8rem; }
+.admin-range { width: 100%; accent-color: #dfb46d; }
+.admin-players { display: grid; gap: 0.5rem; }
+.admin-player { gap: 0.5rem; padding: 0.55rem 0.65rem; }
+.admin-player-head { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0; border: 0; background: none; color: var(--game-cream); font: inherit; text-align: left; cursor: pointer; }
+.admin-player-head i { width: 0.55rem; height: 0.55rem; flex: none; border-radius: 50%; background: #5c6368; }
+.admin-player-head i.is-online { background: #62e08a; box-shadow: 0 0 0.5rem #62e08a; }
+.admin-player-head strong { flex: 1; overflow: hidden; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+.admin-player-head span { color: var(--game-muted); font-size: 0.66rem; }
+.admin-player-head em { padding: 0.1rem 0.35rem; border-radius: 0.3rem; background: rgb(214 80 70 / 28%); color: #ffb3a8; font-size: 0.5rem; font-style: normal; font-weight: 800; }
+.admin-player-actions { display: grid; gap: 0.45rem; }
+.admin-list { display: grid; margin: 0; padding: 0; gap: 0.3rem; list-style: none; }
+.admin-list li { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem; border-radius: 0.5rem; background: rgb(0 0 0 / 22%); font-size: 0.68rem; }
+.admin-list li strong { flex: none; max-width: 7rem; overflow: hidden; color: var(--game-gold); text-overflow: ellipsis; white-space: nowrap; }
+.admin-list li span { flex: 1; min-width: 0; overflow: hidden; color: #cfd5c6; text-overflow: ellipsis; white-space: nowrap; }
+.admin-list li small { color: var(--game-muted); }
+.admin-list li button { display: grid; width: 1.6rem; height: 1.6rem; flex: none; place-items: center; border: 0; border-radius: 0.4rem; background: rgb(214 80 70 / 24%); color: #ffb3a8; cursor: pointer; }
+.admin-list li button svg { width: 0.8rem; height: 0.8rem; }
+.admin-places { max-height: 8rem; overflow-y: auto; }
+.admin-places button { min-height: 1.9rem; font-size: 0.6rem; }
+
+.ride-banner {
+  position: absolute;
+  z-index: 31;
+  left: 50%;
+  top: 4.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: calc(100% - 2rem);
+  padding: 0.45rem 0.7rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--game-border);
+  border-radius: 999px;
+  background: rgb(14 20 27 / 92%);
+  color: var(--game-cream);
+  font-size: 0.7rem;
+  pointer-events: auto;
+}
+.ride-banner button { min-height: 1.8rem; padding: 0 0.7rem; border: 0; border-radius: 999px; background: rgb(214 80 70 / 30%); color: #ffc0b6; font-size: 0.6rem; font-weight: 800; cursor: pointer; }
