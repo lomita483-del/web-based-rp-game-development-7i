@@ -1,13 +1,15 @@
 'use client'
 
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, type MutableRefObject } from 'react'
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Group } from 'three'
 import type { InteriorDefinition, InteriorKind } from './game-data'
 import { HumanoidModel, type IdleStyle } from './humanoid'
 
 type InteriorSceneProps = {
   interior: InteriorDefinition
+  onApartmentMove?: (x: number, z: number) => void
+  apartmentTargetRef?: MutableRefObject<{ x: number; z: number } | null>
 }
 
 type RoomPalette = {
@@ -376,7 +378,7 @@ function RoomFurniture({ kind, palette }: { kind: InteriorKind; palette: RoomPal
 }
 
 
-function StarterApartmentLayout() {
+function StarterApartmentLayout({ onMove, targetRef }: { onMove?: (x: number, z: number) => void; targetRef?: MutableRefObject<{ x: number; z: number } | null> }) {
   const wall = '#16745f'
   const trim = '#d5c7a5'
   const wood = '#80583b'
@@ -389,6 +391,20 @@ function StarterApartmentLayout() {
       <directionalLight position={[-9, 22, 12]} intensity={1.65} castShadow />
       <pointLight position={[-5, 5, -4]} intensity={0.65} color="#fff0cf" distance={18} />
       <pointLight position={[5, 5, -4]} intensity={0.55} color="#fff0cf" distance={18} />
+      {/* Invisible walkable surface: pointer taps set a world-space destination without affecting the city camera. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.16, 0]} onPointerDown={(event) => {
+        event.stopPropagation()
+        const x = Math.max(-17, Math.min(17, event.point.x))
+        const z = Math.max(-14, Math.min(14, event.point.z))
+        onMove?.(x, z)
+      }}>
+        <planeGeometry args={[35, 29]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      {targetRef?.current && <mesh position={[targetRef.current.x, 0.19, targetRef.current.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.42, 0.62, 32]} />
+        <meshBasicMaterial color="#75f0b2" transparent opacity={0.9} />
+      </mesh>}
       {/* Private circular garden plot and tiled approach */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.55, 0]} receiveShadow>
         <circleGeometry args={[19, 64]} /><meshStandardMaterial color="#315b3d" roughness={1} />
@@ -669,8 +685,8 @@ function InteriorPeople({ id, kind }: { id: string; kind: InteriorKind }) {
   )
 }
 
-export function InteriorScene({ interior }: InteriorSceneProps) {
-  if (interior.id === 'marina-apartments') return <StarterApartmentLayout />
+export function InteriorScene({ interior, onApartmentMove, apartmentTargetRef }: InteriorSceneProps) {
+  if (interior.id === 'marina-apartments') return <StarterApartmentLayout onMove={onApartmentMove} targetRef={apartmentTargetRef} />
   const palette = ROOM_PALETTES[interior.kind]
   const seed = hashString(interior.id)
   const floorTexture = useFloorTexture(palette.floor, interior.kind, seed)
