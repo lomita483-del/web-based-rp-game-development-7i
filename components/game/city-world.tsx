@@ -1291,7 +1291,7 @@ function collidesWithBuilding(x: number, z: number, radius: number) {
 function PlayerController({
   keysRef, joystickRef, riding, playerPosRef, ridePoseRef, isAdmin, adminPowersRef,
   lookSensitivity, onPlayerPosition, inVehicle, rideVehicle, gender, paused,
-  spawnPosition, activeInterior, cameraLookRef, autoWalkTarget, onAutoWalkEnd,
+  spawnPosition, activeInterior, cameraLookRef, autoWalkTarget,
 }: {
   riding: boolean
   playerPosRef: MutableRefObject<Point>
@@ -1299,7 +1299,6 @@ function PlayerController({
 } & Pick<CityWorldProps, 'keysRef' | 'joystickRef' | 'isAdmin' | 'adminPowersRef' | 'lookSensitivity' | 'onPlayerPosition' | 'inVehicle' | 'rideVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & {
   cameraLookRef: MutableRefObject<CameraLook>
   autoWalkTarget: LocationId | null
-  onAutoWalkEnd: () => void
 }) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
@@ -1361,7 +1360,6 @@ function PlayerController({
 
       if (direction.lengthSq() > 0.0001) {
         direction.normalize()
-        if (autoWalkTarget && !inside && (useStick || forwardInput !== 0 || rightInput !== 0)) onAutoWalkEnd()
         const running = !inVehicle && (keys.has('shift') || keys.has('shiftleft') || keys.has('shiftright'))
         const powers = isAdmin ? adminPowersRef.current : null
         const analog = useStick ? Math.max(0.35, stickMagnitude) : 1
