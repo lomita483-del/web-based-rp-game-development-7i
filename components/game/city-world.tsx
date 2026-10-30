@@ -1518,8 +1518,6 @@ const StaticWorld = memo(function StaticWorld({
       <StreetLamps night={night} />
       <Billboards night={night} />
       <TrafficSignals />
-      {treePositions.map((position, index) => <StreetTree key={`tree-${index}`} position={position} scale={index % 3 === 0 ? 0.92 : 0.84} />)}
-      {lampPositions.map((position, index) => <StreetLamp key={`lamp-${index}`} position={position} lit={night} />)}
       {Array.from({ length: 30 }, (_, index) => {
         const road = ROAD_LINES[index % ROAD_LINES.length]
         const side = index % 2 === 0 ? -1 : 1
