@@ -825,6 +825,13 @@ button:focus-visible {
   font-size: 0.85rem;
   font-weight: 800;
 }
+.interaction-touch-label { display: none; }
+.interaction-key-label { display: inline; }
+@media (hover: none), (pointer: coarse) {
+  .interaction-touch-label { display: inline; }
+  .interaction-key-label { display: none; }
+}
+
 
 .interaction-copy {
   display: grid;
