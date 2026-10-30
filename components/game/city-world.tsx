@@ -1318,6 +1318,21 @@ function PlayerController({
       perspectiveCamera.updateProjectionMatrix()
     }
 
+    if (activeInterior?.id === 'marina-apartments') {
+      const portrait = size.height > size.width * 1.15
+      perspectiveCamera.fov = portrait ? 66 : 52
+      perspectiveCamera.updateProjectionMatrix()
+      const homeCameraPosition = portrait ? new Vector3(0, 42, 30) : new Vector3(0, 27, 22)
+      camera.position.lerp(homeCameraPosition, 1 - Math.exp(-step * 4.5))
+      camera.lookAt(0, 0.5, 0)
+      publishTimer.current += step
+      if (publishTimer.current > 0.16) {
+        publishTimer.current = 0
+        onPositionRef.current({ x, z })
+      }
+      return
+    }
+
     const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
     const cameraHeight = (inside
       ? (size.height > size.width * 1.15 ? 4.8 : 4.2)
