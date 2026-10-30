@@ -1272,8 +1272,8 @@ function PlayerController({
         const ghost = Boolean(powers?.noclip || powers?.fly)
 
         if (inside) {
-          position.x = MathUtils.clamp(nextX, -6.7, 6.7)
-          position.z = MathUtils.clamp(nextZ, -6.7, 6.7)
+          position.x = MathUtils.clamp(nextX, activeInterior?.id === 'marina-apartments' ? -17.2 : -6.7, activeInterior?.id === 'marina-apartments' ? 17.2 : 6.7)
+          position.z = MathUtils.clamp(nextZ, activeInterior?.id === 'marina-apartments' ? -14.8 : -6.7, activeInterior?.id === 'marina-apartments' ? 14.8 : 6.7)
         } else {
           if (ghost || !collidesWithBuilding(nextX, previousZ, radius)) position.x = nextX
           if (ghost || !collidesWithBuilding(position.x, nextZ, radius)) position.z = nextZ
@@ -1293,8 +1293,8 @@ function PlayerController({
     }
 
     if (inside) {
-      position.x = MathUtils.clamp(position.x, -6.7, 6.7)
-      position.z = MathUtils.clamp(position.z, -6.7, 6.7)
+      position.x = MathUtils.clamp(position.x, activeInterior?.id === 'marina-apartments' ? -17.2 : -6.7, activeInterior?.id === 'marina-apartments' ? 17.2 : 6.7)
+      position.z = MathUtils.clamp(position.z, activeInterior?.id === 'marina-apartments' ? -14.8 : -6.7, activeInterior?.id === 'marina-apartments' ? 14.8 : 6.7)
       position.y = 0
     } else {
       position.x = MathUtils.clamp(position.x, -82, 82)
