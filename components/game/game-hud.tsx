@@ -4,6 +4,9 @@ import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject,
 import {
   Activity,
   ArrowRight,
+  Droplets,
+  Smile,
+  Sparkles,
   UserRound,
   Home,
   ShoppingBag,
@@ -385,8 +388,11 @@ export function GameHud({
       <button className="run-button" type="button" onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); onMoveKey('shift', true) }} onPointerUp={() => onMoveKey('shift', false)} onPointerCancel={() => onMoveKey('shift', false)} onLostPointerCapture={() => onMoveKey('shift', false)} aria-label="Run while moving">RUN</button>
 
       <div className="vitals-card" aria-label="Player condition">
-        <div className="vital-row"><Zap aria-hidden="true" /><span>ENERGY</span><div><i style={{ width: `${player.energy}%` }} /></div><b>{player.energy}%</b></div>
-        <div className="vital-row"><Activity aria-hidden="true" /><span>HUNGER</span><div><i style={{ width: `${player.hunger}%` }} /></div><b>{player.hunger}%</b></div>
+        <div className="vital-row"><Zap aria-hidden="true" /><span>ENERGY</span><div><i style={{ width: `${player.energy}%` }} /></div><b>{Math.round(player.energy)}%</b></div>
+        <div className="vital-row"><Activity aria-hidden="true" /><span>HUNGER</span><div><i style={{ width: `${player.hunger}%` }} /></div><b>{Math.round(player.hunger)}%</b></div>
+        <div className="vital-row"><Smile aria-hidden="true" /><span>FUN</span><div><i style={{ width: `${player.fun}%` }} /></div><b>{Math.round(player.fun)}%</b></div>
+        <div className="vital-row"><Sparkles aria-hidden="true" /><span>HYGIENE</span><div><i style={{ width: `${player.hygiene}%` }} /></div><b>{Math.round(player.hygiene)}%</b></div>
+        <div className="vital-row"><Droplets aria-hidden="true" /><span>BLADDER</span><div><i style={{ width: `${player.bladder}%` }} /></div><b>{Math.round(player.bladder)}%</b></div>
       </div>
 
       {toast && <div className="game-toast" role="status" aria-live="polite" key={toast.id}><Check aria-hidden="true" />{toast.text}</div>}
