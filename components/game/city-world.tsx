@@ -1419,7 +1419,6 @@ function PlayerController({
     }
 
     const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
-    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
     const cameraHeight = (inside
       ? (size.height > size.width * 1.15 ? 4.8 : 4.2)
       : (size.height > size.width * 1.15 ? (inVehicle || riding ? 16 : 17) : (inVehicle || riding ? 8.5 : 9.5))) * zoom
@@ -1451,14 +1450,13 @@ function PlayerController({
 
   return (
     <group ref={playerRef} position={[spawnPosition.x, 0, spawnPosition.z]}>
-      {inVehicle ? <ScooterModel /> : <AvatarModel keysRef={keysRef} paused={paused} gender={gender} isAdmin={isAdmin} />}
       {rideVehicle ? (
         <TrafficVehicleModel
           kind={rideVehicle === 'bike' ? 'okada' : rideVehicle === 'danfo' ? 'danfo' : 'car'}
           color={rideVehicle === 'danfo' ? '#e1bd38' : rideVehicle === 'bike' ? '#31464d' : '#ddd7c9'}
           night
         />
-      ) : inVehicle ? <ScooterModel /> : <AvatarModel keysRef={keysRef} paused={paused} gender={gender} />}
+      ) : inVehicle ? <ScooterModel /> : <AvatarModel keysRef={keysRef} paused={paused} gender={gender} isAdmin={isAdmin} />}
     </group>
   )
 }
