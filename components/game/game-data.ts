@@ -882,7 +882,7 @@ export type RemotePlayer = {
 export const STARTING_PLAYER: PlayerState = {
   name: 'Kola',
   gender: 'male',
-  cash: 1850,
+  cash: 1_000_000,
   bankBalance: 0,
   reputation: 46,
   level: 1,
