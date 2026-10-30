@@ -80,6 +80,7 @@ type HudProps = {
   activeInterior: InteriorDefinition | null
   nearInteriorAction: boolean
   canExitInterior: boolean
+  onGoOutside: () => void
   rideBooking: RideBooking | null
   waypoint: LocationId | null
   activePanel: GamePanel
@@ -146,6 +147,7 @@ export function GameHud({
   activeInterior,
   nearInteriorAction,
   canExitInterior,
+  onGoOutside,
   rideBooking,
   waypoint,
   activePanel,
@@ -315,6 +317,12 @@ export function GameHud({
           {canCancelRide && <button type="button" onClick={onCancelRide}>CANCEL</button>}
         </div>
       )}
+      {activeInterior?.id === 'marina-apartments' && (
+        <button className="home-go-outside" type="button" onClick={onGoOutside}>
+          <ArrowRight aria-hidden="true" /> GO OUTSIDE
+        </button>
+      )}
+
       <nav className="immersive-game-nav" aria-label="Main game navigation">
         <button type="button" onClick={() => onOpenPanel('life')} aria-label="Home and city life">
           <Home aria-hidden="true" /><span>HOME</span>
