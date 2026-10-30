@@ -1147,7 +1147,7 @@ export default function GameShell() {
         isAdmin={isAdmin}
         onOpenSettings={() => { keysRef.current.clear(); setSettingsOpen(true) }}
       />
-      {activePanel !== 'none' && (
+      {activePanel !== 'none' && activePanel !== 'admin' && (
         <GamePanels
           panel={activePanel}
           player={player}
