@@ -88,6 +88,9 @@ export function parseGameSavePayload(value: unknown): GameSavePayload | null {
   const reputation = integerInRange(input.reputation, 0, 100_000)
   const energy = integerInRange(input.energy, 0, 100)
   const hunger = integerInRange(input.hunger, 0, 100)
+  const fun = input.fun === undefined ? 76 : integerInRange(input.fun, 0, 100)
+  const hygiene = input.hygiene === undefined ? 88 : integerInRange(input.hygiene, 0, 100)
+  const bladder = input.bladder === undefined ? 18 : integerInRange(input.bladder, 0, 100)
   const educationCredits = input.educationCredits === undefined ? 0 : integerInRange(input.educationCredits, 0, 100_000)
   const completedRuns = integerInRange(input.completedRuns, 0, 100_000)
   const completedShifts = input.completedShifts === undefined ? 0 : integerInRange(input.completedShifts, 0, 100_000)
@@ -123,6 +126,9 @@ export function parseGameSavePayload(value: unknown): GameSavePayload | null {
     reputation === null ||
     energy === null ||
     hunger === null ||
+    fun === null ||
+    hygiene === null ||
+    bladder === null ||
     educationCredits === null ||
     gender === null ||
     completedRuns === null ||
@@ -156,6 +162,9 @@ export function parseGameSavePayload(value: unknown): GameSavePayload | null {
     level: 1 + Math.floor(reputation / 100),
     energy,
     hunger,
+    fun,
+    hygiene,
+    bladder,
     educationCredits,
     stage,
     inventory,
