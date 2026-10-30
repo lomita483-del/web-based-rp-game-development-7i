@@ -186,6 +186,8 @@ function createTrafficFleet(): TrafficVehicleSpec[] {
       }
     }
   }
+  return vehicles
+}
 
 const CITY_TRAFFIC = createTrafficFleet()
 
@@ -1483,7 +1485,6 @@ function PassbyPedestrian({ index }: { index: number }) {
   const direction: 1 | -1 = Math.floor(index / 2) % 2 === 0 ? 1 : -1
   const sidewalkRoad = ROAD_LINES[Math.floor(index / 4) % ROAD_LINES.length]
   const sidewalkWidth = Math.abs(sidewalkRoad) <= 42 ? 7 : 5
-  const startZ = sidewalkRoad + lane * (sidewalkWidth / 2 + 0.62)
   const sidewalkOffset = direction * (sidewalkWidth / 2 + 1.35)
   const track = sidewalkRoad + sidewalkOffset
   const min = axis === 'x' ? -80 : -70
