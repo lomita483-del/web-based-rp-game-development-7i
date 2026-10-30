@@ -1,6 +1,6 @@
 'use client'
 
-import { useTexture } from '@react-three/drei'
+import { Stars, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type MeshStandardMaterial, type PerspectiveCamera, type Texture, Vector3 } from 'three'
@@ -1194,7 +1194,7 @@ function PlayerController({
   spawnPosition, activeInterior, cameraLookRef, autoWalkTarget,
 }: {
   riding: boolean
-  playerPosRef: MutableRefObject<Point>
+  playerPosRef: MutableRefObject<PlayerPosition>
   ridePoseRef: MutableRefObject<RidePose | null>
 } & Pick<CityWorldProps, 'keysRef' | 'joystickRef' | 'isAdmin' | 'adminPowersRef' | 'lookSensitivity' | 'onPlayerPosition' | 'inVehicle' | 'rideVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & {
   cameraLookRef: MutableRefObject<CameraLook>
@@ -1519,12 +1519,6 @@ const StaticWorld = memo(function StaticWorld({
       <Billboards night={night} />
       <TrafficSignals />
       <CitySignBoards night={night} />
-      <TrafficSignals />
-      <TrafficFleet night={night} />
-      {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
-      {Array.from({ length: 24 }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
-      {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
-      <LandmarkMarkers waypoint={waypoint} />
     </>
   )
 })
@@ -1534,7 +1528,7 @@ export function CityWorld(props: CityWorldProps) {
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
   const activePointersRef = useRef(new Map<number, { x: number; y: number }>())
   const pinchDistanceRef = useRef(0)
-  const playerPosRef = useRef<Point>({ x: 0, z: 0 })
+  const playerPosRef = useRef<PlayerPosition>({ x: 0, z: 0 })
   const ridePoseRef = useRef<RidePose | null>(null)
   useEffect(() => { if (!props.ride || props.ride.phase !== 'riding') ridePoseRef.current = null }, [props.ride])
 
