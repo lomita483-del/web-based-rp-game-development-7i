@@ -1085,11 +1085,11 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       const ticks = Math.max(1, Math.min(10, action.ticks ?? 1))
       return {
         ...state,
-        hunger: Math.max(0, state.hunger - 0.075 * ticks),
-        energy: Math.max(0, state.energy - 0.035 * ticks),
-        fun: Math.max(0, state.fun - 0.055 * ticks),
-        hygiene: Math.max(0, state.hygiene - 0.012 * ticks),
-        bladder: Math.min(100, state.bladder + 0.045 * ticks),
+        hunger: Math.max(0, Math.floor(state.hunger - 0.075 * ticks)),
+        energy: Math.max(0, Math.floor(state.energy - 0.035 * ticks)),
+        fun: Math.max(0, Math.floor(state.fun - 0.055 * ticks)),
+        hygiene: Math.max(0, Math.floor(state.hygiene - 0.012 * ticks)),
+        bladder: Math.min(100, Math.floor(state.bladder + 0.045 * ticks)),
       }
     }
     case 'shower':
