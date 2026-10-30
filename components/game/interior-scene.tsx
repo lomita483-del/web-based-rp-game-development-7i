@@ -470,7 +470,7 @@ function StarterApartmentLayout() {
           <mesh position={[0, 1.1, 0]}><cylinderGeometry args={[0.18, 0.25, 2.2, 8]} /><meshStandardMaterial color="#65452e" /></mesh>
           <mesh position={[0, 2.5, 0]}><sphereGeometry args={[1.2, 12, 10]} /><meshStandardMaterial color="#315b3e" roughness={1} /></mesh>
         </group>
-      ))}
+      )))}
       <FloorText text="LIVING ROOM" color="#f5f0e3" position={[-4.1, 0.11, -6.9]} width={3.2} height={0.65} />
       <FloorText text="BEDROOM / STUDY" color="#f5f0e3" position={[4.1, 0.11, -6.9]} width={3.5} height={0.65} />
       <FloorText text="KITCHEN" color="#f5f0e3" position={[-4.1, 0.11, 6.9]} width={2.2} height={0.55} />
