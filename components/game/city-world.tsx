@@ -1518,22 +1518,6 @@ const StaticWorld = memo(function StaticWorld({
       <StreetLamps night={night} />
       <Billboards night={night} />
       <TrafficSignals />
-      {Array.from({ length: 30 }, (_, index) => {
-        const road = ROAD_LINES[index % ROAD_LINES.length]
-        const side = index % 2 === 0 ? -1 : 1
-        const roadWidth = Math.abs(road) <= 42 ? 7 : 5
-        const x = -78 + Math.floor(index / ROAD_LINES.length) * 29
-        const z = road + side * (roadWidth / 2 + 2.9)
-        return <StreetTree key={`avenue-tree-${index}`} position={[x, 0, z]} scale={0.7 + (index % 4) * 0.08} />
-      })}
-      {Array.from({ length: 20 }, (_, index) => {
-        const road = ROAD_LINES[index % ROAD_LINES.length]
-        const side = index % 2 === 0 ? -1 : 1
-        const roadWidth = Math.abs(road) <= 42 ? 7 : 5
-        const x = -80 + Math.floor(index / ROAD_LINES.length) * 39
-        const z = road + side * (roadWidth / 2 + 1.0)
-        return <StreetLamp key={`avenue-lamp-${index}`} position={[x, 0, z]} lit={night} />
-      })}
       <CitySignBoards night={night} />
       <TrafficSignals />
       <TrafficFleet night={night} />
