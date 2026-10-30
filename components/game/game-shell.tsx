@@ -664,7 +664,6 @@ export default function GameShell() {
       notify('Boarded. Sit back and enjoy the ride.')
       return
     }
-    if (nearbyCharacter) {
     if (nearbyCharacter && !prioritizeEntry) {
       keysRef.current.clear()
       setActiveCharacter(nearbyCharacter.id)
@@ -684,7 +683,7 @@ export default function GameShell() {
       return
     }
     if (nearbyLocation) handleLocationAction(nearbyLocation.id)
-  }, [activeCharacter, enterInterior, exitInterior, handleLocationAction, insideInterior, nearInteriorAction, nearInteriorExit, nearWaitingRide, nearbyCharacter, nearbyEntrance, nearbyLocation, notify, serviceOpen])
+  }, [activeCharacter, activeInterior, canExitInterior, handleLocationAction, nearInteriorAction, nearWaitingRide, nearbyCharacter, nearbyEntry, nearbyLocation, notify, player.returnPosition, playerPosition, prioritizeEntry, runWorldTransition])
 
   const handleCharacterAction = useCallback(() => {
     if (!activeCharacter) return
@@ -1147,7 +1146,7 @@ export default function GameShell() {
         isAdmin={isAdmin}
         onOpenSettings={() => { keysRef.current.clear(); setSettingsOpen(true) }}
       />
-      {activePanel !== 'none' && (
+      {activePanel !== 'none' && activePanel !== 'admin' && (
         <GamePanels
           panel={activePanel}
           player={player}

@@ -807,7 +807,7 @@ export const CITY_HOMES = [
 export type HomeId = (typeof CITY_HOMES)[number]['id']
 
 export type MissionStage = 'meet-bisi' | 'find-tunde' | 'delivery' | 'free-roam'
-export type GamePanel = 'none' | 'map' | 'jobs' | 'life' | 'inventory' | 'online' | 'admin'
+export type GamePanel = 'none' | 'map' | 'jobs' | 'life' | 'inventory' | 'online' | 'phone' | 'admin'
 export type Gender = 'male' | 'female'
 export type RideVehicleType = 'cab' | 'bike' | 'danfo' | 'driver'
 export type RideBookingStatus = 'dispatching' | 'approaching' | 'boarding' | 'en-route' | 'arrived'
