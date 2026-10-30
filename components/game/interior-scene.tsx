@@ -9,6 +9,7 @@ import { HumanoidModel, type IdleStyle } from './humanoid'
 type InteriorSceneProps = {
   interior: InteriorDefinition
   onApartmentMove?: (x: number, z: number) => void
+  onApartmentAction?: (action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => void
   apartmentTargetRef?: MutableRefObject<{ x: number; z: number } | null>
 }
 
@@ -395,7 +396,7 @@ function ApartmentTargetMarker({ targetRef }: { targetRef: MutableRefObject<{ x:
   )
 }
 
-function StarterApartmentLayout({ onMove, targetRef }: { onMove?: (x: number, z: number) => void; targetRef?: MutableRefObject<{ x: number; z: number } | null> }) {
+function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: number, z: number) => void; onAction?: (action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => void; targetRef?: MutableRefObject<{ x: number; z: number } | null> }) {
   const wall = '#16745f'
   const trim = '#d5c7a5'
   const wood = '#80583b'
@@ -419,6 +420,24 @@ function StarterApartmentLayout({ onMove, targetRef }: { onMove?: (x: number, z:
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
       {targetRef && <ApartmentTargetMarker targetRef={targetRef} />}
+      {([
+        { action: 'tv' as const, label: 'WATCH TV', x: -4.3, z: -7.1 },
+        { action: 'rest' as const, label: 'SLEEP / REST', x: 4.5, z: -3.7 },
+        { action: 'study' as const, label: 'USE LAPTOP', x: 1.4, z: -6.7 },
+        { action: 'food' as const, label: 'GET FOOD', x: -6.8, z: 4.1 },
+        { action: 'cook' as const, label: 'COOK', x: -4.1, z: 6.2 },
+        { action: 'shower' as const, label: 'SHOWER', x: 6.4, z: 3.1 },
+        { action: 'toilet' as const, label: 'USE TOILET', x: 4.1, z: 6.2 },
+      ]).map((spot) => (
+        <mesh key={spot.action} position={[spot.x, 0.2, spot.z]} onPointerDown={(event) => {
+          event.stopPropagation()
+          onMove?.(spot.x, spot.z)
+          onAction?.(spot.action)
+        }}>
+          <cylinderGeometry args={[0.72, 0.72, 0.08, 20]} />
+          <meshBasicMaterial color="#72d6a0" transparent opacity={0.001} depthWrite={false} />
+        </mesh>
+      ))}
       {/* Private circular garden plot and tiled approach */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.55, 0]} receiveShadow>
         <circleGeometry args={[19, 64]} /><meshStandardMaterial color="#315b3d" roughness={1} />
@@ -699,8 +718,8 @@ function InteriorPeople({ id, kind }: { id: string; kind: InteriorKind }) {
   )
 }
 
-export function InteriorScene({ interior, onApartmentMove, apartmentTargetRef }: InteriorSceneProps) {
-  if (interior.id === 'marina-apartments') return <StarterApartmentLayout onMove={onApartmentMove} targetRef={apartmentTargetRef} />
+export function InteriorScene({ interior, onApartmentMove, onApartmentAction, apartmentTargetRef }: InteriorSceneProps) {
+  if (interior.id === 'marina-apartments') return <StarterApartmentLayout onMove={onApartmentMove} onAction={onApartmentAction} targetRef={apartmentTargetRef} />
   const palette = ROOM_PALETTES[interior.kind]
   const seed = hashString(interior.id)
   const floorTexture = useFloorTexture(palette.floor, interior.kind, seed)
