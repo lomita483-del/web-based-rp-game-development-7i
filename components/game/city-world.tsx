@@ -1199,6 +1199,7 @@ function PlayerController({
 } & Pick<CityWorldProps, 'keysRef' | 'joystickRef' | 'isAdmin' | 'adminPowersRef' | 'lookSensitivity' | 'onPlayerPosition' | 'inVehicle' | 'rideVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & {
   cameraLookRef: MutableRefObject<CameraLook>
   autoWalkTarget: LocationId | null
+  apartmentMoveTargetRef: MutableRefObject<PlayerPosition | null>
 }) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
@@ -1252,6 +1253,15 @@ function PlayerController({
         forwardZ * inputForward + rightZ * inputRight,
       )
 
+      if (activeInterior?.id === 'marina-apartments' && !useStick && !forwardInput && !rightInput) {
+        const target = apartmentMoveTargetRef.current
+        if (target) {
+          const dx = target.x - position.x
+          const dz = target.z - position.z
+          if (Math.hypot(dx, dz) < 0.38) apartmentMoveTargetRef.current = null
+          else direction.set(dx, 0, dz)
+        }
+      }
       if (direction.lengthSq() < 0.0001 && autoWalkTarget && !inside) {
         const target = getLocationEntrancePosition(autoWalkTarget)
           ?? WORLD_LOCATIONS.find((location) => location.id === autoWalkTarget)
@@ -1545,6 +1555,7 @@ export function CityWorld(props: CityWorldProps) {
   const pinchDistanceRef = useRef(0)
   const playerPosRef = useRef<PlayerPosition>({ x: 0, z: 0 })
   const ridePoseRef = useRef<RidePose | null>(null)
+  const apartmentMoveTargetRef = useRef<PlayerPosition | null>(null)
   useEffect(() => { if (!props.ride || props.ride.phase !== 'riding') ridePoseRef.current = null }, [props.ride])
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -1629,7 +1640,7 @@ export function CityWorld(props: CityWorldProps) {
       >
         {props.activeInterior ? (
           <>
-            <InteriorScene interior={props.activeInterior} />
+            <InteriorScene interior={props.activeInterior} onApartmentMove={(x, z) => { apartmentMoveTargetRef.current = { x, z } }} apartmentTargetRef={apartmentMoveTargetRef} />
             {props.remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
           </>
         ) : (
@@ -1655,6 +1666,7 @@ export function CityWorld(props: CityWorldProps) {
           activeInterior={props.activeInterior}
           cameraLookRef={cameraLookRef}
           autoWalkTarget={props.autoWalkTarget}
+          apartmentMoveTargetRef={apartmentMoveTargetRef}
         />
       </Canvas>
     </div>
