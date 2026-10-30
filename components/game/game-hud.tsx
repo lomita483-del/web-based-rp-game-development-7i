@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject,
 import {
   Activity,
   ArrowRight,
+  UserRound,
   Home,
   ShoppingBag,
   Smartphone,
@@ -165,6 +166,7 @@ export function GameHud({
   const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const rideDestination = rideBooking && WORLD_LOCATIONS.find((location) => location.id === rideBooking.destinationId)
   const RideIcon = rideBooking?.mode === 'bike' ? Bike : rideBooking?.mode === 'danfo' ? BusFront : CarFront
+  const knobRef = useRef<HTMLSpanElement>(null)
   const interactionLabel = activeInterior
     ? nearInteriorAction ? activeInterior.actionLabel : canExitInterior ? `Exit ${activeInterior.name}` : `Inside ${activeInterior.name}`
     : nearbyInterior && prioritizeInterior
@@ -321,7 +323,7 @@ export function GameHud({
         <button type="button" onClick={() => onOpenPanel('map')} aria-label="Open city map" aria-pressed={activePanel === 'map'}>
           <Map aria-hidden="true" /><span>MAP</span>
         </button>
-        <button type="button" onClick={() => onOpenPanel('online')} aria-label="Open phone and social">
+        <button type="button" onClick={() => onOpenPanel('phone')} aria-label="Open smartphone">
           <Smartphone aria-hidden="true" /><span>PHONE</span>
         </button>
       </nav>
@@ -456,6 +458,7 @@ const PANEL_META: Record<Exclude<GamePanel, 'none'>, { title: string; eyebrow: s
   life: { title: 'City life', eyebrow: 'CITIZEN / COMMUNITY / HOME', icon: Landmark },
   inventory: { title: 'Your bag', eyebrow: 'PLAYER / LOADOUT', icon: Package },
   online: { title: 'Shared world', eyebrow: 'LIVE ROOM / EKO MAINLAND', icon: UsersRound },
+  phone: { title: 'VibeOS', eyebrow: 'PERSONAL SMARTPHONE', icon: Smartphone },
 }
 
 export function GamePanels({
@@ -524,6 +527,7 @@ export function GamePanels({
           {panel === 'jobs' && <JobsPanel player={player} playerPosition={playerPosition} onAcceptDelivery={onAcceptDelivery} onSetWaypoint={onSetWaypoint} onApplyJob={onApplyJob} onCompleteShift={onCompleteShift} />}
           {panel === 'life' && <LifePanel player={player} onJoinFaction={onJoinFaction} onLeaseHome={onLeaseHome} onSetWaypoint={onSetWaypoint} onRegisterVoter={onRegisterVoter} onResolveCourt={onResolveCourt} />}
           {panel === 'inventory' && <InventoryPanel player={player} onBuyFood={onBuyFood} onEatFood={onEatFood} />}
+          {panel === 'phone' && <PhoneHome player={player} onOpenApp={onChangePanel} />}
           {panel === 'online' && (
             <OnlinePanel
               user={user}
@@ -537,6 +541,43 @@ export function GamePanels({
           )}
         </div>
       </section>
+    </div>
+  )
+}
+
+
+function PhoneHome({
+  player,
+  onOpenApp,
+}: {
+  player: PlayerState
+  onOpenApp: (panel: Exclude<GamePanel, 'none'>) => void
+}) {
+  const apps = [
+    { label: 'PROFILE', detail: 'Your life and home', icon: UserRound, panel: 'life' as const, tone: 'gold' },
+    { label: 'WORK', detail: 'Jobs and shifts', icon: BriefcaseBusiness, panel: 'jobs' as const, tone: 'blue' },
+    { label: 'CITY MAP', detail: 'Places and routes', icon: Map, panel: 'map' as const, tone: 'green' },
+    { label: 'BAG', detail: 'Items and purchases', icon: Package, panel: 'inventory' as const, tone: 'amber' },
+    { label: 'SOCIAL', detail: 'Players and account', icon: UsersRound, panel: 'online' as const, tone: 'violet' },
+  ]
+  return (
+    <div className="phone-home">
+      <div className="phone-status"><span>VIBEOS</span><span>● LTE · {formatGameTime(9 * 60 + 37)}</span></div>
+      <div className="phone-greeting">
+        <span>WELCOME BACK</span>
+        <strong>{player.name}</strong>
+        <small>Level {player.level} · {formatNaira(player.cash)} cash</small>
+      </div>
+      <div className="phone-app-grid">
+        {apps.map(({ label, detail, icon: AppIcon, panel: targetPanel, tone }) => (
+          <button className={`phone-app phone-app-${tone}`} type="button" key={label} onClick={() => onOpenApp(targetPanel)}>
+            <span className="phone-app-icon"><AppIcon aria-hidden="true" /></span>
+            <strong>{label}</strong>
+            <small>{detail}</small>
+          </button>
+        ))}
+      </div>
+      <div className="phone-home-footer"><span>ALWAYS ROLEPLAY</span><span>YOUR CITY. YOUR LIFE.</span></div>
     </div>
   )
 }
