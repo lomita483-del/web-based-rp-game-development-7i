@@ -1448,6 +1448,8 @@ function CityScene({ waypoint, remotePlayers, gameMinutes, quality }: Pick<CityW
   const hour = (((gameMinutes / 60) % 24) + 24) % 24
   // Only flips twice a day; everything that depends on it is cheap (material colours, a few instances).
   const night = lightsOn(hour)
+  const dawn = hour >= 5.3 && hour < 7.2
+  const dusk = hour >= 17.5 && hour < 19.6
   const settings = QUALITY_SETTINGS[quality]
   const concreteSource = useTexture('/textures/lagos-concrete.png')
   const asphaltSource = useTexture('/textures/eko-asphalt.png')
@@ -1459,7 +1461,7 @@ function CityScene({ waypoint, remotePlayers, gameMinutes, quality }: Pick<CityW
   return (
     <>
       <Atmosphere gameMinutes={gameMinutes} />
-      <StaticWorld night={night} facadeTexture={facadeTexture} pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
+      <StaticWorld night={night} dawn={dawn} dusk={dusk} facadeTexture={facadeTexture} pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
       <TrafficLayer night={night} density={settings.traffic} />
       {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
       {Array.from({ length: settings.pedestrians }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
@@ -1472,12 +1474,16 @@ function CityScene({ waypoint, remotePlayers, gameMinutes, quality }: Pick<CityW
 /** Everything that never moves. Memoised so clock ticks and player movement do not re-render it. */
 const StaticWorld = memo(function StaticWorld({
   night,
+  dawn,
+  dusk,
   facadeTexture,
   pavementTexture,
   horizontalRoadTexture,
   verticalRoadTexture,
 }: {
   night: boolean
+  dawn: boolean
+  dusk: boolean
   facadeTexture: Texture
   pavementTexture: Texture
   horizontalRoadTexture: Texture
