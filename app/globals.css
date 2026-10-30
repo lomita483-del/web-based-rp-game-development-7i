@@ -173,7 +173,7 @@ button:focus-visible {
   to { opacity: 1; transform: translateY(-0.25rem); }
 }
 
-.world-vignette {
+  .world-vignette {
   position: absolute;
   z-index: 1;
   inset: 0;
@@ -181,6 +181,20 @@ button:focus-visible {
   background:
     linear-gradient(180deg, rgb(6 15 12 / 38%) 0%, transparent 23%, transparent 65%, rgb(6 13 11 / 44%) 100%),
     radial-gradient(ellipse at 50% 46%, transparent 38%, rgb(3 10 8 / 38%) 100%);
+  }
+
+.world-transition {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #182226 0%, #0d1216 72%);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.world-transition.is-active {
+  opacity: 0.96;
 }
 
 .game-hud {
@@ -201,6 +215,7 @@ button:focus-visible {
 .keyboard-hints,
 .touch-controls,
 .vitals-card,
+.ride-status-card,
 .game-toast {
   pointer-events: auto;
 }
@@ -966,6 +981,70 @@ button:focus-visible {
   height: 1.1rem;
 }
 
+.ride-status-card {
+  position: absolute;
+  top: 6.25rem;
+  left: 50%;
+  display: flex;
+  width: min(21rem, calc(100vw - 2rem));
+  align-items: center;
+  gap: 0.62rem;
+  padding: 0.62rem 0.78rem;
+  transform: translateX(-50%);
+  border: 1px solid rgb(223 180 109 / 26%);
+  border-radius: 0.9rem;
+  background: linear-gradient(120deg, rgb(13 24 27 / 94%), rgb(18 31 29 / 91%));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 30%);
+  backdrop-filter: blur(14px);
+}
+
+.ride-status-icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(223 180 109 / 24%);
+  border-radius: 0.6rem;
+  background: rgb(223 180 109 / 9%);
+  color: var(--game-gold);
+}
+
+.ride-status-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.ride-status-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 0.16rem;
+}
+
+.ride-status-copy small {
+  color: #aab9ad;
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.ride-status-copy strong {
+  overflow: hidden;
+  color: #f0eadb;
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ride-status-fare {
+  flex: 0 0 auto;
+  color: #dfbd79;
+  font-size: 0.63rem;
+  font-weight: 750;
+}
+
 .game-toast {
   position: absolute;
   top: 6.1rem;
@@ -1144,6 +1223,344 @@ button:focus-visible {
   padding: 1.05rem 1.15rem 1.5rem;
   scrollbar-color: rgb(223 180 109 / 25%) transparent;
   scrollbar-width: thin;
+}
+
+.service-sheet {
+  width: min(34rem, 100vw);
+}
+
+.service-sheet-content {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.8rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem 1.15rem 1.4rem;
+  scrollbar-color: rgb(223 180 109 / 25%) transparent;
+  scrollbar-width: thin;
+}
+
+.service-sheet-overview {
+  display: grid;
+  gap: 0.32rem;
+  padding: 0.82rem 0.95rem;
+  border: 1px solid rgb(223 180 109 / 17%);
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, rgb(223 180 109 / 8%), rgb(255 255 255 / 2%));
+}
+
+.service-sheet-overview > span,
+.service-sheet-section-copy > span,
+.service-sheet-stat-copy > small,
+.service-sheet-progress-copy > span {
+  color: #9ead8e;
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.service-sheet-overview p,
+.service-sheet-description,
+.service-sheet-note {
+  margin: 0;
+  color: #b9c2ae;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.service-sheet-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.52rem;
+}
+
+.service-sheet-stat {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.68rem;
+  border: 1px solid rgb(235 228 211 / 10%);
+  border-radius: 0.78rem;
+  background: rgb(255 255 255 / 2%);
+}
+
+.service-sheet-stat-icon,
+.service-sheet-section-icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(223 180 109 / 17%);
+  border-radius: 0.68rem;
+  background: rgb(223 180 109 / 7%);
+  color: var(--game-lime);
+}
+
+.service-sheet-stat-icon svg,
+.service-sheet-section-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.service-sheet-stat-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.16rem;
+}
+
+.service-sheet-stat-copy small {
+  color: #93a18e;
+  font-size: 0.53rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.service-sheet-stat-copy strong {
+  overflow-wrap: anywhere;
+  color: #e4e8d8;
+  font-size: 0.7rem;
+}
+
+.service-sheet-section {
+  display: grid;
+  gap: 0.68rem;
+  padding: 0.9rem;
+  border: 1px solid rgb(235 228 211 / 11%);
+  border-radius: 0.92rem;
+  background: rgb(255 255 255 / 2%);
+}
+
+.service-sheet-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.62rem;
+}
+
+.service-sheet-section-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+  padding-top: 0.08rem;
+}
+
+.service-sheet-section-copy h3 {
+  margin: 0;
+  color: #eef0df;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.service-sheet-section-copy p {
+  margin: 0.15rem 0 0;
+  color: #aab4a3;
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
+.service-sheet-field {
+  display: grid;
+  gap: 0.34rem;
+}
+
+.service-sheet-field label {
+  color: #9ead8e;
+  font-size: 0.53rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.service-sheet-field input {
+  width: 100%;
+  min-height: 2.7rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgb(235 228 211 / 16%);
+  border-radius: 0.68rem;
+  outline: none;
+  background: rgb(4 10 8 / 36%);
+  color: #f0f0df;
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.service-sheet-field input:focus-visible {
+  border-color: rgb(223 180 109 / 66%);
+  box-shadow: 0 0 0 3px rgb(223 180 109 / 16%);
+}
+
+.service-sheet-field input[aria-invalid='true'] {
+  border-color: #d87d69;
+}
+
+.service-sheet-field-help {
+  margin: 0;
+  color: #96a291;
+  font-size: 0.57rem;
+  line-height: 1.45;
+}
+
+.service-sheet-error {
+  color: #e1a08f;
+  font-size: 0.57rem;
+  line-height: 1.45;
+}
+
+.service-sheet-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.7rem, 1fr));
+  gap: 0.55rem;
+}
+
+.service-sheet-actions .primary-action,
+.service-sheet-actions .secondary-action {
+  min-width: 0;
+  min-height: 2.65rem;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.62rem;
+  font-size: 0.57rem;
+  text-align: center;
+}
+
+.service-sheet-actions button:disabled {
+  border-color: rgb(235 228 211 / 10%);
+  background: #354138;
+  color: #a5ae9d;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.service-sheet-job-reward {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.service-sheet-job-reward span {
+  padding: 0.32rem 0.48rem;
+  border: 1px solid rgb(223 180 109 / 16%);
+  border-radius: 999px;
+  background: rgb(223 180 109 / 6%);
+  color: #d6c58f;
+  font-size: 0.56rem;
+  font-weight: 750;
+}
+
+.service-sheet-note {
+  padding: 0.58rem 0.68rem;
+  border-left: 2px solid rgb(223 180 109 / 48%);
+  background: rgb(223 180 109 / 5%);
+}
+
+.service-sheet-progress-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.58rem 0.7rem;
+  border: 1px solid rgb(235 228 211 / 9%);
+  border-radius: 0.65rem;
+  background: rgb(255 255 255 / 2%);
+}
+
+.service-sheet-progress-copy strong {
+  color: #d6c58f;
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.service-sheet-progress-track {
+  height: 0.34rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 8%);
+}
+
+.service-sheet-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #d5b76c, #9ead8e);
+  transition: width 180ms ease;
+}
+
+.service-sheet-task-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-sheet-task {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.58rem;
+  padding: 0.62rem;
+  border: 1px solid rgb(235 228 211 / 10%);
+  border-radius: 0.7rem;
+  background: rgb(255 255 255 / 2%);
+  color: #dfe4d4;
+  font: inherit;
+  font-size: 0.63rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.service-sheet-task:hover:not(:disabled),
+.service-sheet-task:focus-visible {
+  border-color: rgb(223 180 109 / 40%);
+  outline: none;
+  background: rgb(223 180 109 / 6%);
+}
+
+.service-sheet-task.is-complete {
+  border-color: rgb(148 184 125 / 25%);
+  background: rgb(148 184 125 / 7%);
+  color: #b6c6a4;
+  cursor: default;
+}
+
+.service-sheet-task-mark {
+  display: grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(223 180 109 / 22%);
+  border-radius: 0.52rem;
+  color: #d6c58f;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.service-sheet-task-mark svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.service-sheet-exit-note {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.1rem 0.2rem;
+  color: #8f9a89;
+  font-size: 0.56rem;
+}
+
+.service-sheet-exit-note svg {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: 0 0 auto;
+  color: #c7aa68;
 }
 
 .full-map {
@@ -3833,10 +4250,15 @@ button:focus-visible {
 .travel-options-grid button:hover,
 .travel-options-grid button:focus-visible { border-color: #d6ad69; background: rgb(214 173 105 / 10%); }
 .travel-options-grid button > span { grid-row: span 2; font-size: 1.1rem; }
+.travel-options-grid button .travel-option-icon { display: grid; width: 1.35rem; height: 1.35rem; place-items: center; color: #d6b979; }
+.travel-options-grid button .travel-option-icon svg { width: 1.08rem; height: 1.08rem; }
 .travel-options-grid button > strong { font-size: 0.67rem; }
 .travel-options-grid button > small { color: #9aaba5; font-size: 0.56rem; }
 .location-row.is-selected { border-color: rgb(220 187 126 / 55%); background: rgb(220 187 126 / 8%); }
 @media (max-width: 760px) {
+  .ride-status-card { top: 14rem; width: min(21rem, calc(100vw - 1.2rem)); padding: 0.54rem 0.66rem; }
+  .ride-status-copy small { font-size: 0.48rem; }
+  .ride-status-copy strong { font-size: 0.65rem; }
   .minimap-card { top: 5rem; right: 0.55rem; width: 6.25rem; padding: 0.2rem; }
   .game-panel { width: min(92vw, 32rem); }
   .full-map-building span { max-width: 5.5rem; font-size: 0.36rem; }
