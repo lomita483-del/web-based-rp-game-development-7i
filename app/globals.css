@@ -4885,3 +4885,41 @@ button:focus-visible {
   .interaction-wrap { bottom: 4rem; }
   .vitals-card { bottom: 4.2rem; }
 }
+
+
+/* In-game smartphone launcher: opens over the live world and routes into real game panels. */
+.game-panel:has(.phone-home) {
+  width: min(25rem, calc(100vw - 1.2rem));
+  max-height: min(42rem, calc(100dvh - 1.2rem));
+  margin: auto;
+  border: 1px solid rgb(224 190 126 / 38%);
+  border-radius: 1.65rem;
+  background: linear-gradient(155deg, #15252a, #0a1217 72%);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 58%), inset 0 1px 0 rgb(255 255 255 / 8%);
+}
+.game-panel:has(.phone-home) .panel-header { border-bottom-color: rgb(224 190 126 / 18%); }
+.game-panel:has(.phone-home) .panel-tabs { display: none; }
+.game-panel:has(.phone-home) .panel-scroll { padding: 0.75rem; }
+.phone-home { display: grid; gap: 1rem; padding: 0.3rem 0.25rem 0.55rem; }
+.phone-status { display: flex; justify-content: space-between; color: #a8b7ae; font-size: 0.55rem; font-weight: 800; letter-spacing: 0.13em; }
+.phone-greeting { display: grid; gap: 0.25rem; padding: 1rem; border: 1px solid rgb(224 190 126 / 20%); border-radius: 1rem; background: radial-gradient(circle at 100% 0%, rgb(220 183 119 / 18%), transparent 55%), rgb(255 255 255 / 3%); }
+.phone-greeting > span { color: #d8b878; font-size: 0.55rem; font-weight: 850; letter-spacing: 0.16em; }
+.phone-greeting strong { color: #f5ecd9; font-size: 1.3rem; }
+.phone-greeting small { color: #aebbb1; font-size: 0.68rem; }
+.phone-app-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; }
+.phone-app { display: grid; min-width: 0; justify-items: center; gap: 0.38rem; padding: 0.78rem 0.35rem; border: 1px solid rgb(255 255 255 / 8%); border-radius: 0.9rem; background: rgb(255 255 255 / 4%); color: #f3ead8; cursor: pointer; text-align: center; }
+.phone-app:active { transform: scale(0.97); background: rgb(224 190 126 / 12%); }
+.phone-app-icon { display: grid; width: 2.7rem; height: 2.7rem; place-items: center; border-radius: 0.85rem; background: rgb(224 190 126 / 15%); color: #e5c58d; }
+.phone-app-icon svg { width: 1.3rem; height: 1.3rem; }
+.phone-app strong { font-size: 0.6rem; letter-spacing: 0.08em; }
+.phone-app small { color: #9eada7; font-size: 0.5rem; line-height: 1.25; }
+.phone-app-blue .phone-app-icon { background: rgb(93 151 199 / 17%); color: #9dc8ed; }
+.phone-app-green .phone-app-icon { background: rgb(105 169 119 / 17%); color: #a9d4a6; }
+.phone-app-amber .phone-app-icon { background: rgb(211 151 78 / 17%); color: #e8b77c; }
+.phone-app-violet .phone-app-icon { background: rgb(148 119 194 / 17%); color: #c8b0ed; }
+.phone-home-footer { display: flex; justify-content: space-between; padding: 0.35rem 0.15rem 0; color: #778982; font-size: 0.48rem; font-weight: 800; letter-spacing: 0.12em; }
+@media (max-width: 760px) {
+  .game-panel:has(.phone-home) { inset: auto 0.6rem 0.6rem; width: auto; max-height: min(75dvh, 38rem); border-radius: 1.35rem; }
+  .phone-app-grid { gap: 0.42rem; }
+  .phone-app { padding: 0.65rem 0.25rem; }
+}
