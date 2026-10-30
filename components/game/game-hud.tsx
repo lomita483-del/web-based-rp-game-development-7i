@@ -426,12 +426,12 @@ function releaseMove(
 }
 
 type GamePanelsProps = {
-  panel: Exclude<GamePanel, 'none'>
+  panel: Exclude<GamePanel, 'none' | 'admin'>
   player: PlayerState
   waypoint: LocationId | null
   playerPosition: { x: number; z: number }
   onClose: () => void
-  onChangePanel: (panel: Exclude<GamePanel, 'none'>) => void
+  onChangePanel: (panel: Exclude<GamePanel, 'none' | 'admin'>) => void
   onAcceptDelivery: () => void
   onBuyFood: () => void
   onEatFood: () => void
@@ -452,7 +452,7 @@ type GamePanelsProps = {
   onSignOut: () => Promise<void>
 }
 
-const PANEL_META: Record<Exclude<GamePanel, 'none'>, { title: string; eyebrow: string; icon: LucideIcon }> = {
+const PANEL_META: Record<Exclude<GamePanel, 'none' | 'admin'>, { title: string; eyebrow: string; icon: LucideIcon }> = {
   map: { title: 'City map', eyebrow: 'LAGOS / WAYFINDING', icon: Map },
   jobs: { title: 'Work board', eyebrow: 'CAREERS / AVAILABLE SHIFTS', icon: BriefcaseBusiness },
   life: { title: 'City life', eyebrow: 'CITIZEN / COMMUNITY / HOME', icon: Landmark },
@@ -551,7 +551,7 @@ function PhoneHome({
   onOpenApp,
 }: {
   player: PlayerState
-  onOpenApp: (panel: Exclude<GamePanel, 'none'>) => void
+  onOpenApp: (panel: Exclude<GamePanel, 'none' | 'admin'>) => void
 }) {
   const apps = [
     { label: 'PROFILE', detail: 'Your life and home', icon: UserRound, panel: 'life' as const, tone: 'gold' },
@@ -562,7 +562,7 @@ function PhoneHome({
   ]
   return (
     <div className="phone-home">
-      <div className="phone-status"><span>VIBEOS</span><span>● LTE · {formatGameTime(9 * 60 + 37)}</span></div>
+      <div className="phone-status"><span>VIBEOS</span><span>● CITY NETWORK · ONLINE</span></div>
       <div className="phone-greeting">
         <span>WELCOME BACK</span>
         <strong>{player.name}</strong>
