@@ -1,6 +1,6 @@
 // Street furniture layout computed from the real road grid, so trees, lamps, signs and traffic
 // lights always stand on the kerb side (sidewalk), never in the carriageway or a junction.
-import { ENTRANCES } from '@/components/game/game-data'
+import { WORLD_LOCATIONS, getLocationEntrancePosition } from '@/components/game/game-data'
 import { FLYOVER, GRID_LINES, ROADS, SIGNAL_LINES, WORLD_BOUNDS, type Axis } from './world'
 import { STOP_LINE_DISTANCE } from './traffic-sim'
 
@@ -54,7 +54,10 @@ function nearJunction(road: (typeof GRID_ROADS)[number], t: number, pad = 0) {
 }
 
 function nearEntrance(x: number, z: number, radius = 3.2) {
-  return ENTRANCES.some((entrance) => Math.hypot(entrance.x - x, entrance.z - z) < radius)
+  return WORLD_LOCATIONS.some((location) => {
+    const entrance = getLocationEntrancePosition(location.id)
+    return entrance !== null && Math.hypot(entrance.x - x, entrance.z - z) < radius
+  })
 }
 
 function inWorld(x: number, z: number) {
