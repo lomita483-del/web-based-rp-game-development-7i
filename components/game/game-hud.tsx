@@ -588,7 +588,28 @@ function MapPanel({
   onTravel,
 }: Pick<GamePanelsProps, 'waypoint' | 'playerPosition' | 'onSetWaypoint' | 'onTravel'> & { playerCash: number; ownsScooter: boolean }) {
   const [selectedLocationId, setSelectedLocationId] = useState<LocationId | null>(waypoint)
+  const [mapView, setMapView] = useState({ x: 0, y: 0, zoom: 1 })
+  const mapDrag = useRef<{ pointerId: number; x: number; y: number; startX: number; startY: number } | null>(null)
   useEffect(() => { if (waypoint) setSelectedLocationId(waypoint) }, [waypoint])
+  const beginMapPan = (event: PointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest('button')) return
+    mapDrag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, startX: mapView.x, startY: mapView.y }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  const moveMapPan = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = mapDrag.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    setMapView(view => ({ ...view, x: Math.max(-220, Math.min(220, drag.startX + event.clientX - drag.x)), y: Math.max(-180, Math.min(180, drag.startY + event.clientY - drag.y)) }))
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  const endMapPan = (event: PointerEvent<HTMLDivElement>) => {
+    if (mapDrag.current?.pointerId !== event.pointerId) return
+    mapDrag.current = null
+    event.stopPropagation()
+  }
   const selectedLocation = WORLD_LOCATIONS.find((location) => location.id === selectedLocationId) ?? null
   const target = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const playerPoint = mapCoordinates(playerPosition)
@@ -599,7 +620,8 @@ function MapPanel({
   return (
     <div className="map-panel-content">
       <div className="map-world-summary"><span>METROPOLITAN DISTRICT</span><strong>{WORLD_LOCATIONS.length} places · island, mainland & beyond</strong></div>
-      <div className="full-map" aria-label="Lagos metropolitan district map">
+      <div className="full-map" aria-label="Lagos metropolitan district map" onPointerDown={beginMapPan} onPointerMove={moveMapPan} onPointerUp={endMapPan} onPointerCancel={endMapPan} onWheel={(event) => { event.stopPropagation(); setMapView(view => ({ ...view, zoom: Math.max(0.85, Math.min(1.8, view.zoom + (event.deltaY < 0 ? 0.08 : -0.08))) })) }}>
+        <div className="full-map-layer" style={{ transform: `translate(${mapView.x}px, ${mapView.y}px) scale(${mapView.zoom})` }}>
         <span className="full-map-water" aria-hidden="true" />
         {streets.map((street) => (
           <span className="full-map-road full-map-road-horizontal" key={`h-${street}`} style={{ top: `${worldToMapPercent({ x: 0, z: street }).y}%` }} />
@@ -636,6 +658,7 @@ function MapPanel({
         <div className="map-label map-label-ikeja">IKEJA</div>
         <div className="map-label map-label-mainland">MAINLAND</div>
         <div className="map-label map-label-lagoon">LAGOS LAGOON</div>
+        </div>
       </div>
       <div className="map-section-heading">
         <div><span>YOUR CITY</span><small>Tap a place to set a route · {target ? `Heading to ${target.name}` : 'Free roam'}</small></div>
