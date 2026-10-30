@@ -1174,6 +1174,7 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
         nearInteriorAction={nearInteriorAction}
         canExitInterior={canExitInterior}
         onGoOutside={handleGoOutside}
+        onApartmentAction={handleApartmentAction}
         rideBooking={rideBooking}
         waypoint={waypoint}
         activePanel={activePanel}
