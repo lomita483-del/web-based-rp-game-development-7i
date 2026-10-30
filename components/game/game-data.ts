@@ -1028,7 +1028,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       }
     }
     case 'exit-interior':
-      return state.currentInteriorId ? { ...state, currentInteriorId: null, returnPosition: null } : state
+      return state.currentInteriorId ? { ...state, currentInteriorId: null } : state
     case 'meet-bisi': {
       if (state.stage !== 'meet-bisi') return state
       const reputation = state.reputation + 12
