@@ -1289,27 +1289,18 @@ function collidesWithBuilding(x: number, z: number, radius: number) {
 }
 
 function PlayerController({
-  keysRef,
-  joystickRef,
-  riding,
-  playerPosRef,
-  ridePoseRef,
-  isAdmin,
-  adminPowersRef,
-  lookSensitivity,
-  onPlayerPosition,
-  inVehicle,
-  rideVehicle,
-  gender,
-  paused,
-  spawnPosition,
-  activeInterior,
-  cameraLookRef,
-  autoWalkTarget,
-  onAutoWalkEnd,
-}: { riding: boolean; playerPosRef: MutableRefObject<Point>; ridePoseRef: MutableRefObject<RidePose | null> } & Pick<CityWorldProps, 'keysRef' | 'joystickRef' | 'isAdmin' | 'adminPowersRef' | 'lookSensitivity' | 'onPlayerPosition' | 'inVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior' | 'onAutoWalkEnd'> & { cameraLookRef: MutableRefObject<CameraLook>; autoWalkTarget: LocationId | null }) {
-
-}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'rideVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & { cameraLookRef: MutableRefObject<CameraLook>; autoWalkTarget: LocationId | null }) {
+  keysRef, joystickRef, riding, playerPosRef, ridePoseRef, isAdmin, adminPowersRef,
+  lookSensitivity, onPlayerPosition, inVehicle, rideVehicle, gender, paused,
+  spawnPosition, activeInterior, cameraLookRef, autoWalkTarget, onAutoWalkEnd,
+}: {
+  riding: boolean
+  playerPosRef: MutableRefObject<Point>
+  ridePoseRef: MutableRefObject<RidePose | null>
+} & Pick<CityWorldProps, 'keysRef' | 'joystickRef' | 'isAdmin' | 'adminPowersRef' | 'lookSensitivity' | 'onPlayerPosition' | 'inVehicle' | 'rideVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & {
+  cameraLookRef: MutableRefObject<CameraLook>
+  autoWalkTarget: LocationId | null
+  onAutoWalkEnd: () => void
+}) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
   const cameraTarget = useRef(new Vector3())
@@ -1335,108 +1326,67 @@ function PlayerController({
     const direction = movement.current.set(0, 0, 0)
 
     if (riding) {
-      // Seated in a ride: the vehicle drives, the passenger follows its pose.
       const pose = ridePoseRef.current
-      if (pose) { position.x = pose.x; position.z = pose.z; playerRef.current.rotation.y = pose.heading }
-    } else if (!paused) {
-      if (keys.has('w') || keys.has('arrowup')) direction.z -= 1
-      if (keys.has('s') || keys.has('arrowdown')) direction.z += 1
-      if (keys.has('a') || keys.has('arrowleft')) direction.x -= 1
-      if (keys.has('d') || keys.has('arrowright')) direction.x += 1
+      if (pose) {
+        position.x = pose.x
+        position.z = pose.z
+        playerRef.current.rotation.y = pose.heading
+      }
+    } else if (!paused && !rideVehicle) {
+      const keys = keysRef.current
+      const forwardInput = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'))
+      const rightInput = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'))
       const stick = joystickRef.current
       const stickMagnitude = Math.min(1, Math.hypot(stick.x, stick.y))
-      let analog = 1
-      if (direction.lengthSq() === 0 && stickMagnitude > 0.14) {
-        direction.set(stick.x, 0, stick.y)
-        analog = 0.35 + 0.65 * stickMagnitude
-      }
-      if (direction.lengthSq() > 0) {
-        // Input is relative to the camera: pushing up always walks away from the viewer.
-        const lookYaw = cameraLookRef.current.yaw
-        const sinY = Math.sin(lookYaw)
-        const cosY = Math.cos(lookYaw)
-        const ix = direction.x
-        const iz = direction.z
-        direction.set(ix * cosY + iz * sinY, 0, -ix * sinY + iz * cosY)
-      }
-      if (direction.lengthSq() > 0) {
-        // The player took over: drop the automatic route so it is re-planned if they set one again.
-        if (autoWalkTarget && !inside) onAutoWalkEndRef.current()
-        routeRef.current.key = null
-      } else if (autoWalkTarget && !inside) {
-        if (routeRef.current.key !== autoWalkTarget) {
-          const destination = getLocationEntrancePosition(autoWalkTarget) ?? WORLD_LOCATIONS.find((location) => location.id === autoWalkTarget)
-          routeRef.current = {
-            key: autoWalkTarget,
-            points: destination ? planRoute({ x: position.x, z: position.z }, { x: destination.x, z: destination.z }) : [],
-          }
-        }
-        const points = routeRef.current.points
-        while (points.length > 0 && Math.hypot(points[0].x - position.x, points[0].z - position.z) < 0.7) points.shift()
-        if (points.length > 0) direction.set(points[0].x - position.x, 0, points[0].z - position.z)
-        else {
-          routeRef.current.key = null
-          onAutoWalkEndRef.current()
-    if (!paused && !rideVehicle) {
-      // Convert input from camera-relative controls into world-space movement.
-      // At yaw 0 the camera sits behind the avatar and looks toward -Z.
-      const forwardInput = (keys.has('w') || keys.has('arrowup') ? 1 : 0)
-        - (keys.has('s') || keys.has('arrowdown') ? 1 : 0)
-      const rightInput = (keys.has('d') || keys.has('arrowright') ? 1 : 0)
-        - (keys.has('a') || keys.has('arrowleft') ? 1 : 0)
-      const cameraYaw = cameraLookRef.current.yaw
-      const forwardX = -Math.sin(cameraYaw)
-      const forwardZ = -Math.cos(cameraYaw)
-      const rightX = Math.cos(cameraYaw)
-      const rightZ = -Math.sin(cameraYaw)
+      const useStick = stickMagnitude > 0.12
+      const inputForward = useStick ? -stick.y : forwardInput
+      const inputRight = useStick ? stick.x : rightInput
+      const yaw = cameraLookRef.current.yaw
+      const forwardX = -Math.sin(yaw)
+      const forwardZ = -Math.cos(yaw)
+      const rightX = Math.cos(yaw)
+      const rightZ = -Math.sin(yaw)
 
-      if (forwardInput !== 0 || rightInput !== 0) {
-        direction.set(
-          forwardX * forwardInput + rightX * rightInput,
-          0,
-          forwardZ * forwardInput + rightZ * rightInput,
-        )
-      }
-      if (direction.lengthSq() === 0 && autoWalkTarget) {
-        const location = WORLD_LOCATIONS.find((entry) => entry.id === autoWalkTarget)
-        const entrance = location && getLocationEntrancePosition(location.id)
-        const destination = entrance ?? location
-        if (destination) {
-          const dx = destination.x - position.x
-          const dz = destination.z - position.z
-          // Follow a street-grid route in orthogonal legs instead of cutting diagonally across blocks.
-          if (Math.abs(dx) > 2.1) direction.set(dx, 0, 0)
-          else if (Math.abs(dz) > 2.1) direction.set(0, 0, dz)
-        }
+      direction.set(
+        forwardX * inputForward + rightX * inputRight,
+        0,
+        forwardZ * inputForward + rightZ * inputRight,
+      )
+
+      if (direction.lengthSq() < 0.0001 && autoWalkTarget && !inside) {
+        const target = getLocationEntrancePosition(autoWalkTarget)
+          ?? WORLD_LOCATIONS.find((location) => location.id === autoWalkTarget)
+        if (target) direction.set(target.x - position.x, 0, target.z - position.z)
       }
 
-      if (direction.lengthSq() > 0) {
+      if (direction.lengthSq() > 0.0001) {
         direction.normalize()
+        if (autoWalkTarget && !inside && (useStick || forwardInput !== 0 || rightInput !== 0)) onAutoWalkEnd()
         const running = !inVehicle && (keys.has('shift') || keys.has('shiftleft') || keys.has('shiftright'))
         const powers = isAdmin ? adminPowersRef.current : null
-        const speed = (inVehicle ? 17 : running ? 11.5 : 6.2) * analog * (powers ? powers.speed : 1)
+        const analog = useStick ? Math.max(0.35, stickMagnitude) : 1
+        const speed = (inVehicle ? 17 : running ? 11.5 : 6.2) * analog * (powers?.speed ?? 1)
         const radius = inVehicle ? 0.75 : 0.42
-        const nextX = position.x + direction.x * speed * step
-        const nextZ = position.z + direction.z * speed * step
+        const previousX = position.x
+        const previousZ = position.z
+        const nextX = previousX + direction.x * speed * step
+        const nextZ = previousZ + direction.z * speed * step
+        const ghost = Boolean(powers?.noclip || powers?.fly)
 
-        // Resolve axes separately so a blocked axis does not prevent sliding along a wall.
         if (inside) {
           position.x = MathUtils.clamp(nextX, -6.7, 6.7)
           position.z = MathUtils.clamp(nextZ, -6.7, 6.7)
         } else {
-          const ghost = powers?.noclip || powers?.fly
-          if (ghost || !collidesWithBuilding(nextX, position.z, radius)) position.x = nextX
+          if (ghost || !collidesWithBuilding(nextX, previousZ, radius)) position.x = nextX
           if (ghost || !collidesWithBuilding(position.x, nextZ, radius)) position.z = nextZ
         }
-        // Face the actual resolved travel direction, not raw keyboard/joystick input.
-        const movedX = position.x - (nextX - direction.x * speed * step)
-        const movedZ = position.z - (nextZ - direction.z * speed * step)
-        const actualX = Math.abs(movedX) > 0.0001 ? direction.x : 0
-        const actualZ = Math.abs(movedZ) > 0.0001 ? direction.z : 0
-        if (actualX !== 0 || actualZ !== 0) {
+
+        const movedX = position.x - previousX
+        const movedZ = position.z - previousZ
+        if (Math.abs(movedX) + Math.abs(movedZ) > 0.0001) {
           playerRef.current.rotation.y = MathUtils.damp(
             playerRef.current.rotation.y,
-            Math.atan2(actualX, actualZ),
+            Math.atan2(movedX, movedZ),
             10,
             step,
           )
@@ -1471,13 +1421,13 @@ function PlayerController({
     }
 
     const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
+    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
     const cameraHeight = (inside
-      ? tallViewport ? 12 : 9.5
-      : tallViewport ? (inVehicle || riding ? 16 : 17) : (inVehicle || riding ? 8.5 : 9.5)) * zoom
-    const cameraDistance = (inside ? (tallViewport ? 14 : 11) : (tallViewport ? 22 : 16)) * zoom
-      ? tallViewport ? 4.8 : 4.2
-      : tallViewport ? (inVehicle || rideVehicle ? 9.2 : 10.2) : (inVehicle || rideVehicle ? 7.6 : 8.5)) * zoom
-    const cameraDistance = (inside ? (tallViewport ? 4.4 : 3.8) : (tallViewport ? 19 : 14.5)) * zoom
+      ? (size.height > size.width * 1.15 ? 4.8 : 4.2)
+      : (size.height > size.width * 1.15 ? (inVehicle || riding ? 16 : 17) : (inVehicle || riding ? 8.5 : 9.5))) * zoom
+    const cameraDistance = (inside
+      ? (size.height > size.width * 1.15 ? 4.4 : 3.8)
+      : (size.height > size.width * 1.15 ? 19 : 14.5)) * zoom
     const look = cameraLookRef.current
     const yaw = look.yaw
     const pitch = look.pitch
