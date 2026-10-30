@@ -1654,7 +1654,9 @@ export function CityWorld(props: CityWorldProps) {
   useEffect(() => { if (!props.ride || props.ride.phase !== 'riding') ridePoseRef.current = null }, [props.ride])
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    // Reserve the left side for the movement joystick; right-side touch can look or pinch-zoom.
+    // Reserve the left 42% for the HUD joystick. Never capture its touch as a camera drag.
+    const bounds = event.currentTarget.getBoundingClientRect()
+    if (event.clientX < bounds.left + bounds.width * 0.42) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
     activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
     if (activePointersRef.current.size === 1) {
@@ -1687,10 +1689,15 @@ export function CityWorld(props: CityWorldProps) {
     drag.x = event.clientX
     drag.y = event.clientY
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
-    cameraLookRef.current.yaw = MathUtils.clamp(cameraLookRef.current.yaw - dx * 0.003 * props.lookSensitivity, -Math.PI * 0.92, Math.PI * 0.92)
-    cameraLookRef.current.pitch = MathUtils.clamp(cameraLookRef.current.pitch - dy * 0.002 * props.lookSensitivity, -0.48, 0.48)
-    cameraLookRef.current.yaw = MathUtils.euclideanModulo(cameraLookRef.current.yaw - dx * 0.003 + Math.PI, Math.PI * 2) - Math.PI
-    cameraLookRef.current.pitch = MathUtils.clamp(cameraLookRef.current.pitch - dy * 0.002, -0.48, 0.48)
+    cameraLookRef.current.yaw = MathUtils.euclideanModulo(
+      cameraLookRef.current.yaw - dx * 0.003 * props.lookSensitivity + Math.PI,
+      Math.PI * 2,
+    ) - Math.PI
+    cameraLookRef.current.pitch = MathUtils.clamp(
+      cameraLookRef.current.pitch - dy * 0.002 * props.lookSensitivity,
+      -0.48,
+      0.48,
+    )
   }
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     activePointersRef.current.delete(event.pointerId)
