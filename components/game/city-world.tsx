@@ -1522,6 +1522,8 @@ export const QUALITY_SETTINGS: Record<GraphicsQuality, { dpr: [number, number]; 
   low: { dpr: [0.7, 1], antialias: false, traffic: 0.5, pedestrians: 4, fogFar: 170 },
   medium: { dpr: [1, 1.25], antialias: false, traffic: 0.8, pedestrians: 8, fogFar: 230 },
   high: { dpr: [1, 1.75], antialias: true, traffic: 1, pedestrians: 14, fogFar: 300 },
+}
+
 function CitySignBoards({ night }: { night: boolean }) {
   const signs = [
     { x: -28, z: -20, text: 'EKO CIVIC SQUARE', color: '#132b3b' },
