@@ -1192,7 +1192,7 @@ function collidesWithBuilding(x: number, z: number, radius: number) {
 function PlayerController({
   keysRef, joystickRef, riding, playerPosRef, ridePoseRef, isAdmin, adminPowersRef,
   lookSensitivity, onPlayerPosition, inVehicle, rideVehicle, gender, paused,
-  spawnPosition, activeInterior, cameraLookRef, autoWalkTarget,
+  spawnPosition, activeInterior, cameraLookRef, autoWalkTarget, apartmentMoveTargetRef,
 }: {
   riding: boolean
   playerPosRef: MutableRefObject<PlayerPosition>
