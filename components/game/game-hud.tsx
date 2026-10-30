@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Droplets,
   Smile,
-  Sparkles,
   UserRound,
   Home,
   ShoppingBag,
