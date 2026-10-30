@@ -2,7 +2,7 @@
 
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef, type MutableRefObject } from 'react'
-import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Group } from 'three'
+import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Group, type Mesh } from 'three'
 import type { InteriorDefinition, InteriorKind } from './game-data'
 import { HumanoidModel, type IdleStyle } from './humanoid'
 
@@ -378,6 +378,23 @@ function RoomFurniture({ kind, palette }: { kind: InteriorKind; palette: RoomPal
 }
 
 
+function ApartmentTargetMarker({ targetRef }: { targetRef: MutableRefObject<{ x: number; z: number } | null> }) {
+  const markerRef = useRef<Mesh>(null!)
+  useFrame(() => {
+    const marker = markerRef.current
+    if (!marker) return
+    const target = targetRef.current
+    marker.visible = Boolean(target)
+    if (target) marker.position.set(target.x, 0.19, target.z)
+  })
+  return (
+    <mesh ref={markerRef} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+      <ringGeometry args={[0.42, 0.62, 32]} />
+      <meshBasicMaterial color="#75f0b2" transparent opacity={0.9} depthWrite={false} />
+    </mesh>
+  )
+}
+
 function StarterApartmentLayout({ onMove, targetRef }: { onMove?: (x: number, z: number) => void; targetRef?: MutableRefObject<{ x: number; z: number } | null> }) {
   const wall = '#16745f'
   const trim = '#d5c7a5'
@@ -401,10 +418,7 @@ function StarterApartmentLayout({ onMove, targetRef }: { onMove?: (x: number, z:
         <planeGeometry args={[35, 29]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      {targetRef?.current && <mesh position={[targetRef.current.x, 0.19, targetRef.current.z]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.42, 0.62, 32]} />
-        <meshBasicMaterial color="#75f0b2" transparent opacity={0.9} />
-      </mesh>}
+      {targetRef && <ApartmentTargetMarker targetRef={targetRef} />}
       {/* Private circular garden plot and tiled approach */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.55, 0]} receiveShadow>
         <circleGeometry args={[19, 64]} /><meshStandardMaterial color="#315b3d" roughness={1} />
@@ -462,7 +476,7 @@ function StarterApartmentLayout({ onMove, targetRef }: { onMove?: (x: number, z:
         <mesh position={[-2.1, 1.0, 2.1]}><cylinderGeometry args={[0.45, 0.45, 0.12, 20]} /><meshStandardMaterial color="#d6e4e1" /></mesh>
       </group>
       {/* Overhead spotlights */}
-      {[-5.5, -2.5, 2.5, 5.5].map((x) => [-5.5, 5.5].map((z) => (
+      {[-5.5, -2.5, 2.5, 5.5].flatMap((x) => [-5.5, 5.5].map((z) => (
         <group key={x + ':' + z} position={[x, 3.15, z]}>
           <mesh><cylinderGeometry args={[0.28, 0.38, 0.12, 16]} /><meshStandardMaterial color="#f2e5c7" emissive="#f7dfac" emissiveIntensity={0.3} /></mesh>
           <pointLight position={[0, -0.25, 0]} intensity={0.38} color="#ffe8bd" distance={8} />
@@ -481,7 +495,7 @@ function StarterApartmentLayout({ onMove, targetRef }: { onMove?: (x: number, z:
         {[-1.05, 1.05].flatMap((x) => [-1.55, 1.55].map((z) => <mesh key={x + ':' + z} position={[x, 0.38, z]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.4, 0.4, 0.18, 16]} /><meshStandardMaterial color="#171b1d" /></mesh>))}
       </group>
       {/* Small garden trees and hedges */}
-      {[-13, 13].map((x) => [-11, 11].map((z) => (
+      {[-13, 13].flatMap((x) => [-11, 11].map((z) => (
         <group key={x + ':' + z} position={[x, 0, z]}>
           <mesh position={[0, 1.1, 0]}><cylinderGeometry args={[0.18, 0.25, 2.2, 8]} /><meshStandardMaterial color="#65452e" /></mesh>
           <mesh position={[0, 2.5, 0]}><sphereGeometry args={[1.2, 12, 10]} /><meshStandardMaterial color="#315b3e" roughness={1} /></mesh>
