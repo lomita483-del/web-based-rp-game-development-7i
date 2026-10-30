@@ -39,6 +39,7 @@ type CityWorldProps = {
   quality: GraphicsQuality
   ride: RideState | null
   onRideEvent: (event: RideEvent) => void
+  onApartmentAction: (action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => void
   isAdmin: boolean
   /** Admin movement powers, read every frame. */
   adminPowersRef: MutableRefObject<AdminPowers>
@@ -1640,8 +1641,8 @@ export function CityWorld(props: CityWorldProps) {
       >
         {props.activeInterior ? (
           <>
-            <InteriorScene interior={props.activeInterior} onApartmentMove={(x, z) => { apartmentMoveTargetRef.current = { x, z } }} apartmentTargetRef={apartmentMoveTargetRef} />
-            {props.remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
+            <InteriorScene interior={props.activeInterior} onApartmentMove={(x, z) => { apartmentMoveTargetRef.current = { x, z } }} onApartmentAction={props.onApartmentAction} apartmentTargetRef={apartmentMoveTargetRef} />
+            {props.activeInterior.id !== 'marina-apartments' && props.remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
           </>
         ) : (
           <CityScene waypoint={props.waypoint} remotePlayers={props.remotePlayers} gameMinutes={props.gameMinutes} quality={props.quality} />
