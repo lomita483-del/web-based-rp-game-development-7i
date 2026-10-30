@@ -220,7 +220,7 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
     if (savedGame.save) {
       const restoredPosition = { ...savedGame.save.position }
       const restoredPlayer = { ...savedGame.save.playerState, name: currentUser?.name ?? STARTING_PLAYER.name }
-      const homeSpawn = !restoredPlayer.currentInteriorId
+      const homeSpawn = !restoredPlayer.currentInteriorId && !restoredPlayer.returnPosition
       if (homeSpawn) {
         restoredPlayer.currentInteriorId = HOME_INTERIOR_ID
         restoredPlayer.returnPosition = HOME_CITY_POSITION
