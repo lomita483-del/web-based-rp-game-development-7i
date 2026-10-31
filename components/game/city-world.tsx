@@ -1600,13 +1600,6 @@ function CityScene({ waypoint, remotePlayers, gameMinutes, quality }: Pick<CityW
     <>
       <Atmosphere gameMinutes={gameMinutes} />
       <StaticWorld quality={quality} night={night} dawn={dawn} dusk={dusk} facadeTexture={facadeTexture} pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
-      <TrafficLayer night={night} density={settings.traffic} />
-      <FarmDistrict />
-      <CityBuilderDressing />
-      {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
-      {Array.from({ length: settings.pedestrians }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
-      {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
-      <LandmarkMarkers waypoint={waypoint} />
     </>
   )
 }
@@ -1641,28 +1634,7 @@ const StaticWorld = memo(function StaticWorld({
       {!night && <group position={[45, 42, -75]}><mesh><sphereGeometry args={[5, 20, 16]} /><meshBasicMaterial color={dawn || dusk ? '#ffb56e' : '#fff0a3'} /></mesh><pointLight intensity={0.8} color="#ffe2a0" distance={100} /></group>}
       {night && <Stars radius={180} depth={100} count={1600} factor={3.4} saturation={0.15} fade speed={0.22} />}
       {night && <mesh position={[0, 78, -110]}><sphereGeometry args={[2.6, 16, 12]} /><meshBasicMaterial color="#fff3cc" /></mesh>}
-      {quality === 'low' ? <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} /> : <AssetCityReplacement />}
-      {quality === 'low' && <StreetKitProps />}
-      {quality === 'low' && <RoadMarkings night={night} />}
-      {quality === 'low' && <Flyover />}
-      {quality === 'low' && <LagoonBridge />}
-      {quality === 'low' && CITY_BUILDINGS.map((building) => <BuildingLot key={`lot-${building.id}`} building={building} />)}
-      {quality === 'low' && CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
-      <BuildingWindows buildings={CITY_BUILDINGS} night={night} />
-      {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
-      {CITY_BUILDINGS.map((building) => (
-        <EntryBeacon key={`entry-${building.id}`} position={getBuildingEntrancePosition(building)} label="ENTER" />
-      ))}
-      {WORLD_LOCATIONS.map((location) => {
-        const position = getLocationEntrancePosition(location.id)
-        return position ? <EntryBeacon key={`entry-${location.id}`} position={position} label="ENTER" /> : null
-      })}
-      <StreetTrees />
-      <StreetLamps night={night} />
-      <Billboards night={night} />
-      <TrafficSignals />
-      <CitySignBoards night={night} />
-      <TrafficFleet night={night} />
+      {/* The open city is intentionally empty. The player controller remains mounted below. */}
     </>
   )
 })
