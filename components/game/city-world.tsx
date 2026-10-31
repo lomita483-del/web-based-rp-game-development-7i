@@ -560,6 +560,16 @@ function PassengerAircraft({ position }: { position: [number, number, number] })
   )
 }
 
+function CampusTree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 1.05, 0]} castShadow><cylinderGeometry args={[0.12, 0.18, 2.1, 8]} /><meshStandardMaterial color="#745038" roughness={0.9} /></mesh>
+      <mesh position={[0, 2.25, 0]} castShadow><icosahedronGeometry args={[0.85, 1]} /><meshStandardMaterial color="#236c45" roughness={0.95} /></mesh>
+      <mesh position={[0.28, 2.55, 0.1]} castShadow><icosahedronGeometry args={[0.48, 1]} /><meshStandardMaterial color="#2e8050" roughness={0.95} /></mesh>
+    </group>
+  )
+}
+
 function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LOCATIONS)[number]; facadeTexture: Texture }) {
   const { x, z, kind } = location
   if (kind === 'bridge') return null
@@ -711,7 +721,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
         <group position={[0, 2.4, 7.28]}><WorldLabel text="AKOKA CAMPUS" width={6.2} accentColor="#d5b36f" /></group>
         <group position={[0, 8.4, 3.58]}><WorldLabel text="UNIVERSITY OF LAGOS" width={10.2} accentColor="#d5b36f" /></group>
         {[-1, 1].flatMap((side) => [-1, 1].map((forward) => (
-          <StreetTree key={`campus-tree-${side}-${forward}`} position={[side * 7.45, 0, forward * 5.9]} scale={0.62} />
+          <CampusTree key={`campus-tree-${side}-${forward}`} position={[side * 7.45, 0, forward * 5.9]} scale={0.62} />
         )))}
       </group>
     )
