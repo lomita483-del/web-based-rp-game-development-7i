@@ -1388,12 +1388,13 @@ function PlayerController({
       perspectiveCamera.fov = portrait ? 62 : 50
       perspectiveCamera.updateProjectionMatrix()
       const look = cameraLookRef.current
-      const distance = (portrait ? 17.5 : 15.5) * MathUtils.clamp(look.zoom, 0.72, 1.45)
+      const distance = (portrait ? 22 : 25) * MathUtils.clamp(look.zoom, 0.65, 2.2)
       const yaw = look.yaw
-      const pitch = MathUtils.clamp(look.pitch, -0.28, 0.72)
+      // Positive pitch raises the camera into a clear overhead view; yaw remains a full 360° orbit.
+      const pitch = MathUtils.clamp(look.pitch, -0.05, 1.2)
       cameraTarget.current.set(
         x + Math.sin(yaw) * distance,
-        position.y + 7.2 + Math.sin(pitch) * distance * 0.55,
+        position.y + 8.5 + Math.sin(pitch) * distance * 0.78,
         z + Math.cos(yaw) * distance,
       )
       cameraLookAt.current.set(x, position.y + 1.15, z)
@@ -1613,7 +1614,7 @@ const StaticWorld = memo(function StaticWorld({
 })
 
 export function CityWorld(props: CityWorldProps) {
-  const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0, zoom: 1 })
+  const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0.72, zoom: 1.25 })
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
   const activePointersRef = useRef(new Map<number, { x: number; y: number }>())
   const pinchDistanceRef = useRef(0)
@@ -1645,7 +1646,7 @@ export function CityWorld(props: CityWorldProps) {
       const points = [...activePointersRef.current.values()].slice(0, 2)
       const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)
       if (pinchDistanceRef.current > 0 && distance > 0) {
-        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * (distance / pinchDistanceRef.current), 0.5, 2.8)
+        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * (distance / pinchDistanceRef.current), 0.65, 2.2)
       }
       pinchDistanceRef.current = distance
       dragRef.current = null
@@ -1663,9 +1664,9 @@ export function CityWorld(props: CityWorldProps) {
       Math.PI * 2,
     ) - Math.PI
     cameraLookRef.current.pitch = MathUtils.clamp(
-      cameraLookRef.current.pitch - dy * 0.002 * props.lookSensitivity,
-      -0.48,
-      0.48,
+      cameraLookRef.current.pitch - dy * 0.0035 * props.lookSensitivity,
+      -0.05,
+      1.2,
     )
   }
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -1680,7 +1681,7 @@ export function CityWorld(props: CityWorldProps) {
   }
   const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     cameraLookRef.current.zoom = MathUtils.clamp(
-      cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.12 : 0.89), 0.5, 2.8,
+      cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.12 : 0.89), 0.65, 2.2,
     )
   }
 
