@@ -173,6 +173,8 @@ export function GameHud({
   const rideDestination = rideBooking && WORLD_LOCATIONS.find((location) => location.id === rideBooking.destinationId)
   const RideIcon = rideBooking?.mode === 'bike' ? Bike : rideBooking?.mode === 'danfo' ? BusFront : CarFront
   const knobRef = useRef<HTMLSpanElement>(null)
+  const [radioOn, setRadioOn] = useState(false)
+  const [micOn, setMicOn] = useState(false)
   const interactionLabel = activeInterior
     ? nearInteriorAction ? activeInterior.actionLabel : canExitInterior ? `Exit ${activeInterior.name}` : `Inside ${activeInterior.name}`
     : nearbyInterior && prioritizeInterior
@@ -194,11 +196,11 @@ export function GameHud({
   return (
     <div className="game-hud">
       <header className="game-topbar">
-        <div className="brand-lockup" aria-label="Eko After Hours">
-          <div className="brand-emblem">EA</div>
+        <div className="brand-lockup" aria-label="Lagos Life">
+          <div className="brand-emblem">LL</div>
           <div className="brand-copy">
-            <span className="brand-title">EKÓ</span>
-            <span className="brand-subtitle">AFTER HOURS</span>
+            <span className="brand-title">LAGOS</span>
+            <span className="brand-subtitle">LIFE SIMULATOR</span>
           </div>
         </div>
 
@@ -232,6 +234,45 @@ export function GameHud({
           </button>
         </div>
       </header>
+
+      {activeInterior && (
+        <section className="apartment-overlay" aria-label="Apartment controls">
+          <div className="apartment-title-row">
+            <div>
+              <span className="apartment-kicker">PRIVATE INSTANCE · 3-ROOM FLAT</span>
+              <strong>{activeInterior.name}</strong>
+            </div>
+            <span className="apartment-mood" aria-label="Mood: content">● CONTENT</span>
+          </div>
+          <div className="need-strip" aria-label="Player needs">
+            {[
+              ['HUNGER', player.hunger, 'need-hunger'],
+              ['ENERGY', player.energy, 'need-energy'],
+              ['FUN', player.fun, 'need-fun'],
+              ['HYGIENE', player.hygiene, 'need-hygiene'],
+            ].map(([label, value, tone]) => (
+              <div className="need-meter" key={label}>
+                <div><span>{label}</span><b>{Math.round(Number(value))}</b></div>
+                <span className={`need-meter-track ${tone}`}><i style={{ width: `${Number(value)}%` }} /></span>
+              </div>
+            ))}
+          </div>
+          <div className="apartment-actions" role="group" aria-label="Apartment actions">
+            <button type="button" className={micOn ? 'is-active' : ''} onClick={() => setMicOn((value) => !value)} aria-pressed={micOn}>
+              <span>MIC</span><small>{micOn ? 'ON' : 'OFF'}</small>
+            </button>
+            <button type="button" className={radioOn ? 'is-active' : ''} onClick={() => setRadioOn((value) => !value)} aria-pressed={radioOn}>
+              <Radio aria-hidden="true" /><span>RADIO</span><small>{radioOn ? 'PLAYING' : 'OFF'}</small>
+            </button>
+            <button type="button" onClick={onInteract} disabled={!nearInteriorAction}>
+              <Sparkles aria-hidden="true" /><span>INTERACT</span><small>{nearInteriorAction ? activeInterior.actionLabel : 'WALK TO ITEM'}</small>
+            </button>
+            <button type="button" className="go-outside-action" onClick={onInteract} disabled={!canExitInterior}>
+              <ArrowRight aria-hidden="true" /><span>GO OUTSIDE</span><small>{canExitInterior ? 'CITY MAP' : 'AT FRONT DOOR'}</small>
+            </button>
+          </div>
+        </section>
+      )}
 
       {rideBooking && (
         <div className="ride-status-card" role="status" aria-live="polite">
@@ -554,7 +595,7 @@ export function GamePanels({
               key={id}
               className={panel === id ? 'is-active' : ''}
               aria-current={panel === id ? 'page' : undefined}
-              onClick={() => onChangePanel(id)}
+              onClick={() => onChangePanel(id as Exclude<GamePanel, 'none' | 'admin'>)}
             >
               <TabIcon aria-hidden="true" />{label}
             </button>
@@ -593,9 +634,14 @@ function PhoneHome({
   onOpenApp: (panel: Exclude<GamePanel, 'none' | 'admin'>) => void
 }) {
   const apps = [
-    { label: 'PROFILE', detail: 'Your life and home', icon: UserRound, panel: 'life' as const, tone: 'gold' },
+    { label: 'LIFE', detail: 'Needs, home & civic', icon: UserRound, panel: 'life' as const, tone: 'gold' },
     { label: 'WORK', detail: 'Jobs and shifts', icon: BriefcaseBusiness, panel: 'jobs' as const, tone: 'blue' },
-    { label: 'CITY MAP', detail: 'Places and routes', icon: Map, panel: 'map' as const, tone: 'green' },
+    { label: 'HOUSES', detail: 'Rent across Lagos', icon: Home, panel: 'life' as const, tone: 'green' },
+    { label: 'CHOWDECK', detail: 'Food for your needs', icon: Utensils, panel: 'inventory' as const, tone: 'amber' },
+    { label: 'BANK', detail: 'Wallet and net worth', icon: Wallet, panel: 'life' as const, tone: 'gold' },
+    { label: 'TRANSPORT', detail: 'Danfo, okada & rides', icon: BusFront, panel: 'map' as const, tone: 'blue' },
+    { label: 'CITY MAP', detail: 'Districts and routes', icon: Map, panel: 'map' as const, tone: 'green' },
+    { label: 'CIVIC', detail: 'Polling and records', icon: Landmark, panel: 'life' as const, tone: 'violet' },
     { label: 'BAG', detail: 'Items and purchases', icon: Package, panel: 'inventory' as const, tone: 'amber' },
     { label: 'SOCIAL', detail: 'Players and account', icon: UsersRound, panel: 'online' as const, tone: 'violet' },
   ]
@@ -606,7 +652,7 @@ function PhoneHome({
         <span className="phone-dynamic-island"><i /><b>VIBE</b><em>●</em></span>
         <span className="phone-device-status"><i>▮▮▮</i><i>◉</i><i>▰</i></span>
       </div>
-      <div className="phone-status"><span>VIBEOS</span><span>● CITY NETWORK · ONLINE</span></div>
+      <div className="phone-status"><span>VIBEOS</span><span>● LAGOS LIFE NETWORK · ONLINE</span></div>
       <div className="phone-greeting">
         <span>WELCOME BACK</span>
         <strong>{player.name}</strong>
@@ -621,7 +667,7 @@ function PhoneHome({
           </button>
         ))}
       </div>
-      <div className="phone-home-footer"><span>ALWAYS ROLEPLAY</span><span>YOUR CITY. YOUR LIFE.</span></div>
+      <div className="phone-home-footer"><span>LIVE THE CITY</span><span>YOUR LIFE. YOUR LAGOS.</span></div>
     </div>
   )
 }

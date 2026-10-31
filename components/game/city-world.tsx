@@ -1,6 +1,6 @@
 'use client'
 
-import { Stars, useTexture } from '@react-three/drei'
+import { Stars, useGLTF, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type MeshStandardMaterial, type PerspectiveCamera, type Texture, Vector3 } from 'three'
@@ -20,14 +20,16 @@ import {
   type RideVehicleType,
 } from './game-data'
 import { RideVehicle, type RideEvent, type RidePose, type RideState } from './ride-vehicle'
+import { AssetCharacter, AssetCityReplacement, AssetTrafficVehicle, CityBuilderDressing, FarmDistrict } from './world-asset-layer'
 import { Atmosphere } from './atmosphere'
 import { BuildingWindows } from './building-windows'
 import { Campus } from './campus'
-import { Billboards, RoadMarkings, StreetLamps, StreetTrees, TrafficSignals } from './street-layer'
+import { Billboards, RoadMarkings, StreetKitProps, StreetLamps, StreetTrees, TrafficSignals } from './street-layer'
 import { TrafficLayer } from './traffic-layer'
 import { lightsOn } from './atmosphere'
 import { HumanoidModel } from './humanoid'
 import { InteriorScene } from './interior-scene'
+import type { Point } from '@/lib/game/world'
 
 type PlayerPosition = { x: number; z: number }
 type CameraLook = { yaw: number; pitch: number; zoom: number }
@@ -39,7 +41,7 @@ type CityWorldProps = {
   quality: GraphicsQuality
   ride: RideState | null
   onRideEvent: (event: RideEvent) => void
-  onApartmentAction: (action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => void
+  onApartmentAction?: (action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => void
   isAdmin: boolean
   /** Admin movement powers, read every frame. */
   adminPowersRef: MutableRefObject<AdminPowers>
@@ -979,7 +981,14 @@ function CharacterActor({ character }: { character: (typeof CITY_CHARACTERS)[num
 
   return (
     <group ref={characterRef} position={[character.x, 0, character.z]}>
-      <HumanoidModel skinTone={character.skinTone} hairColor={character.hairColor} clothing={character.color} accentColor={character.accentColor} />
+      <AssetCharacter
+        scale={0.95}
+        gender="male"
+        hairColor={character.hairColor}
+        outfitColor={character.color}
+        skinTone={character.skinTone}
+        animation="idle"
+      />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}><ringGeometry args={[0.38, 0.43, 24]} /><meshBasicMaterial color="#c18c56" transparent opacity={0.52} /></mesh>
     </group>
   )
@@ -988,6 +997,13 @@ function CharacterActor({ character }: { character: (typeof CITY_CHARACTERS)[num
 function AvatarModel({ keysRef, paused, gender, isAdmin }: { keysRef: MutableRefObject<Set<string>>; paused: boolean; gender: Gender; isAdmin: boolean }) {
   return <HumanoidModel skinTone="#80543e" hairColor="#201a17" clothing={isAdmin ? '#15171b' : '#52606a'} accentColor={isAdmin ? '#d9b24f' : '#cf9e62'} keysRef={keysRef} paused={paused} walking gender={gender} admin={isAdmin} />
 }
+
+function PlayerAssetModel() {
+  const { scene } = useGLTF('/assets/oasis/oasis-assets/models/characters/player.glb')
+  return <primitive object={scene} scale={1.15} position={[0, 0.02, 0]} />
+}
+
+useGLTF.preload('/assets/oasis/oasis-assets/models/characters/player.glb')
 
 function ScooterModel() {
   return (
@@ -1177,7 +1193,11 @@ function TrafficFleet({ night }: { night: boolean }) {
           position={getTrafficPosition(vehicle, vehicle.start)}
           rotation={[0, getTrafficHeading(vehicle), 0]}
         >
-          <TrafficVehicleModel kind={vehicle.kind} color={vehicle.color} night={night} />
+          {(vehicle.kind === 'car' || vehicle.kind === 'danfo' || vehicle.kind === 'truck') ? (
+            <AssetTrafficVehicle kind={vehicle.kind} color={vehicle.color} night={night} />
+          ) : (
+            <TrafficVehicleModel kind={vehicle.kind} color={vehicle.color} night={night} />
+          )}
         </group>
       ))}
     </group>
@@ -1414,20 +1434,16 @@ function PlayerController({
     }
 
     if (activeInterior?.id === 'marina-apartments') {
-      // Free orbit camera: the same drag-look controls used outside now orbit around
-      // the avatar indoors instead of forcing a fixed overhead apartment view.
       const portrait = size.height > size.width * 1.15
       perspectiveCamera.fov = portrait ? 62 : 50
       perspectiveCamera.updateProjectionMatrix()
       const look = cameraLookRef.current
       const distance = (portrait ? 22 : 25) * MathUtils.clamp(look.zoom, 0.65, 2.2)
-      const yaw = look.yaw
-      // Positive pitch raises the camera into a clear overhead view; yaw remains a full 360° orbit.
       const pitch = MathUtils.clamp(look.pitch, -0.05, 1.2)
       cameraTarget.current.set(
-        x + Math.sin(yaw) * distance,
+        x + Math.sin(look.yaw) * distance,
         position.y + 8.5 + Math.sin(pitch) * distance * 0.78,
-        z + Math.cos(yaw) * distance,
+        z + Math.cos(look.yaw) * distance,
       )
       cameraLookAt.current.set(x, position.y + 1.15, z)
       camera.position.lerp(cameraTarget.current, 1 - Math.exp(-step * 4.2))
@@ -1440,12 +1456,12 @@ function PlayerController({
       return
     }
 
-    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
+    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, inside ? 0.72 : 0.5, inside ? 1.35 : 2.8)
     const cameraHeight = (inside
-      ? (size.height > size.width * 1.15 ? 4.8 : 4.2)
+      ? (size.height > size.width * 1.15 ? 16 : 14)
       : (size.height > size.width * 1.15 ? (inVehicle || riding ? 16 : 17) : (inVehicle || riding ? 8.5 : 9.5))) * zoom
     const cameraDistance = (inside
-      ? (size.height > size.width * 1.15 ? 4.4 : 3.8)
+      ? (size.height > size.width * 1.15 ? 14 : 12)
       : (size.height > size.width * 1.15 ? 19 : 14.5)) * zoom
     const look = cameraLookRef.current
     const yaw = look.yaw
@@ -1478,7 +1494,7 @@ function PlayerController({
           color={rideVehicle === 'danfo' ? '#e1bd38' : rideVehicle === 'bike' ? '#31464d' : '#ddd7c9'}
           night
         />
-      ) : inVehicle ? <ScooterModel /> : <AvatarModel keysRef={keysRef} paused={paused} gender={gender} isAdmin={isAdmin} />}
+      ) : inVehicle ? <ScooterModel /> : <PlayerAssetModel />}
     </group>
   )
 }
@@ -1532,7 +1548,7 @@ function PassbyPedestrian({ index }: { index: number }) {
   const shirts = ['#8c4d3f', '#d1a05b', '#456b72', '#65764d', '#6c587e', '#c5c0b4']
   const position: [number, number, number] = axis === 'x' ? [start, 0, track] : [track, 0, start]
   return <group ref={ref} position={position} scale={0.88}>
-    <HumanoidModel skinTone={index % 3 === 0 ? '#69432f' : '#87583f'} hairColor={female ? '#211817' : '#30221b'} clothing={shirts[index % shirts.length]} accentColor="#d2b17a" gender={female ? 'female' : 'male'} walking />
+      <AssetCharacter scale={0.9} />
   </group>
 }
 
@@ -1583,18 +1599,14 @@ function CityScene({ waypoint, remotePlayers, gameMinutes, quality }: Pick<CityW
   return (
     <>
       <Atmosphere gameMinutes={gameMinutes} />
-      <StaticWorld night={night} dawn={dawn} dusk={dusk} facadeTexture={facadeTexture} pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
-      <TrafficLayer night={night} density={settings.traffic} />
-      {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
-      {Array.from({ length: settings.pedestrians }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
-      {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
-      <LandmarkMarkers waypoint={waypoint} />
+      <StaticWorld quality={quality} night={night} dawn={dawn} dusk={dusk} facadeTexture={facadeTexture} pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
     </>
   )
 }
 
 /** Everything that never moves. Memoised so clock ticks and player movement do not re-render it. */
 const StaticWorld = memo(function StaticWorld({
+  quality,
   night,
   dawn,
   dusk,
@@ -1603,6 +1615,7 @@ const StaticWorld = memo(function StaticWorld({
   horizontalRoadTexture,
   verticalRoadTexture,
 }: {
+  quality: GraphicsQuality
   night: boolean
   dawn: boolean
   dusk: boolean
@@ -1621,26 +1634,11 @@ const StaticWorld = memo(function StaticWorld({
       {!night && <group position={[45, 42, -75]}><mesh><sphereGeometry args={[5, 20, 16]} /><meshBasicMaterial color={dawn || dusk ? '#ffb56e' : '#fff0a3'} /></mesh><pointLight intensity={0.8} color="#ffe2a0" distance={100} /></group>}
       {night && <Stars radius={180} depth={100} count={1600} factor={3.4} saturation={0.15} fade speed={0.22} />}
       {night && <mesh position={[0, 78, -110]}><sphereGeometry args={[2.6, 16, 12]} /><meshBasicMaterial color="#fff3cc" /></mesh>}
-      <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
-      <RoadMarkings night={night} />
-      <Flyover />
-      <LagoonBridge />
-      {CITY_BUILDINGS.map((building) => <BuildingLot key={`lot-${building.id}`} building={building} />)}
-      {CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
-      <BuildingWindows buildings={CITY_BUILDINGS} night={night} />
-      {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
-      {CITY_BUILDINGS.map((building) => (
-        <EntryBeacon key={`entry-${building.id}`} position={getBuildingEntrancePosition(building)} label="ENTER" />
-      ))}
-      {WORLD_LOCATIONS.map((location) => {
-        const position = getLocationEntrancePosition(location.id)
-        return position ? <EntryBeacon key={`entry-${location.id}`} position={position} label="ENTER" /> : null
-      })}
-      <StreetTrees />
-      <StreetLamps night={night} />
-      <Billboards night={night} />
-      <TrafficSignals />
-      <CitySignBoards night={night} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
+        <planeGeometry args={[240, 240]} />
+        <meshStandardMaterial color="#567a45" roughness={1} metalness={0} />
+      </mesh>
+      {/* The open city is intentionally empty. The player controller remains mounted below. */}
     </>
   )
 })
@@ -1736,10 +1734,12 @@ export function CityWorld(props: CityWorldProps) {
         gl={{ antialias: QUALITY_SETTINGS[props.quality].antialias, powerPreference: 'high-performance' }}
       >
         {props.activeInterior ? (
-          <>
-            <InteriorScene interior={props.activeInterior} onApartmentMove={(x, z) => { apartmentMoveTargetRef.current = { x, z } }} onApartmentAction={props.onApartmentAction} apartmentTargetRef={apartmentMoveTargetRef} />
-            {props.activeInterior.id !== 'marina-apartments' && props.remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
-          </>
+          <InteriorScene
+            interior={props.activeInterior}
+            onApartmentMove={(x, z) => { apartmentMoveTargetRef.current = { x, z } }}
+            onApartmentAction={props.onApartmentAction}
+            apartmentTargetRef={apartmentMoveTargetRef}
+          />
         ) : (
           <CityScene waypoint={props.waypoint} remotePlayers={props.remotePlayers} gameMinutes={props.gameMinutes} quality={props.quality} />
         )}

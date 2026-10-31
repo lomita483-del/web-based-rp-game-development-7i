@@ -1,7 +1,8 @@
 'use client'
 
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useLoader } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 import {
   CanvasTexture,
   CircleGeometry,
@@ -392,6 +393,36 @@ export function RoadMarkings({ night }: { night: boolean }) {
       <SegmentInstances segments={markings.stops} material={white} y={0.022} />
       <SegmentInstances segments={markings.zebras} material={white} y={0.024} />
     </>
+  )
+}
+
+const STREET_SIGN_POSITIONS = [
+  [-42, -47, 0],
+  [-42, 47, Math.PI],
+  [42, -47, 0],
+  [42, 47, Math.PI],
+] as const
+
+/** Uses the supplied Quaternius street-pack stop signs as intersection dressing. */
+export function StreetKitProps() {
+  const stopSign = useLoader(OBJLoader, '/assets/street-pack/OBJ/Sign_Stop.obj')
+  const model = useMemo(() => {
+    const clone = stopSign.clone(true)
+    clone.traverse((child) => {
+      if ('isMesh' in child && child.isMesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+      }
+    })
+    return clone
+  }, [stopSign])
+
+  return (
+    <group name="quaternius-street-kit">
+      {STREET_SIGN_POSITIONS.map(([x, z, rotation]) => (
+        <primitive key={`${x}-${z}`} object={model.clone(true)} position={[x, 0, z]} rotation={[0, rotation, 0]} scale={1.15} />
+      ))}
+    </group>
   )
 }
 
