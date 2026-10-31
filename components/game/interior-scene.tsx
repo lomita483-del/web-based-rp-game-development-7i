@@ -462,7 +462,7 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
       {[-6.25, 6.25].map((z) => <mesh key={`vertical-partition-${z}`} position={[0, 1.45, z]}><boxGeometry args={[0.18, 2.9, 4.0]} /><meshStandardMaterial color={wall} roughness={0.82} /></mesh>)}
       {[-6.25, 6.25].map((x) => <mesh key={`horizontal-partition-${x}`} position={[x, 1.45, 0]}><boxGeometry args={[4.0, 2.9, 0.18]} /><meshStandardMaterial color={wall} roughness={0.82} /></mesh>)}
       {/* Fixed door units keep every leaf, jamb, threshold and handle centered on its opening. */}
-      <group position={[0, 0, -4.1]}>
+      <group position={[0, 0, -4.25]}>
         <mesh position={[-0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
         <mesh position={[0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
         <mesh position={[0, 2.86, 0]}><boxGeometry args={[1.78, 0.14, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
@@ -470,7 +470,7 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
         <mesh position={[0, 1.42, 0.14]}><boxGeometry args={[1.08, 2.38, 0.025]} /><meshStandardMaterial color="#916744" roughness={0.76} /></mesh>
         <mesh position={[0.46, 1.42, 0.2]}><sphereGeometry args={[0.07, 12, 10]} /><meshStandardMaterial color="#d8b56d" metalness={0.82} roughness={0.22} /></mesh>
       </group>
-      <group position={[-4.1, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+      <group position={[-4.25, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
         <mesh position={[-0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
         <mesh position={[0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
         <mesh position={[0, 2.86, 0]}><boxGeometry args={[1.78, 0.14, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
@@ -478,7 +478,7 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
         <mesh position={[0, 1.42, 0.14]}><boxGeometry args={[1.08, 2.38, 0.025]} /><meshStandardMaterial color="#916744" roughness={0.76} /></mesh>
         <mesh position={[0.46, 1.42, 0.2]}><sphereGeometry args={[0.07, 12, 10]} /><meshStandardMaterial color="#d8b56d" metalness={0.82} roughness={0.22} /></mesh>
       </group>
-      <group position={[4.1, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+      <group position={[4.25, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
         <mesh position={[-0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
         <mesh position={[0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
         <mesh position={[0, 2.86, 0]}><boxGeometry args={[1.78, 0.14, 0.24]} /><meshStandardMaterial color={trim} /></mesh>

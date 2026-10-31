@@ -1220,9 +1220,10 @@ function collidesWithApartmentWall(x: number, z: number, radius: number) {
   // Exterior perimeter. The front entrance is a 2.4m opening in the south wall.
   if (wall(0, -8.45, 17, 0.3) || wall(-8.45, 0, 0.3, 17) || wall(8.45, 0, 0.3, 17)) return true
   if (Math.abs(z - 8.45) < radius + 0.15 && Math.abs(x) > 1.35 && Math.abs(x) < 8.7) return true
-  // Internal partitions have real door openings centred on each partition.
-  if (wall(0, -4.2, 0.18, 8.0) || wall(0, 4.2, 0.18, 8.0)) return true
-  if (wall(-4.2, 0, 8.0, 0.18) || wall(4.2, 0, 8.0, 0.18)) return true
+  // Internal partitions match the visible cutaway walls: two short north/south runs and two short east/west runs.
+  // The gaps around the center are intentionally left open so the player can pass through the doorways.
+  if (wall(0, -6.25, 0.18, 4.0) || wall(0, 6.25, 0.18, 4.0)) return true
+  if (wall(-6.25, 0, 4.0, 0.18) || wall(6.25, 0, 4.0, 0.18)) return true
   return false
 }
 
