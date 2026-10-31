@@ -458,14 +458,9 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
       <mesh position={[-8.45, 1.45, 0]}><boxGeometry args={[0.28, 2.9, 17]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
       <mesh position={[8.45, 1.45, 0]}><boxGeometry args={[0.28, 2.9, 17]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
       <mesh position={[0, 1.45, 8.45]}><boxGeometry args={[17, 2.9, 0.28]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
-      {/* Room partitions built as separate wall sections, leaving genuine door openings. */}
-      {[-1].map((side) => <group key={side}>
-        <mesh position={[0,1.05,-6.35]}><boxGeometry args={[0.18,2.1,4.0]} /><meshStandardMaterial color={wall} /></mesh>
-        <mesh position={[0,1.05,-1.95]}><boxGeometry args={[0.18,2.1,3.8]} /><meshStandardMaterial color={wall} /></mesh>
-        <mesh position={[0,1.05,6.35]}><boxGeometry args={[0.18,2.1,4.0]} /><meshStandardMaterial color={wall} /></mesh>
-      </group>)}
-      {[-6.25,6.25].map((z) => <mesh key={`cross-wall-${z}`} position={[0,1.05,z]}><boxGeometry args={[0.18,2.1,4.0]} /><meshStandardMaterial color={wall} /></mesh>)}
-      {[-6.25,6.25].map((x) => <mesh key={`cross-wall-x-${x}`} position={[x,1.05,0]}><boxGeometry args={[4.0,2.1,0.18]} /><meshStandardMaterial color={wall} /></mesh>)}
+      {/* Room partitions built as separate wall sections, leaving genuine 1.6m door openings. */}
+      {[-6.25, 6.25].map((z) => <mesh key={`vertical-partition-${z}`} position={[0,1.05,z]}><boxGeometry args={[0.18,2.1,4.0]} /><meshStandardMaterial color={wall} /></mesh>)}
+      {[-6.25, 6.25].map((x) => <mesh key={`horizontal-partition-${x}`} position={[x,1.05,0]}><boxGeometry args={[4.0,2.1,0.18]} /><meshStandardMaterial color={wall} /></mesh>)}
       {/* Open timber door leaves, hinges and brass handles. */}
       {[
         { position: [-0.08,1.05,-4.1] as [number,number,number], rotation: [0,-Math.PI/2,0] as [number,number,number] },
