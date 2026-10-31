@@ -469,6 +469,12 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
         <mesh position={[0, 0.45, -1.2]}><boxGeometry args={[2.2, 0.14, 1.25]} /><meshStandardMaterial color="#72543b" /></mesh>
         <mesh position={[0, 1.55, -3.5]}><boxGeometry args={[2.8, 1.55, 0.16]} /><meshStandardMaterial color="#17242a" metalness={0.25} /></mesh>
         <mesh position={[0, 1.55, -3.39]}><boxGeometry args={[2.55, 1.28, 0.03]} /><meshStandardMaterial color="#1d4850" emissive="#173e46" emissiveIntensity={0.35} /></mesh>
+        {/* Upholstered seat pads, cushions, timber feet and a realistic media console. */}
+        {[-1.35, 0, 1.35].map((x) => <mesh key={x} position={[x, 0.96, 1.55]} castShadow><boxGeometry args={[1.25, 0.16, 1.08]} /><meshStandardMaterial color="#3a927d" roughness={0.96} /></mesh>)}
+        {[-1.45, 1.45].map((x) => <mesh key={x} position={[x, 1.22, 1.03]} rotation={[0, 0, -0.12]}><boxGeometry args={[0.72, 0.52, 0.24]} /><meshStandardMaterial color="#d4c6a8" roughness={0.98} /></mesh>)}
+        {[-1.85, 1.85].flatMap((x) => [-0.45, 0.45].map(z => <mesh key={x+':'+z} position={[x, 0.22, 1.6+z]}><cylinderGeometry args={[0.07,0.07,0.42,8]} /><meshStandardMaterial color="#59412f" /></mesh>))}
+        <mesh position={[0, 0.25, -3.5]}><boxGeometry args={[3.15, 0.42, 0.72]} /><meshStandardMaterial color="#5c4634" roughness={0.72} /></mesh>
+        {[-1.25, 1.25].map(x => <mesh key={x} position={[x,0.48,-3.5]}><boxGeometry args={[0.08,0.06,0.58]} /><meshStandardMaterial color="#b58a55" metalness={0.45} /></mesh>)}
       </group>
       {/* Bedroom and study */}
       <group position={[4.1, 0.12, -4.1]}>
@@ -478,6 +484,11 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
         <mesh position={[-2.7, 0.72, -2.6]}><boxGeometry args={[1.5, 0.12, 2.5]} /><meshStandardMaterial color="#694a31" /></mesh>
         <mesh position={[-2.7, 1.2, -2.6]}><boxGeometry args={[1.45, 0.8, 0.08]} /><meshStandardMaterial color="#202e32" /></mesh>
         <mesh position={[-2.7, 1.64, -2.55]}><boxGeometry args={[1.1, 0.04, 0.7]} /><meshStandardMaterial color="#77b8c1" emissive="#245d66" emissiveIntensity={0.45} /></mesh>
+        {/* Headboard, layered duvet, pillows and wardrobe detailing. */}
+        <mesh position={[0.4, 1.02, -1.48]}><boxGeometry args={[3.05, 0.13, 1.35]} /><meshStandardMaterial color="#789b91" roughness={0.98} /></mesh>
+        {[-0.48, 0.48].map(x => <mesh key={x} position={[0.4+x, 1.12, -2.55]} rotation={[0.08,0,0]}><boxGeometry args={[1.05,0.22,0.68]} /><meshStandardMaterial color="#f5f1e8" roughness={1} /></mesh>)}
+        <mesh position={[0.4, 1.08, 2.35]}><boxGeometry args={[2.6, 2.05, 0.5]} /><meshStandardMaterial color="#74563c" roughness={0.82} /></mesh>
+        {[-0.25, 1.05].map(x => <group key={x} position={[x,1.08,2.09]}><mesh><boxGeometry args={[1.18,1.82,0.06]} /><meshStandardMaterial color="#987653" roughness={0.78} /></mesh><mesh position={[0.45,0,0.07]}><sphereGeometry args={[0.055,8,8]} /><meshStandardMaterial color="#c6a66f" metalness={0.65} /></mesh></group>)}
       </group>
       {/* Kitchen with fridge, counters and cooker */}
       <group position={[-4.1, 0.12, 4.1]}>
@@ -486,6 +497,12 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
         <mesh position={[-2.6, 1.27, -2.9]}><boxGeometry args={[1.1, 0.08, 1]} /><meshStandardMaterial color="#252a2b" metalness={0.5} /></mesh>
         <mesh position={[2.7, 1.25, -2.9]}><boxGeometry args={[1.35, 2.35, 1.25]} /><meshStandardMaterial color="#d9dedb" metalness={0.16} /></mesh>
         <mesh position={[2.7, 1.4, -2.22]}><boxGeometry args={[0.9, 0.55, 0.04]} /><meshStandardMaterial color="#9bb8b5" /></mesh>
+        {/* Cabinet fronts, metal pulls, inset sink, tap and four-burner hob. */}
+        {[-2.3,-0.8,0.7].map(x => <group key={x} position={[x,0.6,-2.34]}><mesh><boxGeometry args={[1.28,0.78,0.045]} /><meshStandardMaterial color="#b6a184" roughness={0.72} /></mesh><mesh position={[0.48,0,0.05]}><boxGeometry args={[0.055,0.2,0.055]} /><meshStandardMaterial color="#b9b9ae" metalness={0.8} roughness={0.28} /></mesh></group>)}
+        <mesh position={[0.4,1.24,-2.9]}><boxGeometry args={[1.35,0.035,0.68]} /><meshStandardMaterial color="#59686a" metalness={0.45} roughness={0.3} /></mesh>
+        <mesh position={[0.4,1.34,-2.65]}><torusGeometry args={[0.16,0.035,8,20,Math.PI]} /><meshStandardMaterial color="#b8c6c2" metalness={0.75} roughness={0.25} /></mesh>
+        {[-2.6,-1.8].flatMap(x => [-3.15,-2.65].map(z => <group key={x+':'+z} position={[x,1.34,z]}><mesh><cylinderGeometry args={[0.19,0.19,0.035,16]} /><meshStandardMaterial color="#202527" metalness={0.6} /></mesh><mesh position={[0,0.035,0]}><cylinderGeometry args={[0.105,0.105,0.025,12]} /><meshStandardMaterial color="#a9a9a1" metalness={0.7} /></mesh></group>))}
+        <mesh position={[2.7,1.3,-2.24]}><boxGeometry args={[0.055,0.62,0.06]} /><meshStandardMaterial color="#87918f" metalness={0.75} /></mesh>
       </group>
       {/* Attached bathroom */}
       <group position={[4.1, 0.12, 4.1]}>
@@ -493,6 +510,12 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
         <mesh position={[1.9, 0.92, -2.2]}><boxGeometry args={[1.8, 0.08, 1.5]} /><meshStandardMaterial color="#d9e6e4" /></mesh>
         <mesh position={[-2.1, 0.5, 2.1]}><cylinderGeometry args={[0.55, 0.55, 0.9, 20]} /><meshStandardMaterial color="#f3f0e8" /></mesh>
         <mesh position={[-2.1, 1.0, 2.1]}><cylinderGeometry args={[0.45, 0.45, 0.12, 20]} /><meshStandardMaterial color="#d6e4e1" /></mesh>
+        {/* Shower enclosure, chrome mixer, vanity basin and mirror. */}
+        <mesh position={[2.4,1.35,2.35]}><boxGeometry args={[2.2,2.55,0.055]} /><meshStandardMaterial color="#b9d5d6" transparent opacity={0.2} roughness={0.12} metalness={0.12} /></mesh>
+        <mesh position={[1.3,1.32,2.35]}><boxGeometry args={[0.055,2.55,0.055]} /><meshStandardMaterial color="#a9b8b6" metalness={0.75} roughness={0.24} /></mesh>
+        <mesh position={[-2.1,1.62,1.35]}><boxGeometry args={[1.25,0.95,0.08]} /><meshStandardMaterial color="#8faeb0" metalness={0.32} roughness={0.2} /></mesh>
+        <mesh position={[-2.1,0.92,1.95]}><boxGeometry args={[1.65,0.14,0.75]} /><meshStandardMaterial color="#f0eee7" roughness={0.28} /></mesh>
+        <mesh position={[-2.1,1.15,1.95]}><cylinderGeometry args={[0.27,0.32,0.32,18]} /><meshStandardMaterial color="#e8e8df" roughness={0.2} /></mesh>
       </group>
       {/* Overhead spotlights */}
       {[-5.5, -2.5, 2.5, 5.5].flatMap((x) => [-5.5, 5.5].map((z) => (
