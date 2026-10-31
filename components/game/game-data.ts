@@ -46,12 +46,12 @@ export const WORLD_LOCATIONS = [
   },
   {
     id: 'hotel',
-    name: 'Marina House',
+    name: 'Marina Grand Hotel',
     district: 'Victoria Island',
     x: -30,
     z: -30,
     kind: 'hotel',
-    description: 'A modest city hotel with rooms above a busy waterfront road.',
+    description: 'A rentable waterfront hotel with short-stay rooms and a staffed reception desk.',
   },
   {
     id: 'cafe',
@@ -103,7 +103,7 @@ export const WORLD_LOCATIONS = [
     name: 'University of Lagos',
     district: 'Akoka',
     x: -54,
-    z: -76,
+    z: -72,
     kind: 'university',
     description: 'A dedicated Akoka campus with lecture halls, a library, student housing, and open courtyards.'
   },
@@ -350,7 +350,7 @@ export const LOCATION_ENTRY_OFFSETS: Partial<Record<LocationId, { x: number; z: 
   police: { x: 0, z: 5.3 },
   court: { x: 0, z: 5.8 },
   hospital: { x: 0, z: 5.8 },
-  university: { x: 0, z: 5.8 },
+  university: { x: 0, z: 7.6 },
   school: { x: 0, z: 5.3 },
   stadium: { x: 0, z: 7.6 },
   government: { x: 0, z: 5.8 },
@@ -767,13 +767,13 @@ export type FactionId = (typeof CITY_FACTIONS)[number]['id']
 
 export const CITY_HOMES = [
   {
-    id: 'marina-room',
-    name: 'Marina room & parlour',
-    district: 'Victoria Island',
-    locationId: 'hotel',
-    price: 650,
-    tenure: 'Weekly room lease',
-    description: 'A small furnished room above the Marina road.',
+id: 'marina-room',
+  name: 'Abule Egba starter house',
+  district: 'Mainland Estates',
+  locationId: 'bungalow',
+  price: 650,
+  tenure: 'Weekly house lease',
+  description: 'A private starter house with a small yard, separate from the hotel.'
   },
   {
     id: 'mainland-bungalow',

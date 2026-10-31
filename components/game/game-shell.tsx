@@ -357,7 +357,7 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
     const closest = ENTERABLE_INTERIORS
       .map((entry) => ({ ...entry, distance: distanceBetween(playerPosition, entry.entrance) }))
       .sort((a, b) => a.distance - b.distance)[0]
-    return closest && closest.distance < 3.5 ? closest : null
+    return closest && closest.distance < 4.8 ? closest : null
   }, [activeInterior, playerPosition])
   const nearbyInterior = nearbyEntry?.interior ?? null
   const nearbyCharacter = useMemo(() => {

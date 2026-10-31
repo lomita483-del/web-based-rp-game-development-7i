@@ -29,9 +29,6 @@ import {
   MapPin,
   Package,
   Radio,
-  Camera,
-  Maximize2,
-  Mic,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
@@ -170,7 +167,6 @@ export function GameHud({
 }: HudProps) {
   useEffect(() => () => { joystickRef.current.x = 0; joystickRef.current.y = 0 }, [joystickRef])
   const mission = getMissionDetails(player.stage)
-  const [viewMode, setViewMode] = useState<'above' | 'inside' | 'eye'>('above')
   const currentDistrict = activeInterior?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'
   const streets = GRID_LINES
   const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
@@ -342,19 +338,6 @@ export function GameHud({
           </div>
         </section>
       )}
-
-      <div className="reference-view-rail" aria-label="Camera view">
-        {[
-          { id: 'above' as const, label: 'Above' },
-          { id: 'inside' as const, label: 'Inside' },
-          { id: 'eye' as const, label: 'Eye' },
-        ].map((view) => <button key={view.id} type="button" className={viewMode === view.id ? 'is-active' : undefined} onClick={() => setViewMode(view.id)}>{view.label}</button>)}
-      </div>
-      <div className="reference-media-tools" aria-label="Game media tools">
-        <button type="button" aria-label="Voice chat"><Mic aria-hidden="true" /></button>
-        <button type="button" aria-label="Take screenshot"><Camera aria-hidden="true" /></button>
-        <button type="button" aria-label="Toggle fullscreen"><Maximize2 aria-hidden="true" /></button>
-      </div>
 
       {activeInterior?.id === 'marina-apartments' && (
         <div className="home-action-dock" aria-label="Apartment interactions">
