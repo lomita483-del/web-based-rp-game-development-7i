@@ -586,6 +586,11 @@ function PhoneHome({
   ]
   return (
     <div className="phone-home">
+      <div className="phone-device-top" aria-label="Phone status and Dynamic Island">
+        <span className="phone-device-time">09:41</span>
+        <span className="phone-dynamic-island"><i /><b>VIBE</b><em>●</em></span>
+        <span className="phone-device-status"><i>▮▮▮</i><i>◉</i><i>▰</i></span>
+      </div>
       <div className="phone-status"><span>VIBEOS</span><span>● CITY NETWORK · ONLINE</span></div>
       <div className="phone-greeting">
         <span>WELCOME BACK</span>
