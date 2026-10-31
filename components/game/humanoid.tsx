@@ -45,7 +45,11 @@ export function HumanoidModel({
   useFrame((state) => {
     if (!leftArm.current || !rightArm.current || !leftLeg.current || !rightLeg.current) return
     const t = state.clock.elapsedTime + phase
-    const isMoving = (walking || Boolean(keysRef?.current.size)) && !paused
+    const movementKeys = keysRef?.current
+    const hasMovementInput = movementKeys
+      ? ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some((key) => movementKeys.has(key))
+      : walking
+    const isMoving = hasMovementInput && !paused
     const stride = isMoving ? Math.sin(t * 10) * 0.44 : 0
     const breathe = Math.sin(t * 1.5) * 0.035
 
@@ -72,7 +76,7 @@ export function HumanoidModel({
   return (
     <group>
       <mesh position={[0, 1.03, 0]} castShadow>
-        <capsuleGeometry args={gender === 'female' ? [0.24, 0.48, 5, 10] : [0.27, 0.48, 5, 10]} />
+        <capsuleGeometry args={gender === 'female' ? [0.25, 0.5, 8, 14] : [0.28, 0.52, 8, 14]} />
         <meshStandardMaterial color={clothing} roughness={0.77} />
       </mesh>
       <mesh position={[0, 1.42, 0.015]}>
@@ -84,7 +88,7 @@ export function HumanoidModel({
         <meshStandardMaterial color={skinTone} roughness={0.92} />
       </mesh>
       <mesh position={[0, 1.86, 0]} castShadow>
-        <sphereGeometry args={[0.2, 18, 14]} />
+        <sphereGeometry args={[0.205, 24, 18]} />
         <meshStandardMaterial color={skinTone} roughness={0.82} />
       </mesh>
       <mesh position={[0, 1.99, -0.035]}>

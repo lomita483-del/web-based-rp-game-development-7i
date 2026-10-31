@@ -46,12 +46,12 @@ export const WORLD_LOCATIONS = [
   },
   {
     id: 'hotel',
-    name: 'Marina House',
+    name: 'Marina Grand Hotel',
     district: 'Victoria Island',
     x: -30,
     z: -30,
     kind: 'hotel',
-    description: 'A modest city hotel with rooms above a busy waterfront road.',
+    description: 'A rentable waterfront hotel with short-stay rooms and a staffed reception desk.',
   },
   {
     id: 'cafe',
@@ -102,8 +102,9 @@ export const WORLD_LOCATIONS = [
     id: 'university',
     name: 'University of Lagos',
     district: 'Akoka',
-    x: -54,
-    z: -76,
+    // Campus grounds are west of the main street grid; place the university pin on its real campus footprint.
+    x: -120,
+    z: 2,
     kind: 'university',
     description: 'A dedicated Akoka campus with lecture halls, a library, student housing, and open courtyards.'
   },
@@ -350,7 +351,7 @@ export const LOCATION_ENTRY_OFFSETS: Partial<Record<LocationId, { x: number; z: 
   police: { x: 0, z: 5.3 },
   court: { x: 0, z: 5.8 },
   hospital: { x: 0, z: 5.8 },
-  university: { x: 0, z: 5.8 },
+  university: { x: 0, z: 7.6 },
   school: { x: 0, z: 5.3 },
   stadium: { x: 0, z: 7.6 },
   government: { x: 0, z: 5.8 },
@@ -767,13 +768,13 @@ export type FactionId = (typeof CITY_FACTIONS)[number]['id']
 
 export const CITY_HOMES = [
   {
-    id: 'marina-room',
-    name: 'Marina room & parlour',
-    district: 'Victoria Island',
-    locationId: 'hotel',
-    price: 650,
-    tenure: 'Weekly room lease',
-    description: 'A small furnished room above the Marina road.',
+id: 'marina-room',
+  name: 'Abule Egba starter house',
+  district: 'Mainland Estates',
+  locationId: 'bungalow',
+  price: 650,
+  tenure: 'Weekly house lease',
+  description: 'A private starter house with a small yard, separate from the hotel.'
   },
   {
     id: 'mainland-bungalow',
@@ -914,7 +915,7 @@ export const STARTING_PLAYER: PlayerState = {
   shiftStarted: false,
   completedShiftTasks: [],
   currentInteriorId: 'marina-apartments',
-  returnPosition: { x: -76, z: -54 },
+  returnPosition: { x: -76, z: -48.9 },
   job: null,
   faction: null,
   home: null,
@@ -1028,7 +1029,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       }
     }
     case 'exit-interior':
-      return state.currentInteriorId ? { ...state, currentInteriorId: null, returnPosition: null } : state
+      return state.currentInteriorId ? { ...state, currentInteriorId: null } : state
     case 'meet-bisi': {
       if (state.stage !== 'meet-bisi') return state
       const reputation = state.reputation + 12

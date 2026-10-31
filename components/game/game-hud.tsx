@@ -80,6 +80,8 @@ type HudProps = {
   activeInterior: InteriorDefinition | null
   nearInteriorAction: boolean
   canExitInterior: boolean
+  onGoOutside: () => void
+  onApartmentAction: (action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => void
   rideBooking: RideBooking | null
   waypoint: LocationId | null
   activePanel: GamePanel
@@ -146,6 +148,8 @@ export function GameHud({
   activeInterior,
   nearInteriorAction,
   canExitInterior,
+  onGoOutside,
+  onApartmentAction,
   rideBooking,
   waypoint,
   activePanel,
@@ -356,6 +360,35 @@ export function GameHud({
           {canCancelRide && <button type="button" onClick={onCancelRide}>CANCEL</button>}
         </div>
       )}
+      {activeInterior?.id === 'marina-apartments' && (
+        <button className="home-go-outside" type="button" onClick={onGoOutside}>
+          <ArrowRight aria-hidden="true" /> GO OUTSIDE
+        </button>
+      )}
+      {(nearbyLocation || activeInterior) && (
+        <section className="reference-location-card" aria-label="Current location">
+          <div className="reference-location-head">
+            <span className="reference-location-icon"><Building2 aria-hidden="true" /></span>
+            <span><small>{activeInterior ? 'INSIDE' : 'NEARBY'}</small><strong>{activeInterior?.name ?? nearbyLocation?.name}</strong></span>
+            <button type="button" aria-label="Collapse location card"><ChevronUp aria-hidden="true" /></button>
+          </div>
+          <p>{activeInterior?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'} · {activeInterior ? 'Explore the room and interact with objects.' : 'A nearby place to explore.'}</p>
+          <div className="reference-location-actions">
+            {activeInterior && <button type="button" onClick={onGoOutside}><CarFront aria-hidden="true" /> GO OUTSIDE</button>}
+            <button type="button" onClick={() => onOpenPanel('map')}><MapPin aria-hidden="true" /> ROUTE</button>
+          </div>
+        </section>
+      )}
+
+      {activeInterior?.id === 'marina-apartments' && (
+        <div className="home-action-dock" aria-label="Apartment interactions">
+          <button type="button" onClick={() => onApartmentAction('rest')}>🛏 REST</button>
+          <button type="button" onClick={() => onApartmentAction('food')}>🥗 FRIDGE</button>
+          <button type="button" onClick={() => onApartmentAction('shower')}>🚿 SHOWER</button>
+          <button type="button" onClick={() => onApartmentAction('tv')}>📺 TV</button>
+        </div>
+      )}
+
       <nav className="immersive-game-nav" aria-label="Main game navigation">
         <button type="button" onClick={() => onOpenPanel('life')} aria-label="Home and city life">
           <Home aria-hidden="true" /><span>HOME</span>
@@ -376,9 +409,10 @@ export function GameHud({
           className="interaction-button"
           type="button"
           onClick={onInteract}
+          aria-label={`${interactionLabel}. Tap to interact.`}
           disabled={!interactionEnabled}
         >
-          <span className="interaction-key">E</span>
+          <span className="interaction-key" aria-hidden="true"><span className="interaction-touch-label">TAP</span><span className="interaction-key-label">E</span></span>
           <span className="interaction-copy">
             <small>{interactionEyebrow}</small>
             <strong>{interactionLabel}</strong>
@@ -613,6 +647,11 @@ function PhoneHome({
   ]
   return (
     <div className="phone-home">
+      <div className="phone-device-top" aria-label="Phone status and Dynamic Island">
+        <span className="phone-device-time">09:41</span>
+        <span className="phone-dynamic-island"><i /><b>VIBE</b><em>●</em></span>
+        <span className="phone-device-status"><i>▮▮▮</i><i>◉</i><i>▰</i></span>
+      </div>
       <div className="phone-status"><span>VIBEOS</span><span>● LAGOS LIFE NETWORK · ONLINE</span></div>
       <div className="phone-greeting">
         <span>WELCOME BACK</span>

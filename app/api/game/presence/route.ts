@@ -30,7 +30,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Sign in to join the shared city.' }, { status: 401, headers: PRIVATE_NO_STORE_HEADERS })
     }
 
-    const roomId = parseRoomId(new URL(request.url).searchParams.get('roomId'))
+    const requestedRoomId = new URL(request.url).searchParams.get('roomId')
+    const roomId = requestedRoomId?.startsWith('home:')
+      ? (requestedRoomId === `home:${user.id}` ? requestedRoomId : null)
+      : parseRoomId(requestedRoomId)
     if (!roomId) {
       return NextResponse.json({ error: 'That shared-world room does not exist.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }
@@ -87,7 +90,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The player position is not valid.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }
 
-    const roomId = parseRoomId(body.roomId)
+    const roomId = typeof body.roomId === 'string' && body.roomId.startsWith('home:')
+      ? (body.roomId === `home:${user.id}` ? body.roomId : null)
+      : parseRoomId(body.roomId)
     if (!roomId) {
       return NextResponse.json({ error: 'That shared-world room does not exist.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }

@@ -40,6 +40,7 @@ type CityWorldProps = {
   quality: GraphicsQuality
   ride: RideState | null
   onRideEvent: (event: RideEvent) => void
+  onApartmentAction?: (action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => void
   isAdmin: boolean
   /** Admin movement powers, read every frame. */
   adminPowersRef: MutableRefObject<AdminPowers>
@@ -560,6 +561,32 @@ function PassengerAircraft({ position }: { position: [number, number, number] })
   )
 }
 
+function CampusTree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 1.05, 0]} castShadow><cylinderGeometry args={[0.12, 0.18, 2.1, 8]} /><meshStandardMaterial color="#745038" roughness={0.9} /></mesh>
+      <mesh position={[0, 2.25, 0]} castShadow><icosahedronGeometry args={[0.85, 1]} /><meshStandardMaterial color="#236c45" roughness={0.95} /></mesh>
+      <mesh position={[0.28, 2.55, 0.1]} castShadow><icosahedronGeometry args={[0.48, 1]} /><meshStandardMaterial color="#2e8050" roughness={0.95} /></mesh>
+    </group>
+  )
+}
+
+function SecuredCompound({ width, depth, gateWidth = 3.2, color = '#4b5753' }: { width: number; depth: number; gateWidth?: number; color?: string }) {
+  const postPositions = Array.from({ length: 7 }, (_, index) => -width / 2 + (index * width) / 6)
+  return (
+    <group>
+      <mesh position={[0, 1.15, -depth / 2]}><boxGeometry args={[width, 0.16, 0.18]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[-width / 2, 1.15, 0]}><boxGeometry args={[0.18, 0.16, depth]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[width / 2, 1.15, 0]}><boxGeometry args={[0.18, 0.16, depth]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[-(width - gateWidth) / 4 - gateWidth / 2, 1.15, depth / 2]}><boxGeometry args={[(width - gateWidth) / 2, 0.16, 0.18]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[(width - gateWidth) / 4 + gateWidth / 2, 1.15, depth / 2]}><boxGeometry args={[(width - gateWidth) / 2, 0.16, 0.18]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      {postPositions.map((postX) => <mesh key={`compound-post-${postX}`} position={[postX, 1.1, -depth / 2]}><cylinderGeometry args={[0.08, 0.1, 2.2, 8]} /><meshStandardMaterial color="#c6a66e" metalness={0.35} roughness={0.52} /></mesh>)}
+      {[-width / 2, width / 2, -(gateWidth / 2), gateWidth / 2].map((postX) => <mesh key={`gate-post-${postX}`} position={[postX, 1.1, depth / 2]}><cylinderGeometry args={[0.12, 0.15, 2.2, 8]} /><meshStandardMaterial color="#d1b77e" metalness={0.3} roughness={0.5} /></mesh>)}
+      <mesh position={[0, 2.15, depth / 2]}><boxGeometry args={[gateWidth, 0.18, 0.22]} /><meshStandardMaterial color="#d1b77e" metalness={0.32} roughness={0.5} /></mesh>
+    </group>
+  )
+}
+
 function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LOCATIONS)[number]; facadeTexture: Texture }) {
   const { x, z, kind } = location
   if (kind === 'bridge') return null
@@ -625,6 +652,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   if (kind === 'stadium') {
     return (
       <group position={[x, 0, z]}>
+        <SecuredCompound width={18} depth={18} gateWidth={4.5} color="#4c5a54" />
         <mesh position={[0, 2.2, 0]} castShadow>
           <cylinderGeometry args={[6.1, 6.5, 4.4, 32, 1, true]} />
           <meshStandardMaterial color="#77766f" roughness={0.8} side={2} />
@@ -651,6 +679,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   if (kind === 'university') {
     return (
       <group position={[x, 0, z]}>
+        <SecuredCompound width={20} depth={19} gateWidth={4.2} color="#3f5e5c" />
         <mesh position={[0, -0.035, 0]} receiveShadow>
           <boxGeometry args={[17, 0.12, 15]} />
           <meshStandardMaterial color="#52614a" roughness={0.98} />
@@ -710,6 +739,9 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
         <mesh position={[0, 2.4, 7.12]}><boxGeometry args={[8.6, 0.3, 0.28]} /><meshStandardMaterial color="#4d5551" roughness={0.7} /></mesh>
         <group position={[0, 2.4, 7.28]}><WorldLabel text="AKOKA CAMPUS" width={6.2} accentColor="#d5b36f" /></group>
         <group position={[0, 8.4, 3.58]}><WorldLabel text="UNIVERSITY OF LAGOS" width={10.2} accentColor="#d5b36f" /></group>
+        {[-1, 1].flatMap((side) => [-1, 1].map((forward) => (
+          <CampusTree key={`campus-tree-${side}-${forward}`} position={[side * 7.45, 0, forward * 5.9]} scale={0.62} />
+        )))}
       </group>
     )
   }
@@ -764,10 +796,12 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   }
 
   if (kind === 'village') {
-    const huts = [[-4, -3], [1, -5], [4, 1], [-2, 4], [4, 4]] as const
+    const huts = [[-5, -5], [0, -5], [5, -5], [-5, 0], [5, 0], [-5, 5], [0, 5], [5, 5], [-2.5, 0], [2.5, 0]] as const
     return (
       <group position={[x, 0, z]}>
-        <mesh position={[0, 0.02, 0]}><boxGeometry args={[12, 0.12, 12]} /><meshStandardMaterial color="#887d69" roughness={1} /></mesh>
+        <mesh position={[0, 0.02, 0]}><boxGeometry args={[16, 0.12, 16]} /><meshStandardMaterial color="#887d69" roughness={1} /></mesh>
+        <SecuredCompound width={17} depth={17} gateWidth={4} color="#6d5e49" />
+        <group position={[0, 2.7, 8.2]}><WorldLabel text="IBEJU FARM VILLAGE" width={7.5} accentColor="#d8af67" /></group>
         {huts.map(([hutX, hutZ], index) => (
           <group key={`hut-${index}`} position={[hutX, 0, hutZ]}>
             <mesh position={[0, 1.2, 0]} castShadow><cylinderGeometry args={[1.75, 2, 2.4, 8]} /><meshStandardMaterial color={index % 2 ? '#ad9270' : '#8f7558'} roughness={0.96} /></mesh>
@@ -820,6 +854,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
 
   return (
     <group position={[x, 0, z]}>
+      {(kind === 'court' || kind === 'government') && <SecuredCompound width={19} depth={16} gateWidth={4} color="#5a5b56" />}
       <mesh position={[0, 0.28, 0]} castShadow><boxGeometry args={[style.width + 0.8, 0.56, style.depth + 0.8]} /><meshStandardMaterial color="#68655f" roughness={0.94} /></mesh>
       <mesh position={[0, style.height / 2 + 0.56, 0]} castShadow receiveShadow><boxGeometry args={[style.width, style.height, style.depth]} /><meshStandardMaterial map={facadeTexture} color={style.wall} roughness={0.9} /></mesh>
       <mesh position={[0, style.height + 0.7, 0]} castShadow><boxGeometry args={[style.width + 0.6, 0.32, style.depth + 0.6]} /><meshStandardMaterial color={style.trim} roughness={0.78} /></mesh>
@@ -1186,17 +1221,56 @@ function collidesWithBuilding(x: number, z: number, radius: number) {
   )
 }
 
+// Starter-apartment furniture footprints in world-space. The avatar is treated as a
+// capsule-sized circle so it cannot pass through beds, counters, the sofa or appliances.
+const APARTMENT_FURNITURE_BLOCKS = [
+  { x: -4.3, z: -2.65, width: 4.55, depth: 1.55 }, // sectional sofa
+  { x: -4.3, z: -7.45, width: 3.0, depth: 0.48 }, // TV console
+  { x: -4.3, z: -5.35, width: 2.35, depth: 1.4 }, // coffee table
+  { x: 4.5, z: -3.7, width: 3.35, depth: 4.35 }, // bed
+  { x: 1.4, z: -6.7, width: 1.75, depth: 2.7 }, // study desk
+  { x: -4.1, z: 1.2, width: 6.9, depth: 1.2 }, // kitchen counter
+  { x: -1.4, z: 1.2, width: 1.5, depth: 1.6 }, // refrigerator
+  { x: 1.9, z: 1.9, width: 2.25, depth: 1.9 }, // bath fixture
+  { x: -2.1, z: 6.2, width: 1.2, depth: 1.0 }, // toilet
+] as const
+
+function collidesWithApartmentFurniture(x: number, z: number, radius: number) {
+  return APARTMENT_FURNITURE_BLOCKS.some((block) => {
+    const closestX = Math.max(block.x - block.width / 2, Math.min(x, block.x + block.width / 2))
+    const closestZ = Math.max(block.z - block.depth / 2, Math.min(z, block.z + block.depth / 2))
+    return (x - closestX) ** 2 + (z - closestZ) ** 2 < radius ** 2
+  })
+}
+
+function collidesWithApartmentWall(x: number, z: number, radius: number) {
+  const wall = (px: number, pz: number, width: number, depth: number) => {
+    const nearestX = Math.max(px - width / 2, Math.min(x, px + width / 2))
+    const nearestZ = Math.max(pz - depth / 2, Math.min(z, pz + depth / 2))
+    return (x - nearestX) ** 2 + (z - nearestZ) ** 2 < radius ** 2
+  }
+  // Exterior perimeter. The front entrance is a 2.4m opening in the south wall.
+  if (wall(0, -8.45, 17, 0.3) || wall(-8.45, 0, 0.3, 17) || wall(8.45, 0, 0.3, 17)) return true
+  if (Math.abs(z - 8.45) < radius + 0.15 && Math.abs(x) > 1.35 && Math.abs(x) < 8.7) return true
+  // Internal partitions match the visible cutaway walls: two short north/south runs and two short east/west runs.
+  // The gaps around the center are intentionally left open so the player can pass through the doorways.
+  if (wall(0, -6.25, 0.18, 4.0) || wall(0, 6.25, 0.18, 4.0)) return true
+  if (wall(-6.25, 0, 4.0, 0.18) || wall(6.25, 0, 4.0, 0.18)) return true
+  return false
+}
+
 function PlayerController({
   keysRef, joystickRef, riding, playerPosRef, ridePoseRef, isAdmin, adminPowersRef,
   lookSensitivity, onPlayerPosition, inVehicle, rideVehicle, gender, paused,
-  spawnPosition, activeInterior, cameraLookRef, autoWalkTarget,
+  spawnPosition, activeInterior, cameraLookRef, autoWalkTarget, apartmentMoveTargetRef,
 }: {
   riding: boolean
-  playerPosRef: MutableRefObject<Point>
+  playerPosRef: MutableRefObject<PlayerPosition>
   ridePoseRef: MutableRefObject<RidePose | null>
 } & Pick<CityWorldProps, 'keysRef' | 'joystickRef' | 'isAdmin' | 'adminPowersRef' | 'lookSensitivity' | 'onPlayerPosition' | 'inVehicle' | 'rideVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & {
   cameraLookRef: MutableRefObject<CameraLook>
   autoWalkTarget: LocationId | null
+  apartmentMoveTargetRef: MutableRefObject<PlayerPosition | null>
 }) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
@@ -1250,6 +1324,15 @@ function PlayerController({
         forwardZ * inputForward + rightZ * inputRight,
       )
 
+      if (activeInterior?.id === 'marina-apartments' && !useStick && !forwardInput && !rightInput) {
+        const target = apartmentMoveTargetRef.current
+        if (target) {
+          const dx = target.x - position.x
+          const dz = target.z - position.z
+          if (Math.hypot(dx, dz) < 0.38) apartmentMoveTargetRef.current = null
+          else direction.set(dx, 0, dz)
+        }
+      }
       if (direction.lengthSq() < 0.0001 && autoWalkTarget && !inside) {
         const target = getLocationEntrancePosition(autoWalkTarget)
           ?? WORLD_LOCATIONS.find((location) => location.id === autoWalkTarget)
@@ -1270,8 +1353,23 @@ function PlayerController({
         const ghost = Boolean(powers?.noclip || powers?.fly)
 
         if (inside) {
-          position.x = MathUtils.clamp(nextX, -6.7, 6.7)
-          position.z = MathUtils.clamp(nextZ, -6.7, 6.7)
+          const home = activeInterior?.id === 'marina-apartments'
+          const minX = home ? -17.2 : -6.7
+          const maxX = home ? 17.2 : 6.7
+          const minZ = home ? -14.8 : -6.7
+          const maxZ = home ? 14.8 : 6.7
+          const clampedX = MathUtils.clamp(nextX, minX, maxX)
+          const clampedZ = MathUtils.clamp(nextZ, minZ, maxZ)
+          if (home && !ghost) {
+            // Resolve each axis separately so the player can slide along furniture edges.
+            const blockedX = collidesWithApartmentFurniture(clampedX, previousZ, radius) || collidesWithApartmentWall(clampedX, previousZ, radius)
+            if (!blockedX) position.x = clampedX
+            const blockedZ = collidesWithApartmentFurniture(position.x, clampedZ, radius) || collidesWithApartmentWall(position.x, clampedZ, radius)
+            if (!blockedZ) position.z = clampedZ
+          } else {
+            position.x = clampedX
+            position.z = clampedZ
+          }
         } else {
           if (ghost || !collidesWithBuilding(nextX, previousZ, radius)) position.x = nextX
           if (ghost || !collidesWithBuilding(position.x, nextZ, radius)) position.z = nextZ
@@ -1291,8 +1389,8 @@ function PlayerController({
     }
 
     if (inside) {
-      position.x = MathUtils.clamp(position.x, -6.7, 6.7)
-      position.z = MathUtils.clamp(position.z, -6.7, 6.7)
+      position.x = MathUtils.clamp(position.x, activeInterior?.id === 'marina-apartments' ? -17.2 : -6.7, activeInterior?.id === 'marina-apartments' ? 17.2 : 6.7)
+      position.z = MathUtils.clamp(position.z, activeInterior?.id === 'marina-apartments' ? -14.8 : -6.7, activeInterior?.id === 'marina-apartments' ? 14.8 : 6.7)
       position.y = 0
     } else {
       position.x = MathUtils.clamp(position.x, -82, 82)
@@ -1314,6 +1412,29 @@ function PlayerController({
     if (perspectiveCamera.fov !== nextFov) {
       perspectiveCamera.fov = nextFov
       perspectiveCamera.updateProjectionMatrix()
+    }
+
+    if (activeInterior?.id === 'marina-apartments') {
+      const portrait = size.height > size.width * 1.15
+      perspectiveCamera.fov = portrait ? 62 : 50
+      perspectiveCamera.updateProjectionMatrix()
+      const look = cameraLookRef.current
+      const distance = (portrait ? 22 : 25) * MathUtils.clamp(look.zoom, 0.65, 2.2)
+      const pitch = MathUtils.clamp(look.pitch, -0.05, 1.2)
+      cameraTarget.current.set(
+        x + Math.sin(look.yaw) * distance,
+        position.y + 8.5 + Math.sin(pitch) * distance * 0.78,
+        z + Math.cos(look.yaw) * distance,
+      )
+      cameraLookAt.current.set(x, position.y + 1.15, z)
+      camera.position.lerp(cameraTarget.current, 1 - Math.exp(-step * 4.2))
+      camera.lookAt(cameraLookAt.current)
+      publishTimer.current += step
+      if (publishTimer.current > 0.16) {
+        publishTimer.current = 0
+        onPositionRef.current({ x, z })
+      }
+      return
     }
 
     const zoom = MathUtils.clamp(cameraLookRef.current.zoom, inside ? 0.72 : 0.5, inside ? 1.35 : 2.8)
@@ -1497,40 +1618,39 @@ const StaticWorld = memo(function StaticWorld({
       {!night && <group position={[45, 42, -75]}><mesh><sphereGeometry args={[5, 20, 16]} /><meshBasicMaterial color={dawn || dusk ? '#ffb56e' : '#fff0a3'} /></mesh><pointLight intensity={0.8} color="#ffe2a0" distance={100} /></group>}
       {night && <Stars radius={180} depth={100} count={1600} factor={3.4} saturation={0.15} fade speed={0.22} />}
       {night && <mesh position={[0, 78, -110]}><sphereGeometry args={[2.6, 16, 12]} /><meshBasicMaterial color="#fff3cc" /></mesh>}
-      <>
-          <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
-          <RoadMarkings night={night} />
-          <Flyover />
-          <LagoonBridge />
-          {CITY_BUILDINGS.map((building) => <BuildingLot key={`lot-${building.id}`} building={building} />)}
-          {CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
-          <BuildingWindows buildings={CITY_BUILDINGS} night={night} />
-          {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
-          {CITY_BUILDINGS.map((building) => (
-            <EntryBeacon key={`entry-${building.id}`} position={getBuildingEntrancePosition(building)} label="ENTER" />
-          ))}
-          {WORLD_LOCATIONS.map((location) => {
-            const position = getLocationEntrancePosition(location.id)
-            return position ? <EntryBeacon key={`entry-${location.id}`} position={position} label="ENTER" /> : null
-          })}
-          <StreetTrees />
-          <StreetLamps night={night} />
-          <Billboards night={night} />
-          <TrafficSignals />
-          <CitySignBoards night={night} />
-          <TrafficFleet night={night} />
-        </>
+      <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
+      <RoadMarkings night={night} />
+      <Flyover />
+      <LagoonBridge />
+      {CITY_BUILDINGS.map((building) => <BuildingLot key={`lot-${building.id}`} building={building} />)}
+      {CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
+      <BuildingWindows buildings={CITY_BUILDINGS} night={night} />
+      {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
+      {CITY_BUILDINGS.map((building) => (
+        <EntryBeacon key={`entry-${building.id}`} position={getBuildingEntrancePosition(building)} label="ENTER" />
+      ))}
+      {WORLD_LOCATIONS.map((location) => {
+        const position = getLocationEntrancePosition(location.id)
+        return position ? <EntryBeacon key={`entry-${location.id}`} position={position} label="ENTER" /> : null
+      })}
+      <StreetTrees />
+      <StreetLamps night={night} />
+      <Billboards night={night} />
+      <TrafficSignals />
+      <CitySignBoards night={night} />
+      <TrafficFleet night={night} />
     </>
   )
 })
 
 export function CityWorld(props: CityWorldProps) {
-  const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0, zoom: 1 })
+  const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0.72, zoom: 1.25 })
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
   const activePointersRef = useRef(new Map<number, { x: number; y: number }>())
   const pinchDistanceRef = useRef(0)
-  const playerPosRef = useRef<Point>({ x: 0, z: 0 })
+  const playerPosRef = useRef<PlayerPosition>({ x: 0, z: 0 })
   const ridePoseRef = useRef<RidePose | null>(null)
+  const apartmentMoveTargetRef = useRef<PlayerPosition | null>(null)
   useEffect(() => { if (!props.ride || props.ride.phase !== 'riding') ridePoseRef.current = null }, [props.ride])
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -1556,7 +1676,7 @@ export function CityWorld(props: CityWorldProps) {
       const points = [...activePointersRef.current.values()].slice(0, 2)
       const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)
       if (pinchDistanceRef.current > 0 && distance > 0) {
-        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * (distance / pinchDistanceRef.current), 0.5, 2.8)
+        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * (distance / pinchDistanceRef.current), 0.65, 2.2)
       }
       pinchDistanceRef.current = distance
       dragRef.current = null
@@ -1574,9 +1694,9 @@ export function CityWorld(props: CityWorldProps) {
       Math.PI * 2,
     ) - Math.PI
     cameraLookRef.current.pitch = MathUtils.clamp(
-      cameraLookRef.current.pitch - dy * 0.002 * props.lookSensitivity,
-      -0.48,
-      0.48,
+      cameraLookRef.current.pitch - dy * 0.0035 * props.lookSensitivity,
+      -0.05,
+      1.2,
     )
   }
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -1591,7 +1711,7 @@ export function CityWorld(props: CityWorldProps) {
   }
   const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     cameraLookRef.current.zoom = MathUtils.clamp(
-      cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.12 : 0.89), 0.5, 2.8,
+      cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.12 : 0.89), 0.65, 2.2,
     )
   }
 
@@ -1614,9 +1734,12 @@ export function CityWorld(props: CityWorldProps) {
         gl={{ antialias: QUALITY_SETTINGS[props.quality].antialias, powerPreference: 'high-performance' }}
       >
         {props.activeInterior ? (
-          <>
-  <InteriorScene interior={props.activeInterior} />
-          </>
+          <InteriorScene
+            interior={props.activeInterior}
+            onApartmentMove={(x, z) => { apartmentMoveTargetRef.current = { x, z } }}
+            onApartmentAction={props.onApartmentAction}
+            apartmentTargetRef={apartmentMoveTargetRef}
+          />
         ) : (
           <CityScene waypoint={props.waypoint} remotePlayers={props.remotePlayers} gameMinutes={props.gameMinutes} quality={props.quality} />
         )}
@@ -1640,6 +1763,7 @@ export function CityWorld(props: CityWorldProps) {
           activeInterior={props.activeInterior}
           cameraLookRef={cameraLookRef}
           autoWalkTarget={props.autoWalkTarget}
+          apartmentMoveTargetRef={apartmentMoveTargetRef}
         />
       </Canvas>
     </div>
