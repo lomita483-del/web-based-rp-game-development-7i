@@ -1189,6 +1189,28 @@ function collidesWithBuilding(x: number, z: number, radius: number) {
   )
 }
 
+// Starter-apartment furniture footprints in world-space. The avatar is treated as a
+// capsule-sized circle so it cannot pass through beds, counters, the sofa or appliances.
+const APARTMENT_FURNITURE_BLOCKS = [
+  { x: -4.3, z: -2.65, width: 4.55, depth: 1.55 }, // sectional sofa
+  { x: -4.3, z: -7.45, width: 3.0, depth: 0.48 }, // TV console
+  { x: -4.3, z: -5.35, width: 2.35, depth: 1.4 }, // coffee table
+  { x: 4.5, z: -3.7, width: 3.35, depth: 4.35 }, // bed
+  { x: 1.4, z: -6.7, width: 1.75, depth: 2.7 }, // study desk
+  { x: -4.1, z: 1.2, width: 6.9, depth: 1.2 }, // kitchen counter
+  { x: -1.4, z: 1.2, width: 1.5, depth: 1.6 }, // refrigerator
+  { x: 1.9, z: 1.9, width: 2.25, depth: 1.9 }, // bath fixture
+  { x: -2.1, z: 6.2, width: 1.2, depth: 1.0 }, // toilet
+] as const
+
+function collidesWithApartmentFurniture(x: number, z: number, radius: number) {
+  return APARTMENT_FURNITURE_BLOCKS.some((block) => {
+    const closestX = Math.max(block.x - block.width / 2, Math.min(x, block.x + block.width / 2))
+    const closestZ = Math.max(block.z - block.depth / 2, Math.min(z, block.z + block.depth / 2))
+    return (x - closestX) ** 2 + (z - closestZ) ** 2 < radius ** 2
+  })
+}
+
 function PlayerController({
   keysRef, joystickRef, riding, playerPosRef, ridePoseRef, isAdmin, adminPowersRef,
   lookSensitivity, onPlayerPosition, inVehicle, rideVehicle, gender, paused,
@@ -1283,8 +1305,21 @@ function PlayerController({
         const ghost = Boolean(powers?.noclip || powers?.fly)
 
         if (inside) {
-          position.x = MathUtils.clamp(nextX, activeInterior?.id === 'marina-apartments' ? -17.2 : -6.7, activeInterior?.id === 'marina-apartments' ? 17.2 : 6.7)
-          position.z = MathUtils.clamp(nextZ, activeInterior?.id === 'marina-apartments' ? -14.8 : -6.7, activeInterior?.id === 'marina-apartments' ? 14.8 : 6.7)
+          const home = activeInterior?.id === 'marina-apartments'
+          const minX = home ? -17.2 : -6.7
+          const maxX = home ? 17.2 : 6.7
+          const minZ = home ? -14.8 : -6.7
+          const maxZ = home ? 14.8 : 6.7
+          const clampedX = MathUtils.clamp(nextX, minX, maxX)
+          const clampedZ = MathUtils.clamp(nextZ, minZ, maxZ)
+          if (home && !ghost) {
+            // Resolve each axis separately so the player can slide along furniture edges.
+            if (!collidesWithApartmentFurniture(clampedX, previousZ, radius)) position.x = clampedX
+            if (!collidesWithApartmentFurniture(position.x, clampedZ, radius)) position.z = clampedZ
+          } else {
+            position.x = clampedX
+            position.z = clampedZ
+          }
         } else {
           if (ghost || !collidesWithBuilding(nextX, previousZ, radius)) position.x = nextX
           if (ghost || !collidesWithBuilding(position.x, nextZ, radius)) position.z = nextZ
@@ -1330,12 +1365,23 @@ function PlayerController({
     }
 
     if (activeInterior?.id === 'marina-apartments') {
+      // Free orbit camera: the same drag-look controls used outside now orbit around
+      // the avatar indoors instead of forcing a fixed overhead apartment view.
       const portrait = size.height > size.width * 1.15
-      perspectiveCamera.fov = portrait ? 66 : 52
+      perspectiveCamera.fov = portrait ? 62 : 50
       perspectiveCamera.updateProjectionMatrix()
-      const homeCameraPosition = portrait ? new Vector3(0, 42, 30) : new Vector3(0, 27, 22)
-      camera.position.lerp(homeCameraPosition, 1 - Math.exp(-step * 4.5))
-      camera.lookAt(0, 0.5, 0)
+      const look = cameraLookRef.current
+      const distance = (portrait ? 17.5 : 15.5) * MathUtils.clamp(look.zoom, 0.72, 1.45)
+      const yaw = look.yaw
+      const pitch = MathUtils.clamp(look.pitch, -0.28, 0.72)
+      cameraTarget.current.set(
+        x + Math.sin(yaw) * distance,
+        position.y + 7.2 + Math.sin(pitch) * distance * 0.55,
+        z + Math.cos(yaw) * distance,
+      )
+      cameraLookAt.current.set(x, position.y + 1.15, z)
+      camera.position.lerp(cameraTarget.current, 1 - Math.exp(-step * 4.2))
+      camera.lookAt(cameraLookAt.current)
       publishTimer.current += step
       if (publishTimer.current > 0.16) {
         publishTimer.current = 0
