@@ -1211,6 +1211,21 @@ function collidesWithApartmentFurniture(x: number, z: number, radius: number) {
   })
 }
 
+function collidesWithApartmentWall(x: number, z: number, radius: number) {
+  const wall = (px: number, pz: number, width: number, depth: number) => {
+    const nearestX = Math.max(px - width / 2, Math.min(x, px + width / 2))
+    const nearestZ = Math.max(pz - depth / 2, Math.min(z, pz + depth / 2))
+    return (x - nearestX) ** 2 + (z - nearestZ) ** 2 < radius ** 2
+  }
+  // Exterior perimeter. The front entrance is a 2.4m opening in the south wall.
+  if (wall(0, -8.45, 17, 0.3) || wall(-8.45, 0, 0.3, 17) || wall(8.45, 0, 0.3, 17)) return true
+  if (Math.abs(z - 8.45) < radius + 0.15 && Math.abs(x) > 1.35 && Math.abs(x) < 8.7) return true
+  // Internal partitions have real door openings centred on each partition.
+  if (wall(0, -4.2, 0.18, 8.0) || wall(0, 4.2, 0.18, 8.0)) return true
+  if (wall(-4.2, 0, 8.0, 0.18) || wall(4.2, 0, 8.0, 0.18)) return true
+  return false
+}
+
 function PlayerController({
   keysRef, joystickRef, riding, playerPosRef, ridePoseRef, isAdmin, adminPowersRef,
   lookSensitivity, onPlayerPosition, inVehicle, rideVehicle, gender, paused,
@@ -1314,8 +1329,10 @@ function PlayerController({
           const clampedZ = MathUtils.clamp(nextZ, minZ, maxZ)
           if (home && !ghost) {
             // Resolve each axis separately so the player can slide along furniture edges.
-            if (!collidesWithApartmentFurniture(clampedX, previousZ, radius)) position.x = clampedX
-            if (!collidesWithApartmentFurniture(position.x, clampedZ, radius)) position.z = clampedZ
+            const blockedX = collidesWithApartmentFurniture(clampedX, previousZ, radius) || collidesWithApartmentWall(clampedX, previousZ, radius)
+            if (!blockedX) position.x = clampedX
+            const blockedZ = collidesWithApartmentFurniture(position.x, clampedZ, radius) || collidesWithApartmentWall(position.x, clampedZ, radius)
+            if (!blockedZ) position.z = clampedZ
           } else {
             position.x = clampedX
             position.z = clampedZ
