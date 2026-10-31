@@ -20,6 +20,7 @@ import {
   type RideVehicleType,
 } from './game-data'
 import { RideVehicle, type RideEvent, type RidePose, type RideState } from './ride-vehicle'
+import { AssetCharacter, AssetTrafficVehicle, CityBuilderDressing, FarmDistrict } from './world-asset-layer'
 import { Atmosphere } from './atmosphere'
 import { BuildingWindows } from './building-windows'
 import { Campus } from './campus'
@@ -980,7 +981,7 @@ function CharacterActor({ character }: { character: (typeof CITY_CHARACTERS)[num
 
   return (
     <group ref={characterRef} position={[character.x, 0, character.z]}>
-      <HumanoidModel skinTone={character.skinTone} hairColor={character.hairColor} clothing={character.color} accentColor={character.accentColor} />
+      <AssetCharacter scale={0.95} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}><ringGeometry args={[0.38, 0.43, 24]} /><meshBasicMaterial color="#c18c56" transparent opacity={0.52} /></mesh>
     </group>
   )
@@ -1185,7 +1186,11 @@ function TrafficFleet({ night }: { night: boolean }) {
           position={getTrafficPosition(vehicle, vehicle.start)}
           rotation={[0, getTrafficHeading(vehicle), 0]}
         >
-          <TrafficVehicleModel kind={vehicle.kind} color={vehicle.color} night={night} />
+          {(vehicle.kind === 'car' || vehicle.kind === 'danfo' || vehicle.kind === 'truck') ? (
+            <AssetTrafficVehicle kind={vehicle.kind} color={vehicle.color} night={night} />
+          ) : (
+            <TrafficVehicleModel kind={vehicle.kind} color={vehicle.color} night={night} />
+          )}
         </group>
       ))}
     </group>
@@ -1536,7 +1541,7 @@ function PassbyPedestrian({ index }: { index: number }) {
   const shirts = ['#8c4d3f', '#d1a05b', '#456b72', '#65764d', '#6c587e', '#c5c0b4']
   const position: [number, number, number] = axis === 'x' ? [start, 0, track] : [track, 0, start]
   return <group ref={ref} position={position} scale={0.88}>
-    <HumanoidModel skinTone={index % 3 === 0 ? '#69432f' : '#87583f'} hairColor={female ? '#211817' : '#30221b'} clothing={shirts[index % shirts.length]} accentColor="#d2b17a" gender={female ? 'female' : 'male'} walking />
+      <AssetCharacter scale={0.9} />
   </group>
 }
 
@@ -1589,6 +1594,8 @@ function CityScene({ waypoint, remotePlayers, gameMinutes, quality }: Pick<CityW
       <Atmosphere gameMinutes={gameMinutes} />
       <StaticWorld night={night} dawn={dawn} dusk={dusk} facadeTexture={facadeTexture} pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
       <TrafficLayer night={night} density={settings.traffic} />
+      <FarmDistrict />
+      <CityBuilderDressing />
       {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
       {Array.from({ length: settings.pedestrians }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
       {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
