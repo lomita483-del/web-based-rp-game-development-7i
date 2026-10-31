@@ -381,7 +381,7 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
 
   const mission = getMissionDetails(player.stage)
   const waypoint = pinnedWaypoint ?? mission.targetLocation
-    const paused = activePanel !== 'none' || activeCharacter !== null || serviceSheetOpen || worldTransitioning || Boolean(rideBooking && rideBooking.status !== 'arrived')
+    const paused = activePanel !== 'none' || activeCharacter !== null || serviceSheetOpen || worldTransitioning || Boolean(rideBooking && rideBooking.status !== 'arrived') || Boolean(ride && ride.phase !== 'riding')
 
   const notify = useCallback((text: string) => {
     toastId.current += 1
