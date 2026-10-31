@@ -131,6 +131,54 @@ export function FarmDistrict() {
   )
 }
 
+const STREET_ASSETS = {
+  straight: '/assets/street-pack/OBJ/Street_Straight.obj',
+  curve: '/assets/street-pack/OBJ/Street_Curve.obj',
+  fourWay: '/assets/street-pack/OBJ/Street_4Way.obj',
+  threeWay: '/assets/street-pack/OBJ/Street_3Way.obj',
+  light: '/assets/street-pack/OBJ/Streetlight_Single.obj',
+} as const
+
+const HOUSE_ASSETS = Array.from({ length: 21 }, (_, index) => `/assets/street-pack/city-kit/Models/OBJ format/house_type${String(index + 1).padStart(2, '0')}.obj`)
+
+export function AssetCityReplacement() {
+  const straight = useLoader(OBJLoader, STREET_ASSETS.straight)
+  const curve = useLoader(OBJLoader, STREET_ASSETS.curve)
+  const fourWay = useLoader(OBJLoader, STREET_ASSETS.fourWay)
+  const threeWay = useLoader(OBJLoader, STREET_ASSETS.threeWay)
+  const light = useLoader(OBJLoader, STREET_ASSETS.light)
+  const houses = useLoader(OBJLoader, HOUSE_ASSETS)
+  const models = useMemo(() => ({
+    straight: prepareModel(straight.clone(true)),
+    curve: prepareModel(curve.clone(true)),
+    fourWay: prepareModel(fourWay.clone(true)),
+    threeWay: prepareModel(threeWay.clone(true)),
+    light: prepareModel(light.clone(true)),
+    houses: houses.map((house) => prepareModel(house.clone(true))),
+  }), [curve, fourWay, houses, light, straight, threeWay])
+  const roads = [-66, -42, -18, 18, 42, 66]
+  const roadPieces = roads.flatMap((z, row) => roads.map((x, column) => ({ x, z, row, column })))
+
+  return (
+    <group name="provided-asset-city">
+      {roadPieces.map(({ x, z, row, column }) => {
+        const isIntersection = Math.abs(x) <= 66 && Math.abs(z) <= 66
+        const roadModel = row === column ? models.curve : isIntersection ? models.fourWay : models.straight
+        return <primitive key={`provided-road-${x}-${z}`} object={roadModel.clone(true)} position={[x, -0.2, z]} scale={4} />
+      })}
+      {roads.flatMap((offset) => [-76, -52, -28, -4, 20, 44, 68].map((cross) => (
+        <primitive key={`provided-light-${offset}-${cross}`} object={models.light.clone(true)} position={[cross, 0, offset]} scale={4} />
+      )))}
+      {Array.from({ length: 21 }, (_, index) => {
+        const building = models.houses[index % models.houses.length]
+        const x = -72 + (index % 7) * 24
+        const z = -78 + Math.floor(index / 7) * 34
+        return <primitive key={`provided-house-${index}`} object={building.clone(true)} position={[x, 0, z]} scale={6} />
+      })}
+    </group>
+  )
+}
+
 export function CityBuilderDressing() {
   const building = useLoader(FBXLoader, '/assets/kaykit-city/KayKit_City_Builder_Bits_1.0_FREE/Assets/fbx/building_A.fbx')
   const bench = useLoader(FBXLoader, '/assets/kaykit-city/KayKit_City_Builder_Bits_1.0_FREE/Assets/fbx/bench.fbx')
