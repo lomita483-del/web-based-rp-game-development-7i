@@ -4894,6 +4894,50 @@ button:focus-visible {
 }
 
 
+/* Reference-game location and media controls. These stay compact so the 3D world remains the primary surface. */
+.reference-location-card {
+  position: absolute;
+  z-index: 35;
+  right: max(0.65rem, env(safe-area-inset-right));
+  bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.35rem);
+  width: min(21rem, calc(100vw - 1.3rem));
+  padding: 0.72rem;
+  border: 1px solid rgb(229 218 190 / 20%);
+  border-radius: 1rem;
+  background: linear-gradient(155deg, rgb(16 30 31 / 94%), rgb(7 15 18 / 92%));
+  box-shadow: 0 10px 30px rgb(0 0 0 / 32%);
+  backdrop-filter: blur(14px);
+}
+.reference-location-head { display: flex; align-items: center; gap: 0.55rem; }
+.reference-location-icon { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 0.65rem; color: #f0cf8e; background: rgb(224 189 126 / 12%); }
+.reference-location-icon svg { width: 1rem; }
+.reference-location-head span:nth-child(2) { display: grid; min-width: 0; gap: 0.12rem; }
+.reference-location-head small { color: #91a49d; font-size: 0.48rem; font-weight: 800; letter-spacing: 0.13em; }
+.reference-location-head strong { overflow: hidden; color: #f2efdf; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+.reference-location-head > button { margin-left: auto; border: 0; background: none; color: #d9c58e; cursor: pointer; }
+.reference-location-head > button svg { width: 1rem; }
+.reference-location-card p { margin: 0.55rem 0; color: #9daea8; font-size: 0.62rem; line-height: 1.35; }
+.reference-location-actions { display: grid; grid-template-columns: 1fr auto; gap: 0.4rem; }
+.reference-location-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 0.32rem; min-height: 2rem; padding: 0 0.65rem; border: 1px solid rgb(224 189 126 / 24%); border-radius: 0.65rem; background: rgb(224 189 126 / 10%); color: #f1d39a; font: inherit; font-size: 0.58rem; font-weight: 850; letter-spacing: 0.06em; cursor: pointer; }
+.reference-location-actions button:first-child { background: linear-gradient(135deg, #2a826c, #17604f); color: #f4f1dd; }
+.reference-location-actions svg { width: 0.82rem; }
+.reference-view-rail { position: absolute; z-index: 35; top: 50%; right: max(0.65rem, env(safe-area-inset-right)); display: grid; gap: 0.25rem; padding: 0.25rem; border: 1px solid rgb(229 218 190 / 18%); border-radius: 0.8rem; background: rgb(7 15 18 / 78%); backdrop-filter: blur(12px); transform: translateY(-50%); }
+.reference-view-rail button { min-width: 3.05rem; min-height: 1.7rem; border: 0; border-radius: 0.5rem; background: transparent; color: #aebdb5; font: inherit; font-size: 0.52rem; font-weight: 800; cursor: pointer; }
+.reference-view-rail button.is-active { background: #f0cf8e; color: #14201f; }
+.reference-media-tools { position: absolute; z-index: 35; left: max(0.65rem, env(safe-area-inset-left)); bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.55rem); display: flex; gap: 0.35rem; }
+.reference-media-tools button { display: grid; width: 2.15rem; height: 2.15rem; place-items: center; border: 1px solid rgb(229 218 190 / 18%); border-radius: 50%; background: rgb(7 15 18 / 78%); color: #e8d49a; cursor: pointer; }
+.reference-media-tools svg { width: 0.92rem; }
+@media (max-width: 760px) {
+  .reference-location-card { right: 0.65rem; bottom: calc(max(0.65rem, env(safe-area-inset-bottom)) + 3.5rem); width: min(16.5rem, calc(100vw - 7rem)); padding: 0.55rem; }
+  .reference-location-card p { margin: 0.35rem 0; font-size: 0.54rem; }
+  .reference-location-head strong { font-size: 0.68rem; }
+  .reference-location-actions button { min-height: 1.72rem; font-size: 0.5rem; }
+  .reference-view-rail { top: 52%; right: 0.55rem; }
+  .reference-view-rail button { min-width: 2.6rem; min-height: 1.55rem; font-size: 0.46rem; }
+  .reference-media-tools { left: 0.65rem; bottom: calc(max(0.65rem, env(safe-area-inset-bottom)) + 3.55rem); }
+  .reference-media-tools button { width: 1.9rem; height: 1.9rem; }
+}
+
 /* In-game smartphone launcher: opens over the live world and routes into real game panels. */
 .game-panel:has(.phone-home) {
   width: min(25rem, calc(100vw - 1.2rem));
