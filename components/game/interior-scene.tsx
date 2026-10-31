@@ -513,6 +513,39 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
         <mesh position={[0, 1.35, -0.2]}><boxGeometry args={[2.25, 0.65, 2.4]} /><meshStandardMaterial color="#35525a" metalness={0.35} roughness={0.25} /></mesh>
         {[-1.05, 1.05].flatMap((x) => [-1.55, 1.55].map((z) => <mesh key={x + ':' + z} position={[x, 0.38, z]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.4, 0.4, 0.18, 16]} /><meshStandardMaterial color="#171b1d" /></mesh>))}
       </group>
+      {/* Landscaped private yard: layered lawn, planted borders, stepping stones and a low boundary hedge. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.48, 0]} receiveShadow>
+        <circleGeometry args={[18.2, 72]} />
+        <meshStandardMaterial color="#416b42" roughness={1} />
+      </mesh>
+      {Array.from({ length: 18 }, (_, index) => {
+        const angle = (index / 18) * Math.PI * 2
+        const x = Math.cos(angle) * 16.4
+        const z = Math.sin(angle) * 16.4
+        return (
+          <group key={`yard-border-${index}`} position={[x, 0, z]} rotation={[0, -angle, 0]}>
+            <mesh position={[0, 0.28, 0]} castShadow><boxGeometry args={[1.55, 0.56, 0.72]} /><meshStandardMaterial color={index % 2 ? '#355f3b' : '#477447'} roughness={1} /></mesh>
+            <mesh position={[0.25, 0.56, 0]}><sphereGeometry args={[0.25, 8, 7]} /><meshStandardMaterial color={index % 3 ? '#527f4a' : '#6b8c4c'} roughness={1} /></mesh>
+          </group>
+        )
+      })}
+      {[-2.2, -0.75, 0.75, 2.2].map((x, index) => (
+        <mesh key={`path-stone-${index}`} position={[x, -0.095, 11.1]} receiveShadow>
+          <boxGeometry args={[0.9, 0.08, 0.78]} />
+          <meshStandardMaterial color="#aaa99c" roughness={0.96} />
+        </mesh>
+      ))}
+      {[-10, -7.5, 7.5, 10].map((x, index) => (
+        <group key={`flower-bed-${index}`} position={[x, 0, index < 2 ? 6.5 : -6.5]}>
+          <mesh position={[0, 0.12, 0]}><boxGeometry args={[2.8, 0.22, 1.05]} /><meshStandardMaterial color="#493c2d" roughness={1} /></mesh>
+          {[-0.8, 0, 0.8].map((offset, flower) => (
+            <group key={offset} position={[offset, 0.25, 0]}>
+              <mesh position={[0, 0.3, 0]}><cylinderGeometry args={[0.035, 0.045, 0.6, 6]} /><meshStandardMaterial color="#477343" /></mesh>
+              <mesh position={[0, 0.62, 0]}><sphereGeometry args={[0.18, 8, 7]} /><meshStandardMaterial color={['#d7a4a0', '#e5c77c', '#c78e9c'][(flower + index) % 3]} roughness={0.8} /></mesh>
+            </group>
+          ))}
+        </group>
+      ))}
       {/* Small garden trees and hedges */}
       {[-13, 13].flatMap((x) => [-11, 11].map((z) => (
         <group key={x + ':' + z} position={[x, 0, z]}>
