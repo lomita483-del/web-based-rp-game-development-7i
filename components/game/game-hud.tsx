@@ -333,7 +333,7 @@ export function GameHud({
           </div>
           <p>{activeInterior?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'} · {activeInterior ? 'Explore the room and interact with objects.' : 'A nearby place to explore.'}</p>
           <div className="reference-location-actions">
-            <button type="button" onClick={activeInterior ? onGoOutside : () => onOpenPanel('map')}><CarFront aria-hidden="true" /> {activeInterior ? 'GO OUTSIDE' : 'DRIVE HERE'}</button>
+            {activeInterior && <button type="button" onClick={onGoOutside}><CarFront aria-hidden="true" /> GO OUTSIDE</button>}
             <button type="button" onClick={() => onOpenPanel('map')}><MapPin aria-hidden="true" /> ROUTE</button>
           </div>
         </section>
