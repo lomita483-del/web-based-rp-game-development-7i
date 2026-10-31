@@ -45,7 +45,11 @@ export function HumanoidModel({
   useFrame((state) => {
     if (!leftArm.current || !rightArm.current || !leftLeg.current || !rightLeg.current) return
     const t = state.clock.elapsedTime + phase
-    const movementKeys = keysRef?.current\n    const hasMovementInput = movementKeys ? ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some((key) => movementKeys.has(key)) : walking\n    const isMoving = hasMovementInput && !paused
+    const movementKeys = keysRef?.current
+    const hasMovementInput = movementKeys
+      ? ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some((key) => movementKeys.has(key))
+      : walking
+    const isMoving = hasMovementInput && !paused
     const stride = isMoving ? Math.sin(t * 10) * 0.44 : 0
     const breathe = Math.sin(t * 1.5) * 0.035
 
