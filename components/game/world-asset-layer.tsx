@@ -1,10 +1,11 @@
 'use client'
 
 import { useLoader } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
-import { useMemo } from 'react'
+import { useGLTF, useAnimations } from '@react-three/drei'
+import { useEffect, useMemo, useRef } from 'react'
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
+import * as THREE from 'three'
 import { Group } from 'three'
 
 const CAR_ASSETS = {
@@ -49,12 +50,63 @@ export function AssetTrafficVehicle({ kind, color, night = false }: { kind: 'car
   )
 }
 
-export function AssetCharacter({ scale = 1 }: { scale?: number }) {
-  const { scene } = useGLTF('/assets/oasis/oasis-assets/models/characters/player.glb')
-  return <primitive object={scene.clone(true)} scale={scale} position={[0, 0.02, 0]} />
+type AssetCharacterProps = {
+  scale?: number
+  gender?: 'male' | 'female'
+  hairColor?: string
+  outfitColor?: string
+  skinTone?: string
+  animation?: 'idle' | 'walk' | 'eat' | 'sleep' | 'bathe' | 'sit' | 'work'
+}
+
+export function AssetCharacter({
+  scale = 1,
+  gender = 'male',
+  hairColor,
+  outfitColor,
+  skinTone,
+  animation = 'idle',
+}: AssetCharacterProps) {
+  const group = useRef<THREE.Group>(null)
+  const url = gender === 'female'
+    ? '/assets/oasis/oasis-assets/models/characters/player_female.glb'
+    : '/assets/oasis/oasis-assets/models/characters/player.glb'
+  const { scene, animations } = useGLTF(url)
+  const model = useMemo(() => {
+    const clone = scene.clone(true)
+    clone.traverse((child) => {
+      if (!('isMesh' in child) || !child.isMesh) return
+      child.castShadow = true
+      child.receiveShadow = true
+      const mesh = child as THREE.Mesh
+      const material = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      material.forEach((entry) => {
+        const name = `${child.name} ${entry.name}`.toLowerCase()
+        if (entry instanceof THREE.MeshStandardMaterial || entry instanceof THREE.MeshBasicMaterial || entry instanceof THREE.MeshPhongMaterial) {
+          if (hairColor && (name.includes('hair') || name.includes('brow'))) entry.color.set(hairColor)
+          if (outfitColor && (name.includes('shirt') || name.includes('cloth') || name.includes('outfit'))) entry.color.set(outfitColor)
+          if (skinTone && (name.includes('skin') || name.includes('body') || name.includes('face'))) entry.color.set(skinTone)
+        }
+      })
+    })
+    return clone
+  }, [hairColor, outfitColor, scene, skinTone])
+  const { actions } = useAnimations(animations, group)
+
+  useEffect(() => {
+    const preferred = Object.keys(actions).find((name) => name.toLowerCase().includes(animation))
+      ?? Object.keys(actions).find((name) => name.toLowerCase().includes('idle'))
+    if (!preferred) return
+    const action = actions[preferred]
+    action?.reset().fadeIn(0.2).play()
+    return () => { action?.fadeOut(0.2) }
+  }, [actions, animation])
+
+  return <group ref={group} scale={scale} position={[0, 0.02, 0]}><primitive object={model} /></group>
 }
 
 useGLTF.preload('/assets/oasis/oasis-assets/models/characters/player.glb')
+useGLTF.preload('/assets/oasis/oasis-assets/models/characters/player_female.glb')
 
 function FarmProp({ path, position, scale = 1, rotation = 0 }: { path: string; position: [number, number, number]; scale?: number; rotation?: number }) {
   const source = useLoader(OBJLoader, path)

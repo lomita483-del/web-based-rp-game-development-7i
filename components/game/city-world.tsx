@@ -981,7 +981,14 @@ function CharacterActor({ character }: { character: (typeof CITY_CHARACTERS)[num
 
   return (
     <group ref={characterRef} position={[character.x, 0, character.z]}>
-      <AssetCharacter scale={0.95} />
+      <AssetCharacter
+        scale={0.95}
+        gender="male"
+        hairColor={character.hairColor}
+        outfitColor={character.color}
+        skinTone={character.skinTone}
+        animation="idle"
+      />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}><ringGeometry args={[0.38, 0.43, 24]} /><meshBasicMaterial color="#c18c56" transparent opacity={0.52} /></mesh>
     </group>
   )
