@@ -65,7 +65,7 @@ type ToastState = { id: number; text: string } | null
 const fetchGameSave = ([url]: readonly [string, string]) => gameFetcher<GameSaveResponse>(url)
 const CITY_ROOM_ID = 'eko-mainland'
 /** A full in-game day lasts 24 real minutes: 2 game minutes every 2 seconds. */
-const RIDE_NAMES = { cab: 'Cab', bike: 'Okada', driver: 'Private driver' } as const
+const RIDE_NAMES = { cab: 'Cab', bike: 'Okada', danfo: 'Danfo', driver: 'Private driver' } as const
 const START_GAME_MINUTES = 8 * 60 + 30
 const CLOCK_STEP_MINUTES = 2
 const CLOCK_TICK_MS = 2000
@@ -630,8 +630,9 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
 
   const handleRideEvent = useCallback((event: RideEvent) => {
     if (event.type === 'arrived') {
-      setRide((current) => (current && current.phase === 'arriving' ? { ...current, phase: 'waiting', pickup: event.at } : current))
-      notify('Your ride has arrived. Walk to it and press E to board.')
+      // Ride booking is a door-to-door service: board automatically as soon as the vehicle reaches the pickup point.
+      setRide((current) => (current && current.phase === 'arriving' ? { ...current, phase: 'riding', pickup: event.at } : current))
+      notify('Your ride has arrived. You are now on board.')
     } else if (event.type === 'completed') {
       setRide((current) => {
         if (!current) return current
@@ -942,7 +943,7 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
       return
     }
     setAutoWalkTarget(null)
-    if (mode === 'cab' || mode === 'bike' || mode === 'driver') {
+    if (mode === 'cab' || mode === 'bike' || mode === 'danfo' || mode === 'driver') {
       if (ride) {
         notify('You already have a ride booked. Cancel it first to book another.')
         return
@@ -955,7 +956,7 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
       rideIdRef.current += 1
       setRide({ id: rideIdRef.current, kind: mode as RideKind, phase: 'arriving', destination: { x: destination.x, z: destination.z }, pickup: null })
       closePanel()
-      notify(`${RIDE_NAMES[mode]} booked. Watch the road: your driver is on the way. Stay where you are.`)
+      notify(`${RIDE_NAMES[mode]} booked to ${location.name}. Your vehicle is on the way and will board you automatically.`)
       return
     }
 
@@ -1153,7 +1154,7 @@ const HOME_CITY_POSITION: Position = { x: -76, z: -48.9 }
         lookSensitivity={lookSensitivity}
         onPlayerPosition={handlePlayerPosition}
         inVehicle={player.inVehicle}
-        rideVehicle={rideBooking && (rideBooking.status === 'boarding' || rideBooking.status === 'en-route') ? rideBooking.mode : null}
+        rideVehicle={ride?.phase === 'riding' ? ride.kind : null}
         gender={player.gender}
         activeInterior={activeInterior}
         paused={paused}
