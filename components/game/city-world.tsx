@@ -1,6 +1,6 @@
 'use client'
 
-import { useTexture } from '@react-three/drei'
+import { Stars, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type MeshStandardMaterial, type PerspectiveCamera, type Texture, Vector3 } from 'three'
@@ -28,6 +28,7 @@ import { TrafficLayer } from './traffic-layer'
 import { lightsOn } from './atmosphere'
 import { HumanoidModel } from './humanoid'
 import { InteriorScene } from './interior-scene'
+import type { Point } from '@/lib/game/world'
 
 type PlayerPosition = { x: number; z: number }
 type CameraLook = { yaw: number; pitch: number; zoom: number }
@@ -709,9 +710,6 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
         <mesh position={[0, 2.4, 7.12]}><boxGeometry args={[8.6, 0.3, 0.28]} /><meshStandardMaterial color="#4d5551" roughness={0.7} /></mesh>
         <group position={[0, 2.4, 7.28]}><WorldLabel text="AKOKA CAMPUS" width={6.2} accentColor="#d5b36f" /></group>
         <group position={[0, 8.4, 3.58]}><WorldLabel text="UNIVERSITY OF LAGOS" width={10.2} accentColor="#d5b36f" /></group>
-        {[-1, 1].flatMap((side) => [-1, 1].map((forward) => (
-          <StreetTree key={`campus-tree-${side}-${forward}`} position={[side * 7.45, 0, forward * 5.9]} scale={0.62} />
-        )))}
       </group>
     )
   }
@@ -1318,12 +1316,12 @@ function PlayerController({
       perspectiveCamera.updateProjectionMatrix()
     }
 
-    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
+    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, inside ? 0.72 : 0.5, inside ? 1.35 : 2.8)
     const cameraHeight = (inside
-      ? (size.height > size.width * 1.15 ? 4.8 : 4.2)
+      ? (size.height > size.width * 1.15 ? 16 : 14)
       : (size.height > size.width * 1.15 ? (inVehicle || riding ? 16 : 17) : (inVehicle || riding ? 8.5 : 9.5))) * zoom
     const cameraDistance = (inside
-      ? (size.height > size.width * 1.15 ? 4.4 : 3.8)
+      ? (size.height > size.width * 1.15 ? 14 : 12)
       : (size.height > size.width * 1.15 ? 19 : 14.5)) * zoom
     const look = cameraLookRef.current
     const yaw = look.yaw
@@ -1499,32 +1497,29 @@ const StaticWorld = memo(function StaticWorld({
       {!night && <group position={[45, 42, -75]}><mesh><sphereGeometry args={[5, 20, 16]} /><meshBasicMaterial color={dawn || dusk ? '#ffb56e' : '#fff0a3'} /></mesh><pointLight intensity={0.8} color="#ffe2a0" distance={100} /></group>}
       {night && <Stars radius={180} depth={100} count={1600} factor={3.4} saturation={0.15} fade speed={0.22} />}
       {night && <mesh position={[0, 78, -110]}><sphereGeometry args={[2.6, 16, 12]} /><meshBasicMaterial color="#fff3cc" /></mesh>}
-      <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
-      <RoadMarkings night={night} />
-      <Flyover />
-      <LagoonBridge />
-      {CITY_BUILDINGS.map((building) => <BuildingLot key={`lot-${building.id}`} building={building} />)}
-      {CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
-      <BuildingWindows buildings={CITY_BUILDINGS} night={night} />
-      {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
-      {CITY_BUILDINGS.map((building) => (
-        <EntryBeacon key={`entry-${building.id}`} position={getBuildingEntrancePosition(building)} label="ENTER" />
-      ))}
-      {WORLD_LOCATIONS.map((location) => {
-        const position = getLocationEntrancePosition(location.id)
-        return position ? <EntryBeacon key={`entry-${location.id}`} position={position} label="ENTER" /> : null
-      })}
-      <StreetTrees />
-      <StreetLamps night={night} />
-      <Billboards night={night} />
-      <TrafficSignals />
-      <CitySignBoards night={night} />
-      <TrafficSignals />
-      <TrafficFleet night={night} />
-      {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
-      {Array.from({ length: 24 }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
-      {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
-      <LandmarkMarkers waypoint={waypoint} />
+      <>
+          <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
+          <RoadMarkings night={night} />
+          <Flyover />
+          <LagoonBridge />
+          {CITY_BUILDINGS.map((building) => <BuildingLot key={`lot-${building.id}`} building={building} />)}
+          {CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
+          <BuildingWindows buildings={CITY_BUILDINGS} night={night} />
+          {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
+          {CITY_BUILDINGS.map((building) => (
+            <EntryBeacon key={`entry-${building.id}`} position={getBuildingEntrancePosition(building)} label="ENTER" />
+          ))}
+          {WORLD_LOCATIONS.map((location) => {
+            const position = getLocationEntrancePosition(location.id)
+            return position ? <EntryBeacon key={`entry-${location.id}`} position={position} label="ENTER" /> : null
+          })}
+          <StreetTrees />
+          <StreetLamps night={night} />
+          <Billboards night={night} />
+          <TrafficSignals />
+          <CitySignBoards night={night} />
+          <TrafficFleet night={night} />
+        </>
     </>
   )
 })
@@ -1620,8 +1615,7 @@ export function CityWorld(props: CityWorldProps) {
       >
         {props.activeInterior ? (
           <>
-            <InteriorScene interior={props.activeInterior} />
-            {props.remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
+  <InteriorScene interior={props.activeInterior} />
           </>
         ) : (
           <CityScene waypoint={props.waypoint} remotePlayers={props.remotePlayers} gameMinutes={props.gameMinutes} quality={props.quality} />

@@ -4887,6 +4887,33 @@ button:focus-visible {
 }
 
 
+/* Private apartment controls keep the home instance readable without covering the cutaway scene. */
+.apartment-overlay { position: fixed; top: 5.7rem; left: 1rem; z-index: 4; width: min(30rem, calc(100vw - 2rem)); display: grid; gap: 0.7rem; padding: 0.9rem; border: 1px solid rgb(119 218 174 / 22%); border-radius: 1rem; background: linear-gradient(135deg, rgb(10 31 32 / 88%), rgb(8 19 28 / 82%)); box-shadow: 0 1rem 3rem rgb(0 0 0 / 24%); backdrop-filter: blur(14px); }
+.apartment-title-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; }
+.apartment-title-row > div { display: grid; gap: 0.2rem; }
+.apartment-kicker { color: #76d6ae; font-size: 0.5rem; font-weight: 850; letter-spacing: 0.14em; }
+.apartment-title-row strong { color: #f6efe1; font-size: 1rem; }
+.apartment-mood { color: #93dfac; font-size: 0.52rem; font-weight: 800; letter-spacing: 0.1em; white-space: nowrap; }
+.need-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.45rem; }
+.need-meter { display: grid; gap: 0.26rem; min-width: 0; }
+.need-meter > div { display: flex; justify-content: space-between; color: #a9bdb6; font-size: 0.48rem; font-weight: 800; letter-spacing: 0.06em; }
+.need-meter b { color: #f1e6d1; font-size: 0.55rem; }
+.need-meter-track { display: block; height: 0.23rem; overflow: hidden; border-radius: 99px; background: rgb(255 255 255 / 12%); }
+.need-meter-track i { display: block; height: 100%; border-radius: inherit; background: #8fd3b2; }
+.need-meter-track.need-hunger i { background: #e6b46e; }
+.need-meter-track.need-energy i { background: #86c7f1; }
+.need-meter-track.need-fun i { background: #c4a1ed; }
+.need-meter-track.need-hygiene i { background: #80d6dc; }
+.apartment-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.4rem; }
+.apartment-actions button { display: grid; min-width: 0; gap: 0.18rem; justify-items: center; padding: 0.52rem 0.25rem; border: 1px solid rgb(255 255 255 / 10%); border-radius: 0.65rem; background: rgb(255 255 255 / 5%); color: #dce9e0; cursor: pointer; }
+.apartment-actions button:hover:not(:disabled), .apartment-actions button.is-active { border-color: rgb(119 218 174 / 55%); background: rgb(119 218 174 / 13%); }
+.apartment-actions button:disabled { cursor: not-allowed; opacity: 0.48; }
+.apartment-actions button svg { width: 0.9rem; height: 0.9rem; color: #8fd3b2; }
+.apartment-actions button span { font-size: 0.5rem; font-weight: 850; letter-spacing: 0.08em; }
+.apartment-actions button small { overflow: hidden; max-width: 100%; color: #91a79d; font-size: 0.43rem; text-overflow: ellipsis; white-space: nowrap; }
+.apartment-actions .go-outside-action { border-color: rgb(224 190 126 / 35%); background: rgb(224 190 126 / 10%); color: #f0d49a; }
+.apartment-actions .go-outside-action svg { color: #e4bd71; }
+
 /* In-game smartphone launcher: opens over the live world and routes into real game panels. */
 .game-panel:has(.phone-home) {
   width: min(25rem, calc(100vw - 1.2rem));

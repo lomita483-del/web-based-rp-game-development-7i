@@ -41,7 +41,7 @@ const ROOM_PALETTES: Record<InteriorKind, RoomPalette> = {
   port: { background: '#23272a', wall: '#8d9694', floor: '#646c6d', trim: '#c28a53', light: '#efd7a8' },
   clubhouse: { background: '#21241f', wall: '#817b70', floor: '#5d5a50', trim: '#d0a35f', light: '#f1d39b' },
   'event-center': { background: '#20252a', wall: '#a6aaa5', floor: '#747b7a', trim: '#c99b58', light: '#f5d7a0' },
-  apartment: { background: '#292520', wall: '#a19380', floor: '#786c5e', trim: '#c58a5d', light: '#efcf99' },
+  apartment: { background: '#111a35', wall: '#0d806f', floor: '#e8e6dc', trim: '#79533d', light: '#f6e7b0' },
   shop: { background: '#29221c', wall: '#ae9371', floor: '#776653', trim: '#d09a51', light: '#f1d39b' },
   office: { background: '#20272a', wall: '#929b99', floor: '#697374', trim: '#c4a16b', light: '#f2e0ba' },
   house: { background: '#29231d', wall: '#b19a79', floor: '#796753', trim: '#bd7755', light: '#f0d4a0' },
@@ -354,7 +354,6 @@ function RoomFurniture({ kind, palette }: { kind: InteriorKind; palette: RoomPal
   if (kind === 'hotel' || kind === 'bungalow' || kind === 'estate' || kind === 'apartment' || kind === 'house') {
     return (
       <>
-        <Counter position={[-3.7, 0, -4.7]} width={4.4} color="#715c48" />
         <Seat position={[-2.9, 0, -1.1]} color="#625c52" />
         <Seat position={[-1.9, 0, -1.1]} color="#625c52" />
         <Table position={[-2.4, 0, 1.1]} width={2.6} depth={1.1} color="#765c43" />
@@ -519,12 +518,13 @@ function Plant({ position, scale = 1 }: { position: [number, number, number]; sc
   )
 }
 
-function WallArt({ position, rotation = [0, 0, 0], width = 1.8, height = 1.2, color }: { position: [number, number, number]; rotation?: [number, number, number]; width?: number; height?: number; color: string }) {
+function WallArt({ position, rotation = [0, 0, 0], width = 1.8, height = 1.2, color }: { position: [number, number, number]; rotation?: [number, number, number]; width?: number; height?: number; color?: string }) {
+  const artColor = color ?? '#5f8d7e'
   return (
     <group position={position} rotation={rotation}>
       <mesh><boxGeometry args={[width + 0.18, height + 0.18, 0.08]} /><meshStandardMaterial color="#3d352d" roughness={0.7} /></mesh>
-      <mesh position={[0, 0, 0.05]}><boxGeometry args={[width, height, 0.04]} /><meshStandardMaterial color={color} roughness={0.8} /></mesh>
-      <mesh position={[width * 0.12, -height * 0.1, 0.075]}><boxGeometry args={[width * 0.4, height * 0.4, 0.02]} /><meshStandardMaterial color={shade(color, 1.35)} roughness={0.8} /></mesh>
+      <mesh position={[0, 0, 0.05]}><boxGeometry args={[width, height, 0.04]} /><meshStandardMaterial color={artColor} roughness={0.8} /></mesh>
+      <mesh position={[width * 0.12, -height * 0.1, 0.075]}><boxGeometry args={[width * 0.4, height * 0.4, 0.02]} /><meshStandardMaterial color={shade(artColor, 1.35)} roughness={0.8} /></mesh>
     </group>
   )
 }
@@ -596,14 +596,14 @@ export function InteriorScene({ interior }: InteriorSceneProps) {
       )}
 
       {/* Walls: full back and side walls, a low front wall so the camera can see in from the street side. */}
-      <mesh position={[0, 2.5, -7.92]} castShadow receiveShadow>
-        <boxGeometry args={[16, 5, 0.28]} />
+      <mesh position={[0, 1.45, -7.92]} castShadow receiveShadow>
+        <boxGeometry args={[16, 2.9, 0.28]} />
         <meshStandardMaterial color={palette.wall} roughness={0.89} />
       </mesh>
       {[-1, 1].map((side) => (
         <group key={`side-${side}`}>
-          <mesh position={[side * 7.92, 2.5, 0]} castShadow receiveShadow>
-            <boxGeometry args={[0.28, 5, 16]} />
+          <mesh position={[side * 7.92, 1.45, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.28, 2.9, 16]} />
             <meshStandardMaterial color={palette.wall} roughness={0.89} />
           </mesh>
           <mesh position={[side * 7.74, 0.12, 0]}>
@@ -658,8 +658,8 @@ export function InteriorScene({ interior }: InteriorSceneProps) {
       </mesh>
 
       <ActionMarker x={interior.actionPoint.x} z={interior.actionPoint.z} color={palette.trim} />
-      <InteriorPeople id={interior.id} kind={interior.kind} />
-      <RoomFurniture kind={interior.kind} palette={palette} />
+  {interior.kind !== 'apartment' && <InteriorPeople id={interior.id} kind={interior.kind} />}
+  <RoomFurniture kind={interior.kind} palette={palette} />
     </>
   )
 }

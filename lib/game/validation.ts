@@ -155,6 +155,7 @@ export function parseGameSavePayload(value: unknown): GameSavePayload | null {
   }
 
   const playerState: GameSaveState = {
+    adminMode: false,
     gender,
     cash,
     bankBalance,

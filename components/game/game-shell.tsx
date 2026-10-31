@@ -85,6 +85,7 @@ const ENTERABLE_INTERIORS = [
 function createGameSavePayload(player: PlayerState, position: Position, gameMinutes: number): GameSavePayload {
   return {
     playerState: {
+      adminMode: player.adminMode,
       gender: player.gender,
       cash: player.cash,
       bankBalance: player.bankBalance,
@@ -844,7 +845,7 @@ export default function GameShell() {
     notify(isHospital ? `Recovery complete at ${activeInterior.name}.` : isOwnedHome ? `You rested at ${home.name}.` : 'You got a few hours of rest at Marina House.')
   }, [activeInterior, notify, player.home])
 
-  const startInteriorShift = useCallback((jobId: JobId) => {
+  const startInteriorShift = useCallback(async (jobId: JobId) => {
     const job = CITY_JOBS.find((entry) => entry.id === jobId)
     if (!job || !activeInterior || job.locationId !== activeInterior.id) return
     if (player.job !== jobId) {
@@ -855,8 +856,13 @@ export default function GameShell() {
       notify('Your current shift is already underway.')
       return
     }
-    dispatch({ type: 'start-shift', jobId })
-    notify(`Shift started at ${job.employer}. Complete all ${job.tasks.length} tasks before clocking out.`)
+    try {
+      await gameMutation('/api/game/timed-actions', { arg: { operation: 'begin_work', jobId, payoutNgn: job.pay } })
+      dispatch({ type: 'start-shift', jobId })
+      notify(`Shift started at ${job.employer}. Server timer running for ${job.tasks.length} tasks.`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Unable to start shift.')
+    }
   }, [activeInterior, notify, player.job, player.shiftStarted])
 
   const completeInteriorTask = useCallback((jobId: JobId, taskIndex: number) => {
@@ -922,12 +928,15 @@ export default function GameShell() {
       return
     }
 
-    const fare = estimateRideFare(distanceBetween(playerPosition, location), mode)
+    const fareMode = mode === 'danfo' ? 'cab' : mode === 'drive' ? 'driver' : mode
+    const fare = estimateRideFare(distanceBetween(playerPosition, location), fareMode)
     if (player.cash < fare) {
       notify(`You need ${formatNaira(fare)} for this ride.`)
       return
     }
-    notify(messages[mode])
+    closePanel()
+    const rideLabel = mode === 'danfo' ? 'Danfo' : mode === 'drive' ? 'Drive' : RIDE_NAMES[mode]
+    notify(`${rideLabel} booked. The route is ready when you are.`)
   }, [closePanel, notify, player.currentInteriorId, ride])
 
   const applyJob = useCallback((jobId: JobId) => {
