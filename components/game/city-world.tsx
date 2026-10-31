@@ -23,7 +23,7 @@ import { RideVehicle, type RideEvent, type RidePose, type RideState } from './ri
 import { Atmosphere } from './atmosphere'
 import { BuildingWindows } from './building-windows'
 import { Campus } from './campus'
-import { Billboards, RoadMarkings, StreetLamps, StreetTrees, TrafficSignals } from './street-layer'
+import { Billboards, RoadMarkings, StreetKitProps, StreetLamps, StreetTrees, TrafficSignals } from './street-layer'
 import { TrafficLayer } from './traffic-layer'
 import { lightsOn } from './atmosphere'
 import { HumanoidModel } from './humanoid'
@@ -1619,6 +1619,7 @@ const StaticWorld = memo(function StaticWorld({
       {night && <Stars radius={180} depth={100} count={1600} factor={3.4} saturation={0.15} fade speed={0.22} />}
       {night && <mesh position={[0, 78, -110]}><sphereGeometry args={[2.6, 16, 12]} /><meshBasicMaterial color="#fff3cc" /></mesh>}
       <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
+      <StreetKitProps />
       <RoadMarkings night={night} />
       <Flyover />
       <LagoonBridge />
