@@ -1,6 +1,6 @@
 'use client'
 
-import { Stars, useTexture } from '@react-three/drei'
+import { Stars, useGLTF, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type MeshStandardMaterial, type PerspectiveCamera, type Texture, Vector3 } from 'three'
@@ -990,6 +990,13 @@ function AvatarModel({ keysRef, paused, gender, isAdmin }: { keysRef: MutableRef
   return <HumanoidModel skinTone="#80543e" hairColor="#201a17" clothing={isAdmin ? '#15171b' : '#52606a'} accentColor={isAdmin ? '#d9b24f' : '#cf9e62'} keysRef={keysRef} paused={paused} walking gender={gender} admin={isAdmin} />
 }
 
+function PlayerAssetModel() {
+  const { scene } = useGLTF('/assets/oasis/oasis-assets/models/characters/player.glb')
+  return <primitive object={scene} scale={1.15} position={[0, 0.02, 0]} />
+}
+
+useGLTF.preload('/assets/oasis/oasis-assets/models/characters/player.glb')
+
 function ScooterModel() {
   return (
     <group position={[0, 0.08, 0]}>
@@ -1475,7 +1482,7 @@ function PlayerController({
           color={rideVehicle === 'danfo' ? '#e1bd38' : rideVehicle === 'bike' ? '#31464d' : '#ddd7c9'}
           night
         />
-      ) : inVehicle ? <ScooterModel /> : <AvatarModel keysRef={keysRef} paused={paused} gender={gender} isAdmin={isAdmin} />}
+      ) : inVehicle ? <ScooterModel /> : <PlayerAssetModel />}
     </group>
   )
 }
