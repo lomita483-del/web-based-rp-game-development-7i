@@ -8,15 +8,15 @@ import { STOP_LINE_DISTANCE } from '@/lib/game/traffic-sim'
 import { GRID_LINES, SIGNAL_LINES, getSignalState, planRoute, type Point } from '@/lib/game/world'
 import { PAINT, vehicleModels } from './traffic-layer'
 
-export type RideKind = 'cab' | 'bike' | 'driver'
+export type RideKind = 'cab' | 'bike' | 'danfo' | 'driver'
 export type RidePhase = 'arriving' | 'waiting' | 'riding'
 export type RideState = { id: number; kind: RideKind; phase: RidePhase; destination: Point; pickup: Point | null }
 export type RideEvent = { type: 'arrived'; at: Point } | { type: 'completed' } | { type: 'failed' }
 export type RidePose = { x: number; z: number; heading: number }
 
-const MODEL = { cab: 'car', driver: 'car', bike: 'bike' } as const
-const COLOR = { cab: '#e8b923', driver: '#1f1f22', bike: '#c94a3a' } as const
-const SPEED = { cab: 11, driver: 12, bike: 12.5 } as const
+const MODEL = { cab: 'car', driver: 'car', bike: 'bike', danfo: 'danfo' } as const
+const COLOR = { cab: '#e8b923', driver: '#1f1f22', bike: '#c94a3a', danfo: '#e1bd38' } as const
+const SPEED = { cab: 11, driver: 12, bike: 12.5, danfo: 8.5 } as const
 
 /** Offsets each segment to the driver's right-hand lane so ride vehicles keep to their side of the road. */
 function laneRoute(from: Point, waypoints: Point[]): Point[] {
