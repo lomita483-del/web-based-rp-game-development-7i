@@ -102,8 +102,9 @@ export const WORLD_LOCATIONS = [
     id: 'university',
     name: 'University of Lagos',
     district: 'Akoka',
-    x: -54,
-    z: -72,
+    // Campus grounds are west of the main street grid; place the university pin on its real campus footprint.
+    x: -120,
+    z: 2,
     kind: 'university',
     description: 'A dedicated Akoka campus with lecture halls, a library, student housing, and open courtyards.'
   },
