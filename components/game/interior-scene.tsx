@@ -458,10 +458,46 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
       <mesh position={[-8.45, 1.45, 0]}><boxGeometry args={[0.28, 2.9, 17]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
       <mesh position={[8.45, 1.45, 0]}><boxGeometry args={[0.28, 2.9, 17]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
       <mesh position={[0, 1.45, 8.45]}><boxGeometry args={[17, 2.9, 0.28]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
-      {/* Interior partitions with open door gaps */}
-      <mesh position={[0, 1.05, -4.15]}><boxGeometry args={[0.18, 2.1, 8.2]} /><meshStandardMaterial color={wall} /></mesh>
-      <mesh position={[-4.15, 1.05, 0]}><boxGeometry args={[8.2, 2.1, 0.18]} /><meshStandardMaterial color={wall} /></mesh>
-      <mesh position={[4.15, 1.05, 0]}><boxGeometry args={[8.2, 2.1, 0.18]} /><meshStandardMaterial color={wall} /></mesh>
+      {/* Room partitions built as separate wall sections, leaving genuine door openings. */}
+      {[-1].map((side) => <group key={side}>
+        <mesh position={[0,1.05,-6.35]}><boxGeometry args={[0.18,2.1,4.0]} /><meshStandardMaterial color={wall} /></mesh>
+        <mesh position={[0,1.05,-1.95]}><boxGeometry args={[0.18,2.1,3.8]} /><meshStandardMaterial color={wall} /></mesh>
+        <mesh position={[0,1.05,6.35]}><boxGeometry args={[0.18,2.1,4.0]} /><meshStandardMaterial color={wall} /></mesh>
+      </group>)}
+      {[-6.25,6.25].map((z) => <mesh key={`cross-wall-${z}`} position={[0,1.05,z]}><boxGeometry args={[0.18,2.1,4.0]} /><meshStandardMaterial color={wall} /></mesh>)}
+      {[-6.25,6.25].map((x) => <mesh key={`cross-wall-x-${x}`} position={[x,1.05,0]}><boxGeometry args={[4.0,2.1,0.18]} /><meshStandardMaterial color={wall} /></mesh>)}
+      {/* Open timber door leaves, hinges and brass handles. */}
+      {[
+        { position: [-0.08,1.05,-4.1] as [number,number,number], rotation: [0,-Math.PI/2,0] as [number,number,number] },
+        { position: [-4.1,1.05,0.08] as [number,number,number], rotation: [0,Math.PI/2,0] as [number,number,number] },
+        { position: [4.1,1.05,0.08] as [number,number,number], rotation: [0,-Math.PI/2,0] as [number,number,number] },
+      ].map((door,index) => <group key={index} position={door.position} rotation={door.rotation}>
+        <mesh position={[0,0,-0.78]}><boxGeometry args={[1.45,2.05,0.09]} /><meshStandardMaterial color="#765139" roughness={0.78} /></mesh>
+        <mesh position={[0,0,-0.78]}><boxGeometry args={[1.12,1.72,0.025]} /><meshStandardMaterial color="#956b49" roughness={0.82} /></mesh>
+        <mesh position={[0.53,0,-0.71]}><sphereGeometry args={[0.055,10,8]} /><meshStandardMaterial color="#d4b16d" metalness={0.78} roughness={0.25} /></mesh>
+      </group>)}
+      {/* Glazed windows with proper frames, mullions and sills. */}
+      {[-5.8,5.8].map((x) => <group key={`rear-window-${x}`} position={[x,1.85,-8.28]}>
+        <mesh><boxGeometry args={[2.25,1.25,0.12]} /><meshStandardMaterial color="#d7c6a6" /></mesh>
+        <mesh position={[0,0,0.075]}><boxGeometry args={[2.02,1.02,0.035]} /><meshStandardMaterial color="#83b8c3" metalness={0.18} roughness={0.18} transparent opacity={0.72} /></mesh>
+        <mesh position={[0,0,0.11]}><boxGeometry args={[0.055,1.05,0.04]} /><meshStandardMaterial color="#e9dfca" /></mesh>
+        <mesh position={[0,0.53,0.11]}><boxGeometry args={[2.05,0.055,0.04]} /><meshStandardMaterial color="#e9dfca" /></mesh>
+        <mesh position={[0,-0.68,0.16]}><boxGeometry args={[2.45,0.12,0.28]} /><meshStandardMaterial color="#d8c8a9" /></mesh>
+      </group>)}
+      {[-5.8,5.8].map((z) => <group key={`side-window-${z}`} position={[-8.28,1.85,z]} rotation={[0,Math.PI/2,0]}>
+        <mesh><boxGeometry args={[2.25,1.25,0.12]} /><meshStandardMaterial color="#d7c6a6" /></mesh>
+        <mesh position={[0,0,0.075]}><boxGeometry args={[2.02,1.02,0.035]} /><meshStandardMaterial color="#83b8c3" metalness={0.18} roughness={0.18} transparent opacity={0.72} /></mesh>
+        <mesh position={[0,0,0.11]}><boxGeometry args={[0.055,1.05,0.04]} /><meshStandardMaterial color="#e9dfca" /></mesh>
+        <mesh position={[0,0.53,0.11]}><boxGeometry args={[2.05,0.055,0.04]} /><meshStandardMaterial color="#e9dfca" /></mesh>
+        <mesh position={[0,-0.68,0.16]}><boxGeometry args={[2.45,0.12,0.28]} /><meshStandardMaterial color="#d8c8a9" /></mesh>
+      </group>)}
+      {/* Main entrance door and glazed sidelights. */}
+      <group position={[0,0,8.28]}>
+        <mesh position={[-0.72,1.12,0]}><boxGeometry args={[1.28,2.18,0.12]} /><meshStandardMaterial color="#69452f" roughness={0.78} /></mesh>
+        <mesh position={[-0.72,1.12,0.075]}><boxGeometry args={[0.92,1.82,0.025]} /><meshStandardMaterial color="#8b6546" roughness={0.78} /></mesh>
+        <mesh position={[-0.22,1.1,0.15]}><sphereGeometry args={[0.055,10,8]} /><meshStandardMaterial color="#d9b66f" metalness={0.8} /></mesh>
+        <mesh position={[1.0,1.15,0]}><boxGeometry args={[0.62,2.1,0.1]} /><meshStandardMaterial color="#91b9ba" transparent opacity={0.5} /></mesh>
+      </group>
       {/* Living room: sectional sofa, coffee table and television */}
       <group position={[-4.3, 0.12, -4.2]}>
         <mesh position={[0, 0.55, 1.6]}><boxGeometry args={[4.4, 0.72, 1.35]} /><meshStandardMaterial color="#287d69" /></mesh>
