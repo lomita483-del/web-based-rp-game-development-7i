@@ -560,6 +560,32 @@ function PassengerAircraft({ position }: { position: [number, number, number] })
   )
 }
 
+function CampusTree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 1.05, 0]} castShadow><cylinderGeometry args={[0.12, 0.18, 2.1, 8]} /><meshStandardMaterial color="#745038" roughness={0.9} /></mesh>
+      <mesh position={[0, 2.25, 0]} castShadow><icosahedronGeometry args={[0.85, 1]} /><meshStandardMaterial color="#236c45" roughness={0.95} /></mesh>
+      <mesh position={[0.28, 2.55, 0.1]} castShadow><icosahedronGeometry args={[0.48, 1]} /><meshStandardMaterial color="#2e8050" roughness={0.95} /></mesh>
+    </group>
+  )
+}
+
+function SecuredCompound({ width, depth, gateWidth = 3.2, color = '#4b5753' }: { width: number; depth: number; gateWidth?: number; color?: string }) {
+  const postPositions = Array.from({ length: 7 }, (_, index) => -width / 2 + (index * width) / 6)
+  return (
+    <group>
+      <mesh position={[0, 1.15, -depth / 2]}><boxGeometry args={[width, 0.16, 0.18]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[-width / 2, 1.15, 0]}><boxGeometry args={[0.18, 0.16, depth]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[width / 2, 1.15, 0]}><boxGeometry args={[0.18, 0.16, depth]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[-(width - gateWidth) / 4 - gateWidth / 2, 1.15, depth / 2]}><boxGeometry args={[(width - gateWidth) / 2, 0.16, 0.18]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[(width - gateWidth) / 4 + gateWidth / 2, 1.15, depth / 2]}><boxGeometry args={[(width - gateWidth) / 2, 0.16, 0.18]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      {postPositions.map((postX) => <mesh key={`compound-post-${postX}`} position={[postX, 1.1, -depth / 2]}><cylinderGeometry args={[0.08, 0.1, 2.2, 8]} /><meshStandardMaterial color="#c6a66e" metalness={0.35} roughness={0.52} /></mesh>)}
+      {[-width / 2, width / 2, -(gateWidth / 2), gateWidth / 2].map((postX) => <mesh key={`gate-post-${postX}`} position={[postX, 1.1, depth / 2]}><cylinderGeometry args={[0.12, 0.15, 2.2, 8]} /><meshStandardMaterial color="#d1b77e" metalness={0.3} roughness={0.5} /></mesh>)}
+      <mesh position={[0, 2.15, depth / 2]}><boxGeometry args={[gateWidth, 0.18, 0.22]} /><meshStandardMaterial color="#d1b77e" metalness={0.32} roughness={0.5} /></mesh>
+    </group>
+  )
+}
+
 function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LOCATIONS)[number]; facadeTexture: Texture }) {
   const { x, z, kind } = location
   if (kind === 'bridge') return null
@@ -625,6 +651,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   if (kind === 'stadium') {
     return (
       <group position={[x, 0, z]}>
+        <SecuredCompound width={18} depth={18} gateWidth={4.5} color="#4c5a54" />
         <mesh position={[0, 2.2, 0]} castShadow>
           <cylinderGeometry args={[6.1, 6.5, 4.4, 32, 1, true]} />
           <meshStandardMaterial color="#77766f" roughness={0.8} side={2} />
@@ -651,6 +678,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   if (kind === 'university') {
     return (
       <group position={[x, 0, z]}>
+        <SecuredCompound width={20} depth={19} gateWidth={4.2} color="#3f5e5c" />
         <mesh position={[0, -0.035, 0]} receiveShadow>
           <boxGeometry args={[17, 0.12, 15]} />
           <meshStandardMaterial color="#52614a" roughness={0.98} />
@@ -711,7 +739,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
         <group position={[0, 2.4, 7.28]}><WorldLabel text="AKOKA CAMPUS" width={6.2} accentColor="#d5b36f" /></group>
         <group position={[0, 8.4, 3.58]}><WorldLabel text="UNIVERSITY OF LAGOS" width={10.2} accentColor="#d5b36f" /></group>
         {[-1, 1].flatMap((side) => [-1, 1].map((forward) => (
-          <StreetTree key={`campus-tree-${side}-${forward}`} position={[side * 7.45, 0, forward * 5.9]} scale={0.62} />
+          <CampusTree key={`campus-tree-${side}-${forward}`} position={[side * 7.45, 0, forward * 5.9]} scale={0.62} />
         )))}
       </group>
     )
@@ -767,10 +795,12 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   }
 
   if (kind === 'village') {
-    const huts = [[-4, -3], [1, -5], [4, 1], [-2, 4], [4, 4]] as const
+    const huts = [[-5, -5], [0, -5], [5, -5], [-5, 0], [5, 0], [-5, 5], [0, 5], [5, 5], [-2.5, 0], [2.5, 0]] as const
     return (
       <group position={[x, 0, z]}>
-        <mesh position={[0, 0.02, 0]}><boxGeometry args={[12, 0.12, 12]} /><meshStandardMaterial color="#887d69" roughness={1} /></mesh>
+        <mesh position={[0, 0.02, 0]}><boxGeometry args={[16, 0.12, 16]} /><meshStandardMaterial color="#887d69" roughness={1} /></mesh>
+        <SecuredCompound width={17} depth={17} gateWidth={4} color="#6d5e49" />
+        <group position={[0, 2.7, 8.2]}><WorldLabel text="IBEJU FARM VILLAGE" width={7.5} accentColor="#d8af67" /></group>
         {huts.map(([hutX, hutZ], index) => (
           <group key={`hut-${index}`} position={[hutX, 0, hutZ]}>
             <mesh position={[0, 1.2, 0]} castShadow><cylinderGeometry args={[1.75, 2, 2.4, 8]} /><meshStandardMaterial color={index % 2 ? '#ad9270' : '#8f7558'} roughness={0.96} /></mesh>
@@ -823,6 +853,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
 
   return (
     <group position={[x, 0, z]}>
+      {(kind === 'court' || kind === 'government') && <SecuredCompound width={19} depth={16} gateWidth={4} color="#5a5b56" />}
       <mesh position={[0, 0.28, 0]} castShadow><boxGeometry args={[style.width + 0.8, 0.56, style.depth + 0.8]} /><meshStandardMaterial color="#68655f" roughness={0.94} /></mesh>
       <mesh position={[0, style.height / 2 + 0.56, 0]} castShadow receiveShadow><boxGeometry args={[style.width, style.height, style.depth]} /><meshStandardMaterial map={facadeTexture} color={style.wall} roughness={0.9} /></mesh>
       <mesh position={[0, style.height + 0.7, 0]} castShadow><boxGeometry args={[style.width + 0.6, 0.32, style.depth + 0.6]} /><meshStandardMaterial color={style.trim} roughness={0.78} /></mesh>
@@ -1220,9 +1251,10 @@ function collidesWithApartmentWall(x: number, z: number, radius: number) {
   // Exterior perimeter. The front entrance is a 2.4m opening in the south wall.
   if (wall(0, -8.45, 17, 0.3) || wall(-8.45, 0, 0.3, 17) || wall(8.45, 0, 0.3, 17)) return true
   if (Math.abs(z - 8.45) < radius + 0.15 && Math.abs(x) > 1.35 && Math.abs(x) < 8.7) return true
-  // Internal partitions have real door openings centred on each partition.
-  if (wall(0, -4.2, 0.18, 8.0) || wall(0, 4.2, 0.18, 8.0)) return true
-  if (wall(-4.2, 0, 8.0, 0.18) || wall(4.2, 0, 8.0, 0.18)) return true
+  // Internal partitions match the visible cutaway walls: two short north/south runs and two short east/west runs.
+  // The gaps around the center are intentionally left open so the player can pass through the doorways.
+  if (wall(0, -6.25, 0.18, 4.0) || wall(0, 6.25, 0.18, 4.0)) return true
+  if (wall(-6.25, 0, 4.0, 0.18) || wall(6.25, 0, 4.0, 0.18)) return true
   return false
 }
 

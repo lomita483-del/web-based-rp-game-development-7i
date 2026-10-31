@@ -458,19 +458,34 @@ function StarterApartmentLayout({ onMove, onAction, targetRef }: { onMove?: (x: 
       <mesh position={[-8.45, 1.45, 0]}><boxGeometry args={[0.28, 2.9, 17]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
       <mesh position={[8.45, 1.45, 0]}><boxGeometry args={[0.28, 2.9, 17]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
       <mesh position={[0, 1.45, 8.45]}><boxGeometry args={[17, 2.9, 0.28]} /><meshStandardMaterial color={wall} roughness={0.85} /></mesh>
-      {/* Room partitions built as separate wall sections, leaving genuine 1.6m door openings. */}
-      {[-6.25, 6.25].map((z) => <mesh key={`vertical-partition-${z}`} position={[0,1.05,z]}><boxGeometry args={[0.18,2.1,4.0]} /><meshStandardMaterial color={wall} /></mesh>)}
-      {[-6.25, 6.25].map((x) => <mesh key={`horizontal-partition-${x}`} position={[x,1.05,0]}><boxGeometry args={[4.0,2.1,0.18]} /><meshStandardMaterial color={wall} /></mesh>)}
-      {/* Open timber door leaves, hinges and brass handles. */}
-      {[
-        { position: [-0.08,1.05,-4.1] as [number,number,number], rotation: [0,-Math.PI/2,0] as [number,number,number] },
-        { position: [-4.1,1.05,0.08] as [number,number,number], rotation: [0,Math.PI/2,0] as [number,number,number] },
-        { position: [4.1,1.05,0.08] as [number,number,number], rotation: [0,-Math.PI/2,0] as [number,number,number] },
-      ].map((door,index) => <group key={index} position={door.position} rotation={door.rotation}>
-        <mesh position={[0,0,-0.78]}><boxGeometry args={[1.45,2.05,0.09]} /><meshStandardMaterial color="#765139" roughness={0.78} /></mesh>
-        <mesh position={[0,0,-0.78]}><boxGeometry args={[1.12,1.72,0.025]} /><meshStandardMaterial color="#956b49" roughness={0.82} /></mesh>
-        <mesh position={[0.53,0,-0.71]}><sphereGeometry args={[0.055,10,8]} /><meshStandardMaterial color="#d4b16d" metalness={0.78} roughness={0.25} /></mesh>
-      </group>)}
+      {/* Room partitions leave centered, believable door openings with solid jambs. */}
+      {[-6.25, 6.25].map((z) => <mesh key={`vertical-partition-${z}`} position={[0, 1.45, z]}><boxGeometry args={[0.18, 2.9, 4.0]} /><meshStandardMaterial color={wall} roughness={0.82} /></mesh>)}
+      {[-6.25, 6.25].map((x) => <mesh key={`horizontal-partition-${x}`} position={[x, 1.45, 0]}><boxGeometry args={[4.0, 2.9, 0.18]} /><meshStandardMaterial color={wall} roughness={0.82} /></mesh>)}
+      {/* Fixed door units keep every leaf, jamb, threshold and handle centered on its opening. */}
+      <group position={[0, 0, -4.25]}>
+        <mesh position={[-0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
+        <mesh position={[0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
+        <mesh position={[0, 2.86, 0]}><boxGeometry args={[1.78, 0.14, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
+        <mesh position={[0, 1.42, 0.08]}><boxGeometry args={[1.36, 2.72, 0.1]} /><meshStandardMaterial color="#68462f" roughness={0.82} /></mesh>
+        <mesh position={[0, 1.42, 0.14]}><boxGeometry args={[1.08, 2.38, 0.025]} /><meshStandardMaterial color="#916744" roughness={0.76} /></mesh>
+        <mesh position={[0.46, 1.42, 0.2]}><sphereGeometry args={[0.07, 12, 10]} /><meshStandardMaterial color="#d8b56d" metalness={0.82} roughness={0.22} /></mesh>
+      </group>
+      <group position={[-4.25, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[-0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
+        <mesh position={[0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
+        <mesh position={[0, 2.86, 0]}><boxGeometry args={[1.78, 0.14, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
+        <mesh position={[0, 1.42, 0.08]}><boxGeometry args={[1.36, 2.72, 0.1]} /><meshStandardMaterial color="#68462f" roughness={0.82} /></mesh>
+        <mesh position={[0, 1.42, 0.14]}><boxGeometry args={[1.08, 2.38, 0.025]} /><meshStandardMaterial color="#916744" roughness={0.76} /></mesh>
+        <mesh position={[0.46, 1.42, 0.2]}><sphereGeometry args={[0.07, 12, 10]} /><meshStandardMaterial color="#d8b56d" metalness={0.82} roughness={0.22} /></mesh>
+      </group>
+      <group position={[4.25, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[-0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
+        <mesh position={[0.82, 1.45, 0]}><boxGeometry args={[0.14, 2.9, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
+        <mesh position={[0, 2.86, 0]}><boxGeometry args={[1.78, 0.14, 0.24]} /><meshStandardMaterial color={trim} /></mesh>
+        <mesh position={[0, 1.42, 0.08]}><boxGeometry args={[1.36, 2.72, 0.1]} /><meshStandardMaterial color="#68462f" roughness={0.82} /></mesh>
+        <mesh position={[0, 1.42, 0.14]}><boxGeometry args={[1.08, 2.38, 0.025]} /><meshStandardMaterial color="#916744" roughness={0.76} /></mesh>
+        <mesh position={[0.46, 1.42, 0.2]}><sphereGeometry args={[0.07, 12, 10]} /><meshStandardMaterial color="#d8b56d" metalness={0.82} roughness={0.22} /></mesh>
+      </group>
       {/* Glazed windows with proper frames, mullions and sills. */}
       {[-5.8,5.8].map((x) => <group key={`rear-window-${x}`} position={[x,1.85,-8.28]}>
         <mesh><boxGeometry args={[2.25,1.25,0.12]} /><meshStandardMaterial color="#d7c6a6" /></mesh>

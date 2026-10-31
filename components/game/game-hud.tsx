@@ -324,6 +324,21 @@ export function GameHud({
           <ArrowRight aria-hidden="true" /> GO OUTSIDE
         </button>
       )}
+      {(nearbyLocation || activeInterior) && (
+        <section className="reference-location-card" aria-label="Current location">
+          <div className="reference-location-head">
+            <span className="reference-location-icon"><Building2 aria-hidden="true" /></span>
+            <span><small>{activeInterior ? 'INSIDE' : 'NEARBY'}</small><strong>{activeInterior?.name ?? nearbyLocation?.name}</strong></span>
+            <button type="button" aria-label="Collapse location card"><ChevronUp aria-hidden="true" /></button>
+          </div>
+          <p>{activeInterior?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'} · {activeInterior ? 'Explore the room and interact with objects.' : 'A nearby place to explore.'}</p>
+          <div className="reference-location-actions">
+            <button type="button" onClick={activeInterior ? onGoOutside : () => onOpenPanel('map')}><CarFront aria-hidden="true" /> {activeInterior ? 'GO OUTSIDE' : 'DRIVE HERE'}</button>
+            <button type="button" onClick={() => onOpenPanel('map')}><MapPin aria-hidden="true" /> ROUTE</button>
+          </div>
+        </section>
+      )}
+
       {activeInterior?.id === 'marina-apartments' && (
         <div className="home-action-dock" aria-label="Apartment interactions">
           <button type="button" onClick={() => onApartmentAction('rest')}>🛏 REST</button>
