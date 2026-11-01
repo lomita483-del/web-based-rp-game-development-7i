@@ -157,29 +157,31 @@ const PROVIDED_CITY_GLTF = {
 } as const
 
 export function AssetCityReplacement() {
-  const straight = useGLTF(PROVIDED_CITY_GLTF.straight)
-  const curve = useGLTF(PROVIDED_CITY_GLTF.curve)
-  const fourWay = useGLTF(PROVIDED_CITY_GLTF.fourWay)
-  const threeWay = useGLTF(PROVIDED_CITY_GLTF.threeWay)
+  const straight = useLoader(OBJLoader, STREET_ASSETS.straight)
+  const curve = useLoader(OBJLoader, STREET_ASSETS.curve)
+  const fourWay = useLoader(OBJLoader, STREET_ASSETS.fourWay)
+  const threeWay = useLoader(OBJLoader, STREET_ASSETS.threeWay)
   const houses = [
-    useGLTF(PROVIDED_CITY_GLTF.houseA), useGLTF(PROVIDED_CITY_GLTF.houseB),
-    useGLTF(PROVIDED_CITY_GLTF.houseC), useGLTF(PROVIDED_CITY_GLTF.houseD),
-    useGLTF(PROVIDED_CITY_GLTF.houseE), useGLTF(PROVIDED_CITY_GLTF.houseF),
-    useGLTF(PROVIDED_CITY_GLTF.houseG), useGLTF(PROVIDED_CITY_GLTF.houseH),
+    useLoader(OBJLoader, HOUSE_ASSETS[0]),
+    useLoader(OBJLoader, HOUSE_ASSETS[1]),
+    useLoader(OBJLoader, HOUSE_ASSETS[2]),
+    useLoader(OBJLoader, HOUSE_ASSETS[3]),
   ]
-  const roads = [-66, -42, -18, 18, 42, 66]
+  const roads = [-30, -20, -10, 0, 10, 20, 30]
   const roadPieces = roads.flatMap((z, row) => roads.map((x, column) => ({ x, z, row, column })))
+  const houseLots = Array.from({ length: 20 }, (_, index) => ({
+    x: -36 + (index % 5) * 18,
+    z: -38 + Math.floor(index / 5) * 24,
+  }))
   return (
     <group name="provided-asset-city">
       {roadPieces.map(({ x, z, row, column }) => {
-        const road = row === column ? curve : column === 2 || row === 2 ? fourWay : straight
+        const road = row === column ? curve : column === 3 || row === 3 ? fourWay : straight
         return <primitive key={`provided-road-${x}-${z}`} object={road.scene.clone(true)} position={[x, -0.12, z]} scale={4} />
       })}
-      {Array.from({ length: 20 }, (_, index) => {
+      {houseLots.map(({ x, z }, index) => {
         const house = houses[index % houses.length]
-        const x = -72 + (index % 5) * 30
-        const z = -82 + Math.floor(index / 5) * 38
-        return <primitive key={`provided-house-${index}`} object={house.scene.clone(true)} position={[x, 0, z]} scale={0.9} />
+        return <primitive key={`provided-house-${index}`} object={house.scene.clone(true)} position={[x, 0, z]} scale={1.15} />
       })}
     </group>
   )
