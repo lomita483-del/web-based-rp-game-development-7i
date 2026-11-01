@@ -1638,7 +1638,14 @@ const StaticWorld = memo(function StaticWorld({
         <planeGeometry args={[240, 240]} />
         <meshStandardMaterial color="#567a45" roughness={1} metalness={0} />
       </mesh>
-      {/* The open city is intentionally empty. The player controller remains mounted below. */}
+      <AssetCityReplacement />
+      <group name="provided-city-traffic">
+        <group position={[-66, 0, -42]} rotation={[0, Math.PI / 2, 0]}><AssetTrafficVehicle kind="car" color="#c64b43" /></group>
+        <group position={[-18, 0, -42]} rotation={[0, Math.PI / 2, 0]}><AssetTrafficVehicle kind="danfo" color="#e9bb3f" /></group>
+        <group position={[42, 0, -18]}><AssetTrafficVehicle kind="truck" color="#2e6ea8" /></group>
+        <group position={[-42, 0, 42]} rotation={[0, Math.PI, 0]}><AssetTrafficVehicle kind="car" color="#4d8f68" /></group>
+        <group position={[18, 0, 66]} rotation={[0, Math.PI / 2, 0]}><AssetTrafficVehicle kind="car" color="#d16d39" /></group>
+      </group>
     </>
   )
 })
