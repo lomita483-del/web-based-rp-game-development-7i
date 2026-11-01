@@ -19,13 +19,29 @@ type AssetCarKind = keyof typeof CAR_ASSETS
 
 function prepareModel(model: Group) {
   model.traverse((child) => {
-    if ('isMesh' in child && child.isMesh) {
+  if ('isMesh' in child && child.isMesh) {
+  child.castShadow = true
+  child.receiveShadow = true
+  }
+  })
+  return model
+  }
+
+function prepareCityObj(model: THREE.Object3D, color: string) {
+  model.traverse((child) => {
+    if (child.type === 'Line' || child.type === 'LineSegments' || child.type === 'Points') {
+      child.visible = false
+      return
+    }
+    if (child instanceof THREE.Mesh) {
       child.castShadow = true
       child.receiveShadow = true
+      child.material = new THREE.MeshStandardMaterial({ color, roughness: 0.82, metalness: 0 })
     }
   })
   return model
 }
+
 
 export function AssetTrafficVehicle({ kind, color, night = false }: { kind: 'car' | 'danfo' | 'truck'; color: string; night?: boolean }) {
   const url = kind === 'danfo' ? CAR_ASSETS.taxi : kind === 'truck' ? CAR_ASSETS.suv : CAR_ASSETS.car
@@ -162,11 +178,21 @@ export function AssetCityReplacement() {
   const fourWay = useLoader(OBJLoader, STREET_ASSETS.fourWay)
   const threeWay = useLoader(OBJLoader, STREET_ASSETS.threeWay)
   const houses = [
-    useLoader(OBJLoader, HOUSE_ASSETS[0]),
-    useLoader(OBJLoader, HOUSE_ASSETS[1]),
-    useLoader(OBJLoader, HOUSE_ASSETS[2]),
-    useLoader(OBJLoader, HOUSE_ASSETS[3]),
+  useLoader(OBJLoader, HOUSE_ASSETS[0]),
+  useLoader(OBJLoader, HOUSE_ASSETS[1]),
+  useLoader(OBJLoader, HOUSE_ASSETS[2]),
+  useLoader(OBJLoader, HOUSE_ASSETS[3]),
   ]
+  const roadModels = useMemo(() => ({
+    straight: prepareCityObj(straight.clone(true), '#30343a'),
+    curve: prepareCityObj(curve.clone(true), '#30343a'),
+    fourWay: prepareCityObj(fourWay.clone(true), '#30343a'),
+    threeWay: prepareCityObj(threeWay.clone(true), '#30343a'),
+  }), [straight, curve, fourWay, threeWay])
+  const houseModels = useMemo(
+    () => houses.map((house) => prepareCityObj(house.clone(true), '#c8b69b')),
+    [houses],
+  )
   const roads = [-30, -20, -10, 0, 10, 20, 30]
   const roadPieces = roads.flatMap((z, row) => roads.map((x, column) => ({ x, z, row, column })))
   const houseLots = Array.from({ length: 20 }, (_, index) => ({
@@ -176,12 +202,12 @@ export function AssetCityReplacement() {
   return (
     <group name="provided-asset-city">
       {roadPieces.map(({ x, z, row, column }) => {
-        const road = row === column ? curve : column === 3 || row === 3 ? fourWay : straight
-        return <primitive key={`provided-road-${x}-${z}`} object={road.clone(true)} position={[x, -0.12, z]} scale={4} />
+  const road = row === column ? roadModels.curve : column === 3 || row === 3 ? roadModels.fourWay : roadModels.straight
+  return <primitive key={`provided-road-${x}-${z}`} object={road.clone(true)} position={[x, -0.12, z]} scale={4} />
       })}
       {houseLots.map(({ x, z }, index) => {
-        const house = houses[index % houses.length]
-        return <primitive key={`provided-house-${index}`} object={house.clone(true)} position={[x, 0, z]} scale={1.15} />
+  const house = houseModels[index % houseModels.length]
+  return <primitive key={`provided-house-${index}`} object={house.clone(true)} position={[x, 0, z]} scale={1.15} />
       })}
     </group>
   )
