@@ -177,11 +177,11 @@ export function AssetCityReplacement() {
     <group name="provided-asset-city">
       {roadPieces.map(({ x, z, row, column }) => {
         const road = row === column ? curve : column === 3 || row === 3 ? fourWay : straight
-        return <primitive key={`provided-road-${x}-${z}`} object={road.scene.clone(true)} position={[x, -0.12, z]} scale={4} />
+        return <primitive key={`provided-road-${x}-${z}`} object={road.clone(true)} position={[x, -0.12, z]} scale={4} />
       })}
       {houseLots.map(({ x, z }, index) => {
         const house = houses[index % houses.length]
-        return <primitive key={`provided-house-${index}`} object={house.scene.clone(true)} position={[x, 0, z]} scale={1.15} />
+        return <primitive key={`provided-house-${index}`} object={house.clone(true)} position={[x, 0, z]} scale={1.15} />
       })}
     </group>
   )
