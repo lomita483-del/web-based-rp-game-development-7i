@@ -1541,6 +1541,51 @@ function CitySignBoards({ night }: { night: boolean }) {
   </>
 }
 
+function ImportedCityBuilding({ position, rotation = 0, scale = 1 }: { position: [number, number, number]; rotation?: number; scale?: number }) {
+  const { scene } = useGLTF('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/building_A.gltf')
+  const building = useMemo(() => scene.clone(true), [scene])
+  return <primitive object={building} position={position} rotation={[0, rotation, 0]} scale={[scale, scale, scale]} />
+}
+
+useGLTF.preload('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/building_A.gltf')
+
+function ImportedCityCar({ position, rotation = 0, color = '#d9b56e' }: { position: [number, number, number]; rotation?: number; color?: string }) {
+  const { scene } = useGLTF('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/car_taxi.gltf')
+  const car = useMemo(() => {
+    const clone = scene.clone(true)
+    clone.traverse((child) => {
+      if ('material' in child && child.material && !Array.isArray(child.material)) {
+        child.material = child.material.clone()
+        child.material.color.set(color)
+      }
+    })
+    return clone
+  }, [scene, color])
+  return <primitive object={car} position={position} rotation={[0, rotation, 0]} scale={1.15} />
+}
+
+useGLTF.preload('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/car_taxi.gltf')
+
+function DistrictMarker({ position, label, color }: { position: [number, number, number]; label: string; color: string }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[8, 32]} />
+        <meshBasicMaterial color={color} transparent opacity={0.12} />
+      </mesh>
+      <mesh position={[0, 4.6, 0]}>
+        <cylinderGeometry args={[0.08, 0.08, 9.2, 8]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.6} />
+      </mesh>
+      <mesh position={[0, 9.1, 0]}>
+        <sphereGeometry args={[0.42, 12, 8]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
+      <WorldLabel text={label} width={6.4} accentColor={color} />
+    </group>
+  )
+}
+
 function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps, 'waypoint' | 'remotePlayers' | 'gameMinutes'>) {
   const hour = (gameMinutes / 60) % 24
   const night = hour < 5.5 || hour >= 19
@@ -1578,6 +1623,22 @@ function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps
       {CITY_BUILDINGS.map((building) => <BuildingLot key={`lot-${building.id}`} building={building} />)}
       {CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
       {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
+      <group name="imported-city-kit-landmarks">
+        <ImportedCityBuilding position={[8, 0, -18]} rotation={Math.PI * 0.5} scale={0.78} />
+        <ImportedCityBuilding position={[-58, 0, -52]} rotation={Math.PI * 0.25} scale={1.05} />
+        <ImportedCityBuilding position={[58, 0, -52]} rotation={Math.PI * -0.25} scale={0.92} />
+        <ImportedCityBuilding position={[-58, 0, 52]} rotation={Math.PI * 0.75} scale={1.12} />
+        <ImportedCityBuilding position={[58, 0, 52]} rotation={Math.PI * 1.25} scale={0.98} />
+      </group>
+      <group name="imported-city-kit-traffic">
+        <ImportedCityCar position={[-6, 0.18, -17]} rotation={Math.PI / 2} color="#e0aa39" />
+        <ImportedCityCar position={[8, 0.18, -17]} rotation={-Math.PI / 2} color="#d75454" />
+        <ImportedCityCar position={[18, 0.18, 7]} rotation={Math.PI} color="#4ea6a8" />
+      </group>
+      <DistrictMarker position={[-58, 0, -43]} label="INDUSTRIAL YARD" color="#f18f5b" />
+      <DistrictMarker position={[58, 0, -43]} label="NORTH MARKET" color="#5ce1df" />
+      <DistrictMarker position={[-58, 0, 43]} label="SUBURBAN ROW" color="#d9b56e" />
+      <DistrictMarker position={[58, 0, 43]} label="OASIS GARDENS" color="#9ee493" />
       {CITY_BUILDINGS.map((building) => (
         <EntryBeacon key={`entry-${building.id}`} position={getBuildingEntrancePosition(building)} label="ENTER" />
       ))}
