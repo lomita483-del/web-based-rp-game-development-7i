@@ -20,6 +20,8 @@ type HumanoidProps = {
   idle?: IdleStyle
   /** Offsets the idle animation so a crowd does not move in lockstep. */
   phase?: number
+  /** Game admins wear a black suit with gold trim and a halo so players can recognise them. */
+  admin?: boolean
 }
 
 export function HumanoidModel({
@@ -33,6 +35,7 @@ export function HumanoidModel({
   gender = 'male',
   idle = 'stand',
   phase = 0,
+  admin = false,
 }: HumanoidProps) {
   const leftArm = useRef<Group>(null!)
   const rightArm = useRef<Group>(null!)
@@ -42,7 +45,11 @@ export function HumanoidModel({
   useFrame((state) => {
     if (!leftArm.current || !rightArm.current || !leftLeg.current || !rightLeg.current) return
     const t = state.clock.elapsedTime + phase
-    const isMoving = (walking || Boolean(keysRef?.current.size)) && !paused
+    const movementKeys = keysRef?.current
+    const hasMovementInput = movementKeys
+      ? ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some((key) => movementKeys.has(key))
+      : walking
+    const isMoving = hasMovementInput && !paused
     const stride = isMoving ? Math.sin(t * 10) * 0.44 : 0
     const breathe = Math.sin(t * 1.5) * 0.035
 
@@ -69,7 +76,7 @@ export function HumanoidModel({
   return (
     <group>
       <mesh position={[0, 1.03, 0]} castShadow>
-        <capsuleGeometry args={gender === 'female' ? [0.24, 0.48, 5, 10] : [0.27, 0.48, 5, 10]} />
+        <capsuleGeometry args={gender === 'female' ? [0.25, 0.5, 8, 14] : [0.28, 0.52, 8, 14]} />
         <meshStandardMaterial color={clothing} roughness={0.77} />
       </mesh>
       <mesh position={[0, 1.42, 0.015]}>
@@ -81,7 +88,7 @@ export function HumanoidModel({
         <meshStandardMaterial color={skinTone} roughness={0.92} />
       </mesh>
       <mesh position={[0, 1.86, 0]} castShadow>
-        <sphereGeometry args={[0.2, 18, 14]} />
+        <sphereGeometry args={[0.205, 24, 18]} />
         <meshStandardMaterial color={skinTone} roughness={0.82} />
       </mesh>
       <mesh position={[0, 1.99, -0.035]}>
@@ -120,6 +127,13 @@ export function HumanoidModel({
         <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.105, 0.37, 5, 8]} /><meshStandardMaterial color="#35383a" roughness={0.94} /></mesh>
         <mesh position={[0, -0.55, 0.11]} castShadow><boxGeometry args={[0.23, 0.16, 0.38]} /><meshStandardMaterial color="#24272a" roughness={0.86} /></mesh>
       </group>
+      {admin && (
+        <group>
+          <mesh position={[0, 2.38, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.22, 0.025, 8, 24]} /><meshBasicMaterial color="#f0c860" toneMapped={false} /></mesh>
+          {[-1, 1].map((side) => <mesh key={`epaulette-${side}`} position={[side * 0.34, 1.43, 0]}><boxGeometry args={[0.22, 0.05, 0.3]} /><meshStandardMaterial color="#d9b24f" metalness={0.7} roughness={0.3} /></mesh>)}
+          <mesh position={[0, 1.1, 0.28]}><boxGeometry args={[0.08, 0.55, 0.03]} /><meshStandardMaterial color="#d9b24f" metalness={0.7} roughness={0.3} /></mesh>
+        </group>
+      )}
       {walking && <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[0.34, 0.42, 24]} /><meshBasicMaterial color="#d8aa68" transparent opacity={0.48} /></mesh>}
     </group>
   )

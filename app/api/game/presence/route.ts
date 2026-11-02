@@ -1,7 +1,8 @@
-import { and, desc, eq, gt } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { playerPresence } from '@/lib/db/schema'
+import { playerPresence, user as userTable } from '@/lib/db/schema'
+import { getPlayerFlags, isAdminEmail } from '@/lib/game/admin'
 import { getAuthenticatedGameUser } from '@/lib/game/auth'
 import { PRIVATE_NO_STORE_HEADERS, readJsonBody } from '@/lib/game/http'
 import { isInteriorId } from '@/components/game/game-data'
@@ -29,7 +30,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Sign in to join the shared city.' }, { status: 401, headers: PRIVATE_NO_STORE_HEADERS })
     }
 
-    const roomId = parseRoomId(new URL(request.url).searchParams.get('roomId'))
+    const requestedRoomId = new URL(request.url).searchParams.get('roomId')
+    const roomId = requestedRoomId?.startsWith('home:')
+      ? (requestedRoomId === `home:${user.id}` ? requestedRoomId : null)
+      : parseRoomId(requestedRoomId)
     if (!roomId) {
       return NextResponse.json({ error: 'That shared-world room does not exist.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }
@@ -49,9 +53,14 @@ export async function GET(request: Request) {
       .orderBy(desc(playerPresence.updatedAt))
       .limit(24)
 
+    const emails = players.length > 0
+      ? await db.select({ id: userTable.id, email: userTable.email }).from(userTable).where(inArray(userTable.id, players.map((player) => player.userId)))
+      : []
+    const adminIds = new Set(emails.filter((entry) => isAdminEmail(entry.email)).map((entry) => entry.id))
+
     return NextResponse.json(
       {
-        players: players.map((player) => ({ ...player, updatedAt: player.updatedAt.toISOString() })),
+        players: players.map((player) => ({ ...player, isAdmin: adminIds.has(player.userId), updatedAt: player.updatedAt.toISOString() })),
       },
       { headers: PRIVATE_NO_STORE_HEADERS },
     )
@@ -71,12 +80,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Sign in to join the shared city.' }, { status: 401, headers: PRIVATE_NO_STORE_HEADERS })
     }
 
+    const flags = await getPlayerFlags(user.id)
+    if (flags.banned) {
+      return NextResponse.json({ error: 'You are banned from the shared city.' }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+
     const body = await readJsonBody(request)
     if (!isRecord(body) || typeof body.x !== 'number' || typeof body.z !== 'number' || typeof body.inVehicle !== 'boolean') {
       return NextResponse.json({ error: 'The player position is not valid.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }
 
-    const roomId = parseRoomId(body.roomId)
+    const roomId = typeof body.roomId === 'string' && body.roomId.startsWith('home:')
+      ? (body.roomId === `home:${user.id}` ? body.roomId : null)
+      : parseRoomId(body.roomId)
     if (!roomId) {
       return NextResponse.json({ error: 'That shared-world room does not exist.' }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }

@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       .where(eq(gameSaves.userId, user.id))
       .limit(1)
 
-    const normalizedSave = save
+    const parsedSave = save
       ? parseGameSavePayload({
           playerState: save.playerState,
           position: { x: save.positionX, z: save.positionZ },
@@ -29,10 +29,26 @@ export async function GET(request: Request) {
         })
       : null
 
+    // One-time launch grant: bring every existing saved player up to ₦1,000,000.
+    // Persist it so spending the grant is not undone on the next login.
+    const grantUpdatedAt = parsedSave && save && parsedSave.playerState.cash < 1_000_000
+      ? new Date()
+      : null
+    const normalizedSave = parsedSave && grantUpdatedAt
+      ? { ...parsedSave, playerState: { ...parsedSave.playerState, cash: 1_000_000 } }
+      : parsedSave
+
+    if (normalizedSave && save && grantUpdatedAt) {
+      await db
+        .update(gameSaves)
+        .set({ playerState: normalizedSave.playerState, updatedAt: grantUpdatedAt })
+        .where(eq(gameSaves.userId, user.id))
+    }
+
     return NextResponse.json(
       {
         save: normalizedSave && save
-          ? { ...normalizedSave, updatedAt: save.updatedAt.toISOString() }
+          ? { ...normalizedSave, updatedAt: (grantUpdatedAt ?? save.updatedAt).toISOString() }
           : null,
       },
       { headers: PRIVATE_NO_STORE_HEADERS },

@@ -2,7 +2,7 @@
 
 import { Stars, useGLTF, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
+import { memo, useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type MeshStandardMaterial, type PerspectiveCamera, type Texture, Vector3 } from 'three'
 import {
   CITY_BUILDINGS,
@@ -19,13 +19,37 @@ import {
   type RemotePlayer,
   type RideVehicleType,
 } from './game-data'
+import { RideVehicle, type RideEvent, type RidePose, type RideState } from './ride-vehicle'
+import { AssetCharacter, AssetCityReplacement, AssetTrafficVehicle, CityBuilderDressing, FarmDistrict } from './world-asset-layer'
+import { Atmosphere } from './atmosphere'
+import { BuildingWindows } from './building-windows'
+import { Campus } from './campus'
+import { Billboards, RoadMarkings, StreetKitProps, StreetLamps, StreetTrees, TrafficSignals } from './street-layer'
+import { TrafficLayer } from './traffic-layer'
+import { lightsOn } from './atmosphere'
+import { HumanoidModel } from './humanoid'
 import { InteriorScene } from './interior-scene'
+import type { Point } from '@/lib/game/world'
 
 type PlayerPosition = { x: number; z: number }
 type CameraLook = { yaw: number; pitch: number; zoom: number }
 
+export type GraphicsQuality = 'low' | 'medium' | 'high'
+export type AdminPowers = { speed: number; noclip: boolean; fly: boolean }
+
 type CityWorldProps = {
+  quality: GraphicsQuality
+  ride: RideState | null
+  onRideEvent: (event: RideEvent) => void
+  onApartmentAction?: (action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => void
+  isAdmin: boolean
+  /** Admin movement powers, read every frame. */
+  adminPowersRef: MutableRefObject<AdminPowers>
+  /** Look sensitivity multiplier from settings. */
+  lookSensitivity: number
   keysRef: MutableRefObject<Set<string>>
+  /** Analog joystick vector: x right, y down, each -1..1. */
+  joystickRef: MutableRefObject<{ x: number; y: number }>
   onPlayerPosition: (position: PlayerPosition) => void
   inVehicle: boolean
   rideVehicle?: RideVehicleType | null
@@ -165,7 +189,6 @@ function createTrafficFleet(): TrafficVehicleSpec[] {
       }
     }
   }
-
   return vehicles
 }
 
@@ -210,43 +233,6 @@ function Building({ name, x, z, width, depth, height, color, accent, interiorKin
       <group position={[0, height + 0.82, depth / 2 + 0.18]}>
         <WorldLabel text={name} width={Math.min(width * 0.84, 6.8)} accentColor={accent} />
       </group>
-      {Array.from({ length: floors }, (_, floor) => {
-        const windowY = 1.55 + floor * 2.72
-        return (
-          <group key={`floor-${floor}`}>
-            <mesh position={[0, windowY - 0.64, depth / 2 + 0.035]}>
-              <boxGeometry args={[width * 0.96, 0.12, 0.18]} />
-              <meshStandardMaterial color={accent} roughness={0.84} />
-            </mesh>
-            {Array.from({ length: columns }, (_, column) => {
-              const windowX = (column - (columns - 1) / 2) * (width / (columns + 0.1))
-              const lit = (column * 5 + floor * 3 + Math.round(x + z)) % 5 !== 0
-              return (
-                <group key={`window-${floor}-${column}`} position={[windowX, windowY, depth / 2 + 0.08]}>
-                  <mesh>
-                    <boxGeometry args={[windowWidth + 0.12, 1.18, 0.12]} />
-                    <meshStandardMaterial color="#4a4c4a" roughness={0.7} />
-                  </mesh>
-                  <mesh position={[0, 0, 0.08]}>
-                    <boxGeometry args={[windowWidth, 0.94, 0.08]} />
-                    <meshStandardMaterial
-                      color={lit ? '#d4b985' : '#33404a'}
-                      emissive={lit ? '#9c7042' : '#101820'}
-                      emissiveIntensity={lit ? 0.28 : 0.04}
-                      roughness={0.3}
-                      metalness={0.12}
-                    />
-                  </mesh>
-                  <mesh position={[0, -0.02, 0.14]}>
-                    <boxGeometry args={[0.045, 0.9, 0.04]} />
-                    <meshStandardMaterial color="#677078" metalness={0.36} roughness={0.46} />
-                  </mesh>
-                </group>
-              )
-            })}
-          </group>
-        )
-      })}
       <mesh position={[-width * 0.34, height + 0.82, -depth * 0.08]} castShadow>
         <cylinderGeometry args={[0.62, 0.68, 1.1, 10]} />
         <meshStandardMaterial color="#8a8579" roughness={0.94} />
@@ -318,8 +304,6 @@ function RoadGrid({
   horizontalRoadTexture: Texture
   verticalRoadTexture: Texture
 }) {
-  const dashPositions = Array.from({ length: 19 }, (_, index) => -86 + index * 9.5)
-  const coreIntersections = [-42, -18, 18, 42]
 
   return (
     <group>
@@ -328,8 +312,9 @@ function RoadGrid({
         <meshStandardMaterial map={pavementTexture} color="#c1b8a9" roughness={1} />
       </mesh>
       {ROAD_LINES.map((offset) => {
-        const width = Math.abs(offset) <= 42 ? 7 : 5
-        const isMainRoad = width >= 7
+        const isMainRoad = Math.abs(offset) <= 42
+        const width = isMainRoad ? 7 : 5
+        const dashPositions = Array.from({ length: 18 }, (_, index) => -84 + index * 9.5)
         const sidewalkOffset = width / 2 + 0.8
         return (
           <group key={`road-${offset}`}>
@@ -369,15 +354,13 @@ function RoadGrid({
         )
       })}
       {ROAD_LINES.map((offset) => {
-        const width = Math.abs(offset) <= 42 ? 7 : 5
-        const isMainRoad = width >= 7
+        const isMainRoad = Math.abs(offset) <= 42
+        const width = isMainRoad ? 7 : 5
+        const verticalDashPositions = Array.from({ length: 18 }, (_, index) => -84 + index * 9.5)
         const airportNorthRoute = Math.abs(offset) >= 42
         const roadLength = airportNorthRoute ? 160 : 180
         const roadCenterZ = airportNorthRoute ? 10 : 0
         const sidewalkOffset = width / 2 + 0.8
-        const verticalDashPositions = airportNorthRoute
-          ? dashPositions.filter((position) => position >= -78 && position <= 80)
-          : dashPositions
         return (
           <group key={`road-v-${offset}`} position={[0, 0, roadCenterZ]}>
             <mesh position={[offset, -0.075, 0]} receiveShadow>
@@ -415,7 +398,6 @@ function RoadGrid({
           </group>
         )
       })}
-      {coreIntersections.flatMap((x) => coreIntersections.map((z) => <Crosswalk key={`crossing-${x}-${z}`} x={x} z={z} />))}
       <mesh position={[0, 0.02, 66.8]}>
         <boxGeometry args={[180, 0.18, 1.1]} />
         <meshStandardMaterial color="#b6aa92" roughness={0.9} />
@@ -423,29 +405,6 @@ function RoadGrid({
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.09, 78]} receiveShadow>
         <planeGeometry args={[180, 20]} />
         <meshStandardMaterial color="#34535b" roughness={0.34} metalness={0.18} />
-      </mesh>
-    </group>
-  )
-}
-
-function StreetTree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
-  return (
-    <group position={position} scale={scale}>
-      <mesh position={[0, 1.35, 0]} castShadow>
-        <cylinderGeometry args={[0.2, 0.32, 2.7, 9]} />
-        <meshStandardMaterial color="#695343" roughness={0.97} />
-      </mesh>
-      <mesh position={[0, 3.05, 0]} castShadow>
-        <sphereGeometry args={[1.18, 10, 9]} />
-        <meshStandardMaterial color="#5e6656" roughness={0.98} />
-      </mesh>
-      <mesh position={[0.42, 3.4, 0.1]} castShadow>
-        <sphereGeometry args={[0.72, 9, 8]} />
-        <meshStandardMaterial color="#73705c" roughness={1} />
-      </mesh>
-      <mesh position={[-0.48, 2.78, -0.1]} castShadow>
-        <sphereGeometry args={[0.76, 9, 8]} />
-        <meshStandardMaterial color="#555e52" roughness={1} />
       </mesh>
     </group>
   )
@@ -466,7 +425,6 @@ function StreetLamp({ position, lit = false }: { position: [number, number, numb
         <boxGeometry args={[0.36, 0.12, 0.3]} />
         <meshStandardMaterial color="#edc17a" emissive="#d39b54" emissiveIntensity={lit ? 1.4 : 0.7} roughness={0.25} />
       </mesh>
-      {lit && <pointLight position={[0.7, 4.5, 0]} color="#ffd49a" intensity={0.48} distance={11} decay={2} />}
     </group>
   )
 }
@@ -604,6 +562,32 @@ function PassengerAircraft({ position }: { position: [number, number, number] })
   )
 }
 
+function CampusTree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 1.05, 0]} castShadow><cylinderGeometry args={[0.12, 0.18, 2.1, 8]} /><meshStandardMaterial color="#745038" roughness={0.9} /></mesh>
+      <mesh position={[0, 2.25, 0]} castShadow><icosahedronGeometry args={[0.85, 1]} /><meshStandardMaterial color="#236c45" roughness={0.95} /></mesh>
+      <mesh position={[0.28, 2.55, 0.1]} castShadow><icosahedronGeometry args={[0.48, 1]} /><meshStandardMaterial color="#2e8050" roughness={0.95} /></mesh>
+    </group>
+  )
+}
+
+function SecuredCompound({ width, depth, gateWidth = 3.2, color = '#4b5753' }: { width: number; depth: number; gateWidth?: number; color?: string }) {
+  const postPositions = Array.from({ length: 7 }, (_, index) => -width / 2 + (index * width) / 6)
+  return (
+    <group>
+      <mesh position={[0, 1.15, -depth / 2]}><boxGeometry args={[width, 0.16, 0.18]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[-width / 2, 1.15, 0]}><boxGeometry args={[0.18, 0.16, depth]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[width / 2, 1.15, 0]}><boxGeometry args={[0.18, 0.16, depth]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[-(width - gateWidth) / 4 - gateWidth / 2, 1.15, depth / 2]}><boxGeometry args={[(width - gateWidth) / 2, 0.16, 0.18]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      <mesh position={[(width - gateWidth) / 4 + gateWidth / 2, 1.15, depth / 2]}><boxGeometry args={[(width - gateWidth) / 2, 0.16, 0.18]} /><meshStandardMaterial color={color} roughness={0.75} /></mesh>
+      {postPositions.map((postX) => <mesh key={`compound-post-${postX}`} position={[postX, 1.1, -depth / 2]}><cylinderGeometry args={[0.08, 0.1, 2.2, 8]} /><meshStandardMaterial color="#c6a66e" metalness={0.35} roughness={0.52} /></mesh>)}
+      {[-width / 2, width / 2, -(gateWidth / 2), gateWidth / 2].map((postX) => <mesh key={`gate-post-${postX}`} position={[postX, 1.1, depth / 2]}><cylinderGeometry args={[0.12, 0.15, 2.2, 8]} /><meshStandardMaterial color="#d1b77e" metalness={0.3} roughness={0.5} /></mesh>)}
+      <mesh position={[0, 2.15, depth / 2]}><boxGeometry args={[gateWidth, 0.18, 0.22]} /><meshStandardMaterial color="#d1b77e" metalness={0.32} roughness={0.5} /></mesh>
+    </group>
+  )
+}
+
 function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LOCATIONS)[number]; facadeTexture: Texture }) {
   const { x, z, kind } = location
   if (kind === 'bridge') return null
@@ -611,6 +595,20 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   if (kind === 'square') {
     return (
       <group position={[x, 0, z]}>
+        {/* Eiffel-inspired landmark tower: tapered iron legs, open lattice silhouette, central mast. */}
+        <mesh position={[0, 0.3, 0]} receiveShadow><cylinderGeometry args={[6.8, 7.4, 0.6, 32]} /><meshStandardMaterial color="#6b7073" roughness={0.75} /></mesh>
+        {Array.from({ length: 4 }, (_, leg) => {
+          const angle = (leg / 4) * Math.PI * 2 + Math.PI / 4
+          return <group key={`iron-leg-${leg}`} rotation={[0, angle, 0]}>
+            <mesh position={[0, 6.4, 4.2]} rotation={[0.52, 0, 0]}><boxGeometry args={[0.42, 13.2, 0.42]} /><meshStandardMaterial color="#6e806f" metalness={0.62} roughness={0.4} /></mesh>
+            <mesh position={[0, 12, 2.5]} rotation={[0.34, 0, 0]}><boxGeometry args={[0.22, 8.4, 0.22]} /><meshStandardMaterial color="#6e806f" metalness={0.62} roughness={0.4} /></mesh>
+          </group>
+        })}
+        {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-platform-${i}`} position={[0, height, 0]}><cylinderGeometry args={[Math.max(1.2, 5.6 - i * 1.05), Math.max(1.2, 5.6 - i * 1.05), 0.24, 24]} /><meshStandardMaterial color="#596d60" metalness={0.55} roughness={0.45} /></mesh>)}
+        {[4.8, 9.2, 14.2, 19.5].map((height, i) => <mesh key={`tower-ring-${i}`} position={[0, height, 0]}><torusGeometry args={[Math.max(1.2, 5.6 - i * 1.05), 0.12, 6, 24]} /><meshStandardMaterial color="#d9b16b" emissive="#ffb64d" emissiveIntensity={0.8} metalness={0.7} roughness={0.35} /></mesh>)}
+        <mesh position={[0, 23.4, 0]}><cylinderGeometry args={[0.08, 0.55, 7.8, 8]} /><meshStandardMaterial color="#6e806f" metalness={0.65} roughness={0.4} /></mesh>
+        <mesh position={[0, 3.4, 3.62]}><boxGeometry args={[3.8, 1.25, 0.12]} /><meshStandardMaterial color="#17252c" /></mesh>
+        <mesh position={[0, 3.4, 3.71]}><boxGeometry args={[3.2, 0.12, 0.04]} /><meshBasicMaterial color="#e4c58b" /></mesh>
         <mesh position={[0, 0.02, 0]} receiveShadow>
           <boxGeometry args={[21, 0.16, 16]} />
           <meshStandardMaterial color="#a9a18f" roughness={0.9} />
@@ -655,6 +653,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   if (kind === 'stadium') {
     return (
       <group position={[x, 0, z]}>
+        <SecuredCompound width={18} depth={18} gateWidth={4.5} color="#4c5a54" />
         <mesh position={[0, 2.2, 0]} castShadow>
           <cylinderGeometry args={[6.1, 6.5, 4.4, 32, 1, true]} />
           <meshStandardMaterial color="#77766f" roughness={0.8} side={2} />
@@ -681,6 +680,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   if (kind === 'university') {
     return (
       <group position={[x, 0, z]}>
+        <SecuredCompound width={20} depth={19} gateWidth={4.2} color="#3f5e5c" />
         <mesh position={[0, -0.035, 0]} receiveShadow>
           <boxGeometry args={[17, 0.12, 15]} />
           <meshStandardMaterial color="#52614a" roughness={0.98} />
@@ -741,7 +741,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
         <group position={[0, 2.4, 7.28]}><WorldLabel text="AKOKA CAMPUS" width={6.2} accentColor="#d5b36f" /></group>
         <group position={[0, 8.4, 3.58]}><WorldLabel text="UNIVERSITY OF LAGOS" width={10.2} accentColor="#d5b36f" /></group>
         {[-1, 1].flatMap((side) => [-1, 1].map((forward) => (
-          <StreetTree key={`campus-tree-${side}-${forward}`} position={[side * 7.45, 0, forward * 5.9]} scale={0.62} />
+          <CampusTree key={`campus-tree-${side}-${forward}`} position={[side * 7.45, 0, forward * 5.9]} scale={0.62} />
         )))}
       </group>
     )
@@ -797,10 +797,12 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
   }
 
   if (kind === 'village') {
-    const huts = [[-4, -3], [1, -5], [4, 1], [-2, 4], [4, 4]] as const
+    const huts = [[-5, -5], [0, -5], [5, -5], [-5, 0], [5, 0], [-5, 5], [0, 5], [5, 5], [-2.5, 0], [2.5, 0]] as const
     return (
       <group position={[x, 0, z]}>
-        <mesh position={[0, 0.02, 0]}><boxGeometry args={[12, 0.12, 12]} /><meshStandardMaterial color="#887d69" roughness={1} /></mesh>
+        <mesh position={[0, 0.02, 0]}><boxGeometry args={[16, 0.12, 16]} /><meshStandardMaterial color="#887d69" roughness={1} /></mesh>
+        <SecuredCompound width={17} depth={17} gateWidth={4} color="#6d5e49" />
+        <group position={[0, 2.7, 8.2]}><WorldLabel text="IBEJU FARM VILLAGE" width={7.5} accentColor="#d8af67" /></group>
         {huts.map(([hutX, hutZ], index) => (
           <group key={`hut-${index}`} position={[hutX, 0, hutZ]}>
             <mesh position={[0, 1.2, 0]} castShadow><cylinderGeometry args={[1.75, 2, 2.4, 8]} /><meshStandardMaterial color={index % 2 ? '#ad9270' : '#8f7558'} roughness={0.96} /></mesh>
@@ -853,6 +855,7 @@ function CivicBuilding({ location, facadeTexture }: { location: (typeof WORLD_LO
 
   return (
     <group position={[x, 0, z]}>
+      {(kind === 'court' || kind === 'government') && <SecuredCompound width={19} depth={16} gateWidth={4} color="#5a5b56" />}
       <mesh position={[0, 0.28, 0]} castShadow><boxGeometry args={[style.width + 0.8, 0.56, style.depth + 0.8]} /><meshStandardMaterial color="#68655f" roughness={0.94} /></mesh>
       <mesh position={[0, style.height / 2 + 0.56, 0]} castShadow receiveShadow><boxGeometry args={[style.width, style.height, style.depth]} /><meshStandardMaterial map={facadeTexture} color={style.wall} roughness={0.9} /></mesh>
       <mesh position={[0, style.height + 0.7, 0]} castShadow><boxGeometry args={[style.width + 0.6, 0.32, style.depth + 0.6]} /><meshStandardMaterial color={style.trim} roughness={0.78} /></mesh>
@@ -969,99 +972,6 @@ function LandmarkMarkers({ waypoint }: { waypoint: LocationId | null }) {
   )
 }
 
-function HumanoidModel({
-  skinTone,
-  hairColor,
-  clothing,
-  accentColor,
-  keysRef,
-  paused = false,
-  walking = false,
-  gender = 'male',
-}: {
-  skinTone: string
-  hairColor: string
-  clothing: string
-  accentColor: string
-  keysRef?: MutableRefObject<Set<string>>
-  paused?: boolean
-  walking?: boolean
-  gender?: Gender
-}) {
-  const leftArm = useRef<Group>(null!)
-  const rightArm = useRef<Group>(null!)
-  const leftLeg = useRef<Group>(null!)
-  const rightLeg = useRef<Group>(null!)
-
-  useFrame((state) => {
-    const isMoving = (walking || Boolean(keysRef?.current.size)) && !paused
-    const stride = isMoving ? Math.sin(state.clock.elapsedTime * 10) * 0.44 : 0
-    const idle = Math.sin(state.clock.elapsedTime * 1.5) * 0.035
-    leftArm.current.rotation.x = isMoving ? stride : idle
-    rightArm.current.rotation.x = isMoving ? -stride : -idle
-    leftLeg.current.rotation.x = isMoving ? -stride : 0
-    rightLeg.current.rotation.x = isMoving ? stride : 0
-  })
-
-  return (
-    <group>
-      <mesh position={[0, 1.03, 0]} castShadow>
-        <capsuleGeometry args={gender === 'female' ? [0.24, 0.48, 5, 10] : [0.27, 0.48, 5, 10]} />
-        <meshStandardMaterial color={clothing} roughness={0.77} />
-      </mesh>
-      <mesh position={[0, 1.42, 0.015]}>
-        <boxGeometry args={[0.45, 0.13, 0.32]} />
-        <meshStandardMaterial color={accentColor} roughness={0.76} />
-      </mesh>
-      <mesh position={[0, 1.54, 0]}>
-        <cylinderGeometry args={[0.1, 0.13, 0.25, 10]} />
-        <meshStandardMaterial color={skinTone} roughness={0.92} />
-      </mesh>
-      <mesh position={[0, 1.86, 0]} castShadow>
-        <sphereGeometry args={[0.2, 18, 14]} />
-        <meshStandardMaterial color={skinTone} roughness={0.82} />
-      </mesh>
-      <mesh position={[0, 1.99, -0.035]}>
-        <sphereGeometry args={[0.205, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={hairColor} roughness={0.96} />
-      </mesh>
-      {gender === 'female' && (
-        <mesh position={[0, 1.67, -0.19]} rotation={[0.2, 0, 0]}>
-          <capsuleGeometry args={[0.09, 0.38, 4, 8]} />
-          <meshStandardMaterial color={hairColor} roughness={0.96} />
-        </mesh>
-      )}
-      {[-1, 1].map((side) => (
-        <group key={`face-side-${side}`}>
-          <mesh position={[side * 0.205, 1.86, 0.01]}><sphereGeometry args={[0.038, 10, 8]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
-          <mesh position={[side * 0.072, 1.88, 0.17]}><sphereGeometry args={[0.019, 10, 8]} /><meshStandardMaterial color="#f0e8dc" roughness={0.5} /></mesh>
-          <mesh position={[side * 0.072, 1.88, 0.188]}><sphereGeometry args={[0.009, 8, 6]} /><meshStandardMaterial color="#211c19" roughness={0.5} /></mesh>
-          <mesh position={[side * 0.072, 1.93, 0.16]} rotation={[0, 0, side * -0.1]}><boxGeometry args={[0.08, 0.016, 0.02]} /><meshStandardMaterial color={hairColor} roughness={0.9} /></mesh>
-        </group>
-      ))}
-      <mesh position={[0, 1.82, 0.194]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.035, 0.085, 6]} /><meshStandardMaterial color={skinTone} roughness={0.88} /></mesh>
-      <mesh position={[0, 1.73, 0.18]}><boxGeometry args={[0.075, 0.014, 0.018]} /><meshStandardMaterial color="#57392f" roughness={0.82} /></mesh>
-      <group ref={leftArm} position={[-0.33, 1.28, 0]}>
-        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.09, 0.36, 5, 8]} /><meshStandardMaterial color={clothing} roughness={0.8} /></mesh>
-        <mesh position={[0, -0.53, 0.02]}><sphereGeometry args={[0.085, 8, 7]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
-      </group>
-      <group ref={rightArm} position={[0.33, 1.28, 0]}>
-        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.09, 0.36, 5, 8]} /><meshStandardMaterial color={clothing} roughness={0.8} /></mesh>
-        <mesh position={[0, -0.53, 0.02]}><sphereGeometry args={[0.085, 8, 7]} /><meshStandardMaterial color={skinTone} roughness={0.9} /></mesh>
-      </group>
-      <group ref={leftLeg} position={[-0.13, 0.72, 0]}>
-        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.105, 0.37, 5, 8]} /><meshStandardMaterial color="#35383a" roughness={0.94} /></mesh>
-        <mesh position={[0, -0.55, 0.11]} castShadow><boxGeometry args={[0.23, 0.16, 0.38]} /><meshStandardMaterial color="#24272a" roughness={0.86} /></mesh>
-      </group>
-      <group ref={rightLeg} position={[0.13, 0.72, 0]}>
-        <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.105, 0.37, 5, 8]} /><meshStandardMaterial color="#35383a" roughness={0.94} /></mesh>
-        <mesh position={[0, -0.55, 0.11]} castShadow><boxGeometry args={[0.23, 0.16, 0.38]} /><meshStandardMaterial color="#24272a" roughness={0.86} /></mesh>
-      </group>
-      {walking && <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[0.34, 0.42, 24]} /><meshBasicMaterial color="#d8aa68" transparent opacity={0.48} /></mesh>}
-    </group>
-  )
-}
-
 function CharacterActor({ character }: { character: (typeof CITY_CHARACTERS)[number] }) {
   const characterRef = useRef<Group>(null!)
 
@@ -1071,31 +981,29 @@ function CharacterActor({ character }: { character: (typeof CITY_CHARACTERS)[num
 
   return (
     <group ref={characterRef} position={[character.x, 0, character.z]}>
-      <HumanoidModel skinTone={character.skinTone} hairColor={character.hairColor} clothing={character.color} accentColor={character.accentColor} />
+      <AssetCharacter
+        scale={0.95}
+        gender="male"
+        hairColor={character.hairColor}
+        outfitColor={character.color}
+        skinTone={character.skinTone}
+        animation="idle"
+      />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}><ringGeometry args={[0.38, 0.43, 24]} /><meshBasicMaterial color="#c18c56" transparent opacity={0.52} /></mesh>
     </group>
   )
 }
 
-function ImportedPlayerModel() {
-  const { scene } = useGLTF('/assets/player.glb')
-  const model = useMemo(() => {
-    const clone = scene.clone(true)
-    clone.traverse((object) => {
-      object.castShadow = true
-      object.receiveShadow = true
-    })
-    return clone
-  }, [scene])
-
-  return <primitive object={model} scale={1.35} position={[0, 0, 0]} />
+function AvatarModel({ keysRef, paused, gender, isAdmin }: { keysRef: MutableRefObject<Set<string>>; paused: boolean; gender: Gender; isAdmin: boolean }) {
+  return <HumanoidModel skinTone="#80543e" hairColor="#201a17" clothing={isAdmin ? '#15171b' : '#52606a'} accentColor={isAdmin ? '#d9b24f' : '#cf9e62'} keysRef={keysRef} paused={paused} walking gender={gender} admin={isAdmin} />
 }
 
-useGLTF.preload('/assets/player.glb')
-
-function AvatarModel({ keysRef, paused, gender }: { keysRef: MutableRefObject<Set<string>>; paused: boolean; gender: Gender }) {
-  return <HumanoidModel skinTone="#80543e" hairColor="#201a17" clothing="#52606a" accentColor="#cf9e62" keysRef={keysRef} paused={paused} walking gender={gender} />
+function PlayerAssetModel() {
+  const { scene } = useGLTF('/assets/oasis/oasis-assets/models/characters/player.glb')
+  return <primitive object={scene} scale={1.15} position={[0, 0.02, 0]} />
 }
+
+useGLTF.preload('/assets/oasis/oasis-assets/models/characters/player.glb')
 
 function ScooterModel() {
   return (
@@ -1217,11 +1125,21 @@ function getNextSignal(vehicle: TrafficVehicleSpec, coordinate: number) {
 function TrafficFleet({ night }: { night: boolean }) {
   const vehicleRefs = useRef<(Group | null)[]>([])
   const positionsRef = useRef(CITY_TRAFFIC.map((vehicle) => vehicle.start))
+  const nextPositionsRef = useRef(CITY_TRAFFIC.map((vehicle) => vehicle.start))
+  const routeGroups = useMemo(() => {
+    const groups = new Map<string, number[]>()
+    CITY_TRAFFIC.forEach((vehicle, index) => {
+      const indices = groups.get(vehicle.routeId)
+      if (indices) indices.push(index)
+      else groups.set(vehicle.routeId, [index])
+    })
+    return groups
+  }, [])
 
   useFrame(({ clock }, delta) => {
     const step = Math.min(delta, 0.05)
     const currentPositions = positionsRef.current
-    const nextPositions = currentPositions.slice()
+    const nextPositions = nextPositionsRef.current
 
     CITY_TRAFFIC.forEach((vehicle, index) => {
       const coordinate = currentPositions[index]
@@ -1229,12 +1147,13 @@ function TrafficFleet({ night }: { night: boolean }) {
       let desiredSpeed = vehicle.speed
       let leadDistance = Number.POSITIVE_INFINITY
 
-      CITY_TRAFFIC.forEach((other, otherIndex) => {
-        if (otherIndex === index || other.routeId !== vehicle.routeId) return
+      const sameRoute = routeGroups.get(vehicle.routeId) ?? []
+      for (const otherIndex of sameRoute) {
+        if (otherIndex === index) continue
         let distance = vehicle.direction * (currentPositions[otherIndex] - coordinate)
         if (distance <= 0) distance += routeLength
         if (distance > 0.05) leadDistance = Math.min(leadDistance, distance)
-      })
+      }
 
       if (leadDistance < 15) {
         const safeGap = vehicle.kind === 'truck' ? 8.2 : vehicle.kind === 'danfo' ? 7.2 : 5.4
@@ -1254,7 +1173,9 @@ function TrafficFleet({ night }: { night: boolean }) {
       nextPositions[index] = vehicle.min + ((((coordinate + vehicle.direction * desiredSpeed * step - vehicle.min) % length) + length) % length)
     })
 
+    // Swap reusable position buffers instead of allocating a new array every frame.
     positionsRef.current = nextPositions
+    nextPositionsRef.current = currentPositions
     CITY_TRAFFIC.forEach((vehicle, index) => {
       const group = vehicleRefs.current[index]
       if (!group) return
@@ -1272,7 +1193,11 @@ function TrafficFleet({ night }: { night: boolean }) {
           position={getTrafficPosition(vehicle, vehicle.start)}
           rotation={[0, getTrafficHeading(vehicle), 0]}
         >
-          <TrafficVehicleModel kind={vehicle.kind} color={vehicle.color} night={night} />
+          {(vehicle.kind === 'car' || vehicle.kind === 'danfo' || vehicle.kind === 'truck') ? (
+            <AssetTrafficVehicle kind={vehicle.kind} color={vehicle.color} night={night} />
+          ) : (
+            <TrafficVehicleModel kind={vehicle.kind} color={vehicle.color} night={night} />
+          )}
         </group>
       ))}
     </group>
@@ -1308,19 +1233,6 @@ function TrafficSignal({ position, intersectionX, intersectionZ, axis }: { posit
   )
 }
 
-function TrafficSignals() {
-  return (
-    <group>
-      {TRAFFIC_INTERSECTIONS.flatMap((x) => TRAFFIC_INTERSECTIONS.map((z) => (
-        <group key={`signals-${x}-${z}`}>
-          <TrafficSignal position={[x - 4.8, 0, z + 4.8]} intersectionX={x} intersectionZ={z} axis="x" />
-          <TrafficSignal position={[x + 4.8, 0, z - 4.8]} intersectionX={x} intersectionZ={z} axis="z" />
-        </group>
-      )))}
-    </group>
-  )
-}
-
 function collidesWithBuilding(x: number, z: number, radius: number) {
   return CITY_COLLISION_BLOCKS.some((block) =>
     Math.abs(x - block.x) < block.width / 2 + radius &&
@@ -1328,19 +1240,57 @@ function collidesWithBuilding(x: number, z: number, radius: number) {
   )
 }
 
-function PlayerController({
-  keysRef,
-  onPlayerPosition,
-  inVehicle,
-  rideVehicle,
-  gender,
-  paused,
-  spawnPosition,
-  activeInterior,
-  cameraLookRef,
-  autoWalkTarget,
+// Starter-apartment furniture footprints in world-space. The avatar is treated as a
+// capsule-sized circle so it cannot pass through beds, counters, the sofa or appliances.
+const APARTMENT_FURNITURE_BLOCKS = [
+  { x: -4.3, z: -2.65, width: 4.55, depth: 1.55 }, // sectional sofa
+  { x: -4.3, z: -7.45, width: 3.0, depth: 0.48 }, // TV console
+  { x: -4.3, z: -5.35, width: 2.35, depth: 1.4 }, // coffee table
+  { x: 4.5, z: -3.7, width: 3.35, depth: 4.35 }, // bed
+  { x: 1.4, z: -6.7, width: 1.75, depth: 2.7 }, // study desk
+  { x: -4.1, z: 1.2, width: 6.9, depth: 1.2 }, // kitchen counter
+  { x: -1.4, z: 1.2, width: 1.5, depth: 1.6 }, // refrigerator
+  { x: 1.9, z: 1.9, width: 2.25, depth: 1.9 }, // bath fixture
+  { x: -2.1, z: 6.2, width: 1.2, depth: 1.0 }, // toilet
+] as const
 
-}: Pick<CityWorldProps, 'keysRef' | 'onPlayerPosition' | 'inVehicle' | 'rideVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & { cameraLookRef: MutableRefObject<CameraLook>; autoWalkTarget: LocationId | null }) {
+function collidesWithApartmentFurniture(x: number, z: number, radius: number) {
+  return APARTMENT_FURNITURE_BLOCKS.some((block) => {
+    const closestX = Math.max(block.x - block.width / 2, Math.min(x, block.x + block.width / 2))
+    const closestZ = Math.max(block.z - block.depth / 2, Math.min(z, block.z + block.depth / 2))
+    return (x - closestX) ** 2 + (z - closestZ) ** 2 < radius ** 2
+  })
+}
+
+function collidesWithApartmentWall(x: number, z: number, radius: number) {
+  const wall = (px: number, pz: number, width: number, depth: number) => {
+    const nearestX = Math.max(px - width / 2, Math.min(x, px + width / 2))
+    const nearestZ = Math.max(pz - depth / 2, Math.min(z, pz + depth / 2))
+    return (x - nearestX) ** 2 + (z - nearestZ) ** 2 < radius ** 2
+  }
+  // Exterior perimeter. The front entrance is a 2.4m opening in the south wall.
+  if (wall(0, -8.45, 17, 0.3) || wall(-8.45, 0, 0.3, 17) || wall(8.45, 0, 0.3, 17)) return true
+  if (Math.abs(z - 8.45) < radius + 0.15 && Math.abs(x) > 1.35 && Math.abs(x) < 8.7) return true
+  // Internal partitions match the visible cutaway walls: two short north/south runs and two short east/west runs.
+  // The gaps around the center are intentionally left open so the player can pass through the doorways.
+  if (wall(0, -6.25, 0.18, 4.0) || wall(0, 6.25, 0.18, 4.0)) return true
+  if (wall(-6.25, 0, 4.0, 0.18) || wall(6.25, 0, 4.0, 0.18)) return true
+  return false
+}
+
+function PlayerController({
+  keysRef, joystickRef, riding, playerPosRef, ridePoseRef, isAdmin, adminPowersRef,
+  lookSensitivity, onPlayerPosition, inVehicle, rideVehicle, gender, paused,
+  spawnPosition, activeInterior, cameraLookRef, autoWalkTarget, apartmentMoveTargetRef,
+}: {
+  riding: boolean
+  playerPosRef: MutableRefObject<PlayerPosition>
+  ridePoseRef: MutableRefObject<RidePose | null>
+} & Pick<CityWorldProps, 'keysRef' | 'joystickRef' | 'isAdmin' | 'adminPowersRef' | 'lookSensitivity' | 'onPlayerPosition' | 'inVehicle' | 'rideVehicle' | 'gender' | 'paused' | 'spawnPosition' | 'activeInterior'> & {
+  cameraLookRef: MutableRefObject<CameraLook>
+  autoWalkTarget: LocationId | null
+  apartmentMoveTargetRef: MutableRefObject<PlayerPosition | null>
+}) {
   const playerRef = useRef<Group>(null!)
   const { camera, size } = useThree()
   const cameraTarget = useRef(new Vector3())
@@ -1365,55 +1315,116 @@ function PlayerController({
     const position = playerRef.current.position
     const direction = movement.current.set(0, 0, 0)
 
-    if (!paused && !rideVehicle) {
-      if (keys.has('w') || keys.has('arrowup')) direction.z -= 1
-      if (keys.has('s') || keys.has('arrowdown')) direction.z += 1
-      if (keys.has('a') || keys.has('arrowleft')) direction.x -= 1
-      if (keys.has('d') || keys.has('arrowright')) direction.x += 1
-      if (direction.lengthSq() === 0 && autoWalkTarget) {
-        const location = WORLD_LOCATIONS.find((entry) => entry.id === autoWalkTarget)
-        const entrance = location && getLocationEntrancePosition(location.id)
-        const destination = entrance ?? location
-        if (destination) {
-          const dx = destination.x - position.x
-          const dz = destination.z - position.z
-          // Follow a street-grid route in orthogonal legs instead of cutting diagonally across blocks.
-          if (Math.abs(dx) > 2.1) direction.set(dx, 0, 0)
-          else if (Math.abs(dz) > 2.1) direction.set(0, 0, dz)
+    if (riding) {
+      const pose = ridePoseRef.current
+      if (pose) {
+        position.x = pose.x
+        position.z = pose.z
+        playerRef.current.rotation.y = pose.heading
+      }
+    } else if (!paused && !rideVehicle) {
+      const keys = keysRef.current
+      const forwardInput = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'))
+      const rightInput = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'))
+      const stick = joystickRef.current
+      const stickMagnitude = Math.min(1, Math.hypot(stick.x, stick.y))
+      const useStick = stickMagnitude > 0.12
+      const inputForward = useStick ? -stick.y : forwardInput
+      const inputRight = useStick ? stick.x : rightInput
+      const yaw = cameraLookRef.current.yaw
+      const forwardX = -Math.sin(yaw)
+      const forwardZ = -Math.cos(yaw)
+      const rightX = Math.cos(yaw)
+      const rightZ = -Math.sin(yaw)
+
+      direction.set(
+        forwardX * inputForward + rightX * inputRight,
+        0,
+        forwardZ * inputForward + rightZ * inputRight,
+      )
+
+      if (activeInterior?.id === 'marina-apartments' && !useStick && !forwardInput && !rightInput) {
+        const target = apartmentMoveTargetRef.current
+        if (target) {
+          const dx = target.x - position.x
+          const dz = target.z - position.z
+          if (Math.hypot(dx, dz) < 0.38) apartmentMoveTargetRef.current = null
+          else direction.set(dx, 0, dz)
         }
       }
+      if (direction.lengthSq() < 0.0001 && autoWalkTarget && !inside) {
+        const target = getLocationEntrancePosition(autoWalkTarget)
+          ?? WORLD_LOCATIONS.find((location) => location.id === autoWalkTarget)
+        if (target) direction.set(target.x - position.x, 0, target.z - position.z)
+      }
 
-      if (direction.lengthSq() > 0) {
+      if (direction.lengthSq() > 0.0001) {
         direction.normalize()
         const running = !inVehicle && (keys.has('shift') || keys.has('shiftleft') || keys.has('shiftright'))
-        const speed = inVehicle ? 17 : running ? 11.5 : 6.2
+        const powers = isAdmin ? adminPowersRef.current : null
+        const analog = useStick ? Math.max(0.35, stickMagnitude) : 1
+        const speed = (inVehicle ? 17 : running ? 11.5 : 6.2) * analog * (powers?.speed ?? 1)
         const radius = inVehicle ? 0.75 : 0.42
-        const nextX = position.x + direction.x * speed * step
-        const nextZ = position.z + direction.z * speed * step
+        const previousX = position.x
+        const previousZ = position.z
+        const nextX = previousX + direction.x * speed * step
+        const nextZ = previousZ + direction.z * speed * step
+        const ghost = Boolean(powers?.noclip || powers?.fly)
 
         if (inside) {
-          position.x = MathUtils.clamp(nextX, -6.7, 6.7)
-          position.z = MathUtils.clamp(nextZ, -6.7, 6.7)
+          const home = activeInterior?.id === 'marina-apartments'
+          const minX = home ? -17.2 : -6.7
+          const maxX = home ? 17.2 : 6.7
+          const minZ = home ? -14.8 : -6.7
+          const maxZ = home ? 14.8 : 6.7
+          const clampedX = MathUtils.clamp(nextX, minX, maxX)
+          const clampedZ = MathUtils.clamp(nextZ, minZ, maxZ)
+          if (home && !ghost) {
+            // Resolve each axis separately so the player can slide along furniture edges.
+            const blockedX = collidesWithApartmentFurniture(clampedX, previousZ, radius) || collidesWithApartmentWall(clampedX, previousZ, radius)
+            if (!blockedX) position.x = clampedX
+            const blockedZ = collidesWithApartmentFurniture(position.x, clampedZ, radius) || collidesWithApartmentWall(position.x, clampedZ, radius)
+            if (!blockedZ) position.z = clampedZ
+          } else {
+            position.x = clampedX
+            position.z = clampedZ
+          }
         } else {
-          if (!collidesWithBuilding(nextX, position.z, radius)) position.x = nextX
-          if (!collidesWithBuilding(position.x, nextZ, radius)) position.z = nextZ
+          if (ghost || !collidesWithBuilding(nextX, previousZ, radius)) position.x = nextX
+          if (ghost || !collidesWithBuilding(position.x, nextZ, radius)) position.z = nextZ
         }
-        playerRef.current.rotation.y = MathUtils.damp(playerRef.current.rotation.y, Math.atan2(direction.x, direction.z), 10, step)
+
+        const movedX = position.x - previousX
+        const movedZ = position.z - previousZ
+        if (Math.abs(movedX) + Math.abs(movedZ) > 0.0001) {
+          playerRef.current.rotation.y = MathUtils.damp(
+            playerRef.current.rotation.y,
+            Math.atan2(movedX, movedZ),
+            10,
+            step,
+          )
+        }
       }
     }
 
     if (inside) {
-      position.x = MathUtils.clamp(position.x, -6.7, 6.7)
-      position.z = MathUtils.clamp(position.z, -6.7, 6.7)
+      position.x = MathUtils.clamp(position.x, activeInterior?.id === 'marina-apartments' ? -17.2 : -6.7, activeInterior?.id === 'marina-apartments' ? 17.2 : 6.7)
+      position.z = MathUtils.clamp(position.z, activeInterior?.id === 'marina-apartments' ? -14.8 : -6.7, activeInterior?.id === 'marina-apartments' ? 14.8 : 6.7)
       position.y = 0
     } else {
       position.x = MathUtils.clamp(position.x, -82, 82)
       position.z = MathUtils.clamp(position.z, -82, 78)
       const onBridge = position.z >= 72 && position.z <= 78
-      position.y = onBridge ? 4.62 : 0
+      const flying = isAdmin && adminPowersRef.current.fly
+      const groundY = onBridge ? 4.62 : 0
+      position.y = MathUtils.damp(position.y, flying ? groundY + 7 : groundY, 5, step)
+      if (!flying && Math.abs(position.y - groundY) < 0.02) position.y = groundY
     }
 
     const { x, z } = position
+    playerPosRef.current.x = x
+    playerPosRef.current.z = z
+    playerRef.current.visible = !riding
     const tallViewport = size.height > size.width * 1.15
     const perspectiveCamera = camera as PerspectiveCamera
     const nextFov = tallViewport ? 50 : 46
@@ -1422,13 +1433,36 @@ function PlayerController({
       perspectiveCamera.updateProjectionMatrix()
     }
 
-    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, 0.5, 2.8)
+    if (activeInterior?.id === 'marina-apartments') {
+      const portrait = size.height > size.width * 1.15
+      perspectiveCamera.fov = portrait ? 62 : 50
+      perspectiveCamera.updateProjectionMatrix()
+      const look = cameraLookRef.current
+      const distance = (portrait ? 22 : 25) * MathUtils.clamp(look.zoom, 0.65, 2.2)
+      const pitch = MathUtils.clamp(look.pitch, -0.05, 1.2)
+      cameraTarget.current.set(
+        x + Math.sin(look.yaw) * distance,
+        position.y + 8.5 + Math.sin(pitch) * distance * 0.78,
+        z + Math.cos(look.yaw) * distance,
+      )
+      cameraLookAt.current.set(x, position.y + 1.15, z)
+      camera.position.lerp(cameraTarget.current, 1 - Math.exp(-step * 4.2))
+      camera.lookAt(cameraLookAt.current)
+      publishTimer.current += step
+      if (publishTimer.current > 0.16) {
+        publishTimer.current = 0
+        onPositionRef.current({ x, z })
+      }
+      return
+    }
+
+    const zoom = MathUtils.clamp(cameraLookRef.current.zoom, inside ? 0.72 : 0.5, inside ? 1.35 : 2.8)
     const cameraHeight = (inside
-      ? tallViewport ? 4.8 : 4.2
-      : tallViewport ? (inVehicle || rideVehicle ? 9.2 : 10.2) : (inVehicle || rideVehicle ? 7.6 : 8.5)) * zoom
+      ? (size.height > size.width * 1.15 ? 16 : 14)
+      : (size.height > size.width * 1.15 ? (inVehicle || riding ? 16 : 17) : (inVehicle || riding ? 8.5 : 9.5))) * zoom
     const cameraDistance = (inside
-      ? tallViewport ? 4.4 : 3.8
-      : tallViewport ? (inVehicle || rideVehicle ? 12.6 : 13.4) : (inVehicle || rideVehicle ? 7.6 : 8.5)) * zoom
+      ? (size.height > size.width * 1.15 ? 14 : 12)
+      : (size.height > size.width * 1.15 ? 19 : 14.5)) * zoom
     const look = cameraLookRef.current
     const yaw = look.yaw
     const pitch = look.pitch
@@ -1460,7 +1494,7 @@ function PlayerController({
           color={rideVehicle === 'danfo' ? '#e1bd38' : rideVehicle === 'bike' ? '#31464d' : '#ddd7c9'}
           night
         />
-        ) : inVehicle ? <ScooterModel /> : <ImportedPlayerModel />}
+      ) : inVehicle ? <ScooterModel /> : <PlayerAssetModel />}
     </group>
   )
 }
@@ -1473,9 +1507,9 @@ function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
   return (
     <group position={[player.x, 0, player.z]}>
       {player.inVehicle && <group position={[0, 0, 0.2]} scale={0.72}><ScooterModel /></group>}
-      <HumanoidModel skinTone="#87583f" hairColor="#211a17" clothing={color} accentColor="#d0a76b" />
+      <HumanoidModel skinTone="#87583f" hairColor="#211a17" clothing={player.isAdmin ? '#15171b' : color} accentColor={player.isAdmin ? '#d9b24f' : '#d0a76b'} admin={Boolean(player.isAdmin)} />
       <group position={[0, 2.4, 0]}>
-        <WorldLabel text={player.displayName} width={3.6} accentColor="#c9a66b" />
+        <WorldLabel text={player.isAdmin ? `ADMIN · ${player.displayName}` : player.displayName} width={3.6} accentColor={player.isAdmin ? '#f0c860' : '#c9a66b'} />
       </group>
     </group>
   )
@@ -1514,8 +1548,15 @@ function PassbyPedestrian({ index }: { index: number }) {
   const shirts = ['#8c4d3f', '#d1a05b', '#456b72', '#65764d', '#6c587e', '#c5c0b4']
   const position: [number, number, number] = axis === 'x' ? [start, 0, track] : [track, 0, start]
   return <group ref={ref} position={position} scale={0.88}>
-    <HumanoidModel skinTone={index % 3 === 0 ? '#69432f' : '#87583f'} hairColor={female ? '#211817' : '#30221b'} clothing={shirts[index % shirts.length]} accentColor="#d2b17a" gender={female ? 'female' : 'male'} walking />
+      <AssetCharacter scale={0.9} />
   </group>
+}
+
+
+export const QUALITY_SETTINGS: Record<GraphicsQuality, { dpr: [number, number]; antialias: boolean; traffic: number; pedestrians: number; fogFar: number }> = {
+  low: { dpr: [0.7, 1], antialias: false, traffic: 0.5, pedestrians: 4, fogFar: 170 },
+  medium: { dpr: [1, 1.25], antialias: false, traffic: 0.8, pedestrians: 8, fogFar: 230 },
+  high: { dpr: [1, 1.75], antialias: true, traffic: 1, pedestrians: 14, fogFar: 300 },
 }
 
 function CitySignBoards({ night }: { night: boolean }) {
@@ -1541,74 +1582,48 @@ function CitySignBoards({ night }: { night: boolean }) {
   </>
 }
 
-function ImportedCityBuilding({ position, rotation = 0, scale = 1 }: { position: [number, number, number]; rotation?: number; scale?: number }) {
-  const { scene } = useGLTF('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/building_A.gltf')
-  const building = useMemo(() => scene.clone(true), [scene])
-  return <primitive object={building} position={position} rotation={[0, rotation, 0]} scale={[scale, scale, scale]} />
-}
-
-useGLTF.preload('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/building_A.gltf')
-
-function ImportedCityCar({ position, rotation = 0, color = '#d9b56e' }: { position: [number, number, number]; rotation?: number; color?: string }) {
-  const { scene } = useGLTF('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/car_taxi.gltf')
-  const car = useMemo(() => {
-    const clone = (scene as import('three').Object3D).clone(true)
-    clone.traverse((child) => {
-      const material = (child as import('three').Mesh).material
-      if (material && !Array.isArray(material) && 'color' in material) {
-        const paintedMaterial = material.clone() as import('three').MeshStandardMaterial
-        paintedMaterial.color.set(color)
-        ;(child as import('three').Mesh).material = paintedMaterial
-      }
-    })
-    return clone
-  }, [scene, color])
-  return <primitive object={car} position={position} rotation={[0, rotation, 0]} scale={1.15} />
-}
-
-useGLTF.preload('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/car_taxi.gltf')
-
-function DistrictMarker({ position, label, color }: { position: [number, number, number]; label: string; color: string }) {
-  return (
-    <group position={position}>
-      <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[8, 32]} />
-        <meshBasicMaterial color={color} transparent opacity={0.12} />
-      </mesh>
-      <mesh position={[0, 4.6, 0]}>
-        <cylinderGeometry args={[0.08, 0.08, 9.2, 8]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.6} />
-      </mesh>
-      <mesh position={[0, 9.1, 0]}>
-        <sphereGeometry args={[0.42, 12, 8]} />
-        <meshBasicMaterial color={color} />
-      </mesh>
-      <WorldLabel text={label} width={6.4} accentColor={color} />
-    </group>
-  )
-}
-
-function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps, 'waypoint' | 'remotePlayers' | 'gameMinutes'>) {
-  const hour = (gameMinutes / 60) % 24
-  const night = hour < 5.5 || hour >= 19
-  const dawn = hour >= 5.5 && hour < 7.5
-  const dusk = hour >= 17.5 && hour < 19
+function CityScene({ waypoint, remotePlayers, gameMinutes, quality }: Pick<CityWorldProps, 'waypoint' | 'remotePlayers' | 'gameMinutes' | 'quality'>) {
+  const hour = (((gameMinutes / 60) % 24) + 24) % 24
+  // Only flips twice a day; everything that depends on it is cheap (material colours, a few instances).
+  const night = lightsOn(hour)
+  const dawn = hour >= 5.3 && hour < 7.2
+  const dusk = hour >= 17.5 && hour < 19.6
+  const settings = QUALITY_SETTINGS[quality]
   const concreteSource = useTexture('/textures/lagos-concrete.png')
   const asphaltSource = useTexture('/textures/eko-asphalt.png')
   const facadeTexture = useMemo(() => cloneTiledTexture(concreteSource, 3, 3), [concreteSource])
   const pavementTexture = useMemo(() => cloneTiledTexture(concreteSource, 18, 18), [concreteSource])
   const horizontalRoadTexture = useMemo(() => cloneTiledTexture(asphaltSource, 18, 1), [asphaltSource])
   const verticalRoadTexture = useMemo(() => cloneTiledTexture(asphaltSource, 1, 18), [asphaltSource])
-  const treePositions: [number, number, number][] = [
-    [-13.7, 0, -14], [13.7, 0, -14], [-13.7, 0, 14], [13.7, 0, 14],
-    [-13.7, 0, -30], [13.7, 0, -30], [-13.7, 0, 30], [13.7, 0, 30],
-  ]
-  const lampPositions: [number, number, number][] = [
-    [-22.3, 0, -30], [22.3, 0, -30], [-46.3, 0, -6], [46.3, 0, -6],
-    [-46.3, 0, 30], [46.3, 0, 30], [-70.3, 0, -30], [70.3, 0, -30],
-    [-70.3, 0, 54], [70.3, 0, 54], [-22.3, 0, 54], [22.3, 0, 54],
-  ]
 
+  return (
+    <>
+      <Atmosphere gameMinutes={gameMinutes} />
+      <StaticWorld quality={quality} night={night} dawn={dawn} dusk={dusk} facadeTexture={facadeTexture} pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
+    </>
+  )
+}
+
+/** Everything that never moves. Memoised so clock ticks and player movement do not re-render it. */
+const StaticWorld = memo(function StaticWorld({
+  quality,
+  night,
+  dawn,
+  dusk,
+  facadeTexture,
+  pavementTexture,
+  horizontalRoadTexture,
+  verticalRoadTexture,
+}: {
+  quality: GraphicsQuality
+  night: boolean
+  dawn: boolean
+  dusk: boolean
+  facadeTexture: Texture
+  pavementTexture: Texture
+  horizontalRoadTexture: Texture
+  verticalRoadTexture: Texture
+}) {
   return (
     <>
       <color attach="background" args={[night ? '#172640' : dawn || dusk ? '#c58e79' : '#8ec9f0']} />
@@ -1619,72 +1634,29 @@ function CityScene({ waypoint, remotePlayers, gameMinutes }: Pick<CityWorldProps
       {!night && <group position={[45, 42, -75]}><mesh><sphereGeometry args={[5, 20, 16]} /><meshBasicMaterial color={dawn || dusk ? '#ffb56e' : '#fff0a3'} /></mesh><pointLight intensity={0.8} color="#ffe2a0" distance={100} /></group>}
       {night && <Stars radius={180} depth={100} count={1600} factor={3.4} saturation={0.15} fade speed={0.22} />}
       {night && <mesh position={[0, 78, -110]}><sphereGeometry args={[2.6, 16, 12]} /><meshBasicMaterial color="#fff3cc" /></mesh>}
-      <RoadGrid pavementTexture={pavementTexture} horizontalRoadTexture={horizontalRoadTexture} verticalRoadTexture={verticalRoadTexture} />
-      <Flyover />
-      <LagoonBridge />
-      {CITY_BUILDINGS.map((building) => <BuildingLot key={`lot-${building.id}`} building={building} />)}
-      {CITY_BUILDINGS.map((building) => <Building key={building.id} {...building} facadeTexture={facadeTexture} />)}
-      {WORLD_LOCATIONS.map((location) => <CivicBuilding key={location.id} location={location} facadeTexture={facadeTexture} />)}
-      <group name="imported-city-kit-landmarks">
-        <ImportedCityBuilding position={[8, 0, -18]} rotation={Math.PI * 0.5} scale={0.78} />
-        <ImportedCityBuilding position={[-58, 0, -52]} rotation={Math.PI * 0.25} scale={1.05} />
-        <ImportedCityBuilding position={[58, 0, -52]} rotation={Math.PI * -0.25} scale={0.92} />
-        <ImportedCityBuilding position={[-58, 0, 52]} rotation={Math.PI * 0.75} scale={1.12} />
-        <ImportedCityBuilding position={[58, 0, 52]} rotation={Math.PI * 1.25} scale={0.98} />
-      </group>
-      <group name="imported-city-kit-traffic">
-        <ImportedCityCar position={[-6, 0.18, -17]} rotation={Math.PI / 2} color="#e0aa39" />
-        <ImportedCityCar position={[8, 0.18, -17]} rotation={-Math.PI / 2} color="#d75454" />
-        <ImportedCityCar position={[18, 0.18, 7]} rotation={Math.PI} color="#4ea6a8" />
-      </group>
-      <DistrictMarker position={[-58, 0, -43]} label="INDUSTRIAL YARD" color="#f18f5b" />
-      <DistrictMarker position={[58, 0, -43]} label="NORTH MARKET" color="#5ce1df" />
-      <DistrictMarker position={[-58, 0, 43]} label="SUBURBAN ROW" color="#d9b56e" />
-      <DistrictMarker position={[58, 0, 43]} label="OASIS GARDENS" color="#9ee493" />
-      {CITY_BUILDINGS.map((building) => (
-        <EntryBeacon key={`entry-${building.id}`} position={getBuildingEntrancePosition(building)} label="ENTER" />
-      ))}
-      {WORLD_LOCATIONS.map((location) => {
-        const position = getLocationEntrancePosition(location.id)
-        return position ? <EntryBeacon key={`entry-${location.id}`} position={position} label="ENTER" /> : null
-      })}
-      {treePositions.map((position, index) => <StreetTree key={`tree-${index}`} position={position} scale={index % 3 === 0 ? 0.92 : 0.84} />)}
-      {lampPositions.map((position, index) => <StreetLamp key={`lamp-${index}`} position={position} lit={night} />)}
-      {Array.from({ length: 30 }, (_, index) => {
-        const road = ROAD_LINES[index % ROAD_LINES.length]
-        const side = index % 2 === 0 ? -1 : 1
-        const roadWidth = Math.abs(road) <= 42 ? 7 : 5
-        const x = -78 + Math.floor(index / ROAD_LINES.length) * 29
-        const z = road + side * (roadWidth / 2 + 2.9)
-        return <StreetTree key={`avenue-tree-${index}`} position={[x, 0, z]} scale={0.7 + (index % 4) * 0.08} />
-      })}
-      {Array.from({ length: 20 }, (_, index) => {
-        const road = ROAD_LINES[index % ROAD_LINES.length]
-        const side = index % 2 === 0 ? -1 : 1
-        const roadWidth = Math.abs(road) <= 42 ? 7 : 5
-        const x = -80 + Math.floor(index / ROAD_LINES.length) * 39
-        const z = road + side * (roadWidth / 2 + 1.0)
-        return <StreetLamp key={`avenue-lamp-${index}`} position={[x, 0, z]} lit={night} />
-      })}
-      <CitySignBoards night={night} />
-      <TrafficSignals />
-      <TrafficFleet night={night} />
-      {CITY_CHARACTERS.map((character) => <CharacterActor key={character.id} character={character} />)}
-      {Array.from({ length: 24 }, (_, index) => <PassbyPedestrian key={`passby-${index}`} index={index} />)}
-      {remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
-      <LandmarkMarkers waypoint={waypoint} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
+        <planeGeometry args={[240, 240]} />
+        <meshStandardMaterial color="#567a45" roughness={1} metalness={0} />
+      </mesh>
+      {/* The open city is intentionally empty. The player controller remains mounted below. */}
     </>
   )
-}
+})
 
 export function CityWorld(props: CityWorldProps) {
-  const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0, zoom: 1 })
+  const cameraLookRef = useRef<CameraLook>({ yaw: 0, pitch: 0.72, zoom: 1.25 })
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
   const activePointersRef = useRef(new Map<number, { x: number; y: number }>())
   const pinchDistanceRef = useRef(0)
+  const playerPosRef = useRef<PlayerPosition>({ x: 0, z: 0 })
+  const ridePoseRef = useRef<RidePose | null>(null)
+  const apartmentMoveTargetRef = useRef<PlayerPosition | null>(null)
+  useEffect(() => { if (!props.ride || props.ride.phase !== 'riding') ridePoseRef.current = null }, [props.ride])
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    // Reserve the left side for the movement joystick; right-side touch can look or pinch-zoom.
+    // Reserve the left 42% for the HUD joystick. Never capture its touch as a camera drag.
+    const bounds = event.currentTarget.getBoundingClientRect()
+    if (event.clientX < bounds.left + bounds.width * 0.42) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
     activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
     if (activePointersRef.current.size === 1) {
@@ -1704,7 +1676,7 @@ export function CityWorld(props: CityWorldProps) {
       const points = [...activePointersRef.current.values()].slice(0, 2)
       const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)
       if (pinchDistanceRef.current > 0 && distance > 0) {
-        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * (distance / pinchDistanceRef.current), 0.5, 2.8)
+        cameraLookRef.current.zoom = MathUtils.clamp(cameraLookRef.current.zoom * (distance / pinchDistanceRef.current), 0.65, 2.2)
       }
       pinchDistanceRef.current = distance
       dragRef.current = null
@@ -1717,8 +1689,15 @@ export function CityWorld(props: CityWorldProps) {
     drag.x = event.clientX
     drag.y = event.clientY
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
-    cameraLookRef.current.yaw = MathUtils.euclideanModulo(cameraLookRef.current.yaw - dx * 0.003 + Math.PI, Math.PI * 2) - Math.PI
-    cameraLookRef.current.pitch = MathUtils.clamp(cameraLookRef.current.pitch - dy * 0.002, -0.48, 0.48)
+    cameraLookRef.current.yaw = MathUtils.euclideanModulo(
+      cameraLookRef.current.yaw - dx * 0.003 * props.lookSensitivity + Math.PI,
+      Math.PI * 2,
+    ) - Math.PI
+    cameraLookRef.current.pitch = MathUtils.clamp(
+      cameraLookRef.current.pitch - dy * 0.0035 * props.lookSensitivity,
+      -0.05,
+      1.2,
+    )
   }
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     activePointersRef.current.delete(event.pointerId)
@@ -1732,7 +1711,7 @@ export function CityWorld(props: CityWorldProps) {
   }
   const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     cameraLookRef.current.zoom = MathUtils.clamp(
-      cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.12 : 0.89), 0.5, 2.8,
+      cameraLookRef.current.zoom * (event.deltaY > 0 ? 1.12 : 0.89), 0.65, 2.2,
     )
   }
 
@@ -1749,22 +1728,32 @@ export function CityWorld(props: CityWorldProps) {
     >
       <Canvas
         // Cap pixel ratio to reduce fill-rate and GPU memory on mid-range phones.
-        dpr={[1, 1.1]}
+        dpr={QUALITY_SETTINGS[props.quality].dpr}
         shadows={false}
-        camera={{ position: [-2, 16, 24], fov: 55, near: 0.1, far: 220 }}
-        gl={{ antialias: false, powerPreference: 'low-power' }}
+        camera={{ position: [-2, 16, 24], fov: 55, near: 0.1, far: 320 }}
+        gl={{ antialias: QUALITY_SETTINGS[props.quality].antialias, powerPreference: 'high-performance' }}
       >
         {props.activeInterior ? (
-          <>
-            <InteriorScene interior={props.activeInterior} />
-            {props.remotePlayers.map((player) => <RemotePlayerAvatar key={player.userId} player={player} />)}
-          </>
+          <InteriorScene
+            interior={props.activeInterior}
+            onApartmentMove={(x, z) => { apartmentMoveTargetRef.current = { x, z } }}
+            onApartmentAction={props.onApartmentAction}
+            apartmentTargetRef={apartmentMoveTargetRef}
+          />
         ) : (
-          <CityScene waypoint={props.waypoint} remotePlayers={props.remotePlayers} gameMinutes={props.gameMinutes} />
+          <CityScene waypoint={props.waypoint} remotePlayers={props.remotePlayers} gameMinutes={props.gameMinutes} quality={props.quality} />
         )}
+        {props.ride && !props.activeInterior && <RideVehicle key={props.ride.id} ride={props.ride} playerRef={playerPosRef} poseRef={ridePoseRef} onEvent={props.onRideEvent} />}
         <PlayerController
+          riding={props.ride?.phase === 'riding'}
+          playerPosRef={playerPosRef}
+          ridePoseRef={ridePoseRef}
           key={props.activeInterior?.id ?? 'city'}
           keysRef={props.keysRef}
+          joystickRef={props.joystickRef}
+          isAdmin={props.isAdmin}
+          adminPowersRef={props.adminPowersRef}
+          lookSensitivity={props.lookSensitivity}
           onPlayerPosition={props.onPlayerPosition}
           inVehicle={props.inVehicle}
           rideVehicle={props.rideVehicle ?? null}
@@ -1774,6 +1763,7 @@ export function CityWorld(props: CityWorldProps) {
           activeInterior={props.activeInterior}
           cameraLookRef={cameraLookRef}
           autoWalkTarget={props.autoWalkTarget}
+          apartmentMoveTargetRef={apartmentMoveTargetRef}
         />
       </Canvas>
     </div>

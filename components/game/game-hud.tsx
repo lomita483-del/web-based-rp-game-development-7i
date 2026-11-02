@@ -1,9 +1,15 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type PointerEvent } from 'react'
 import {
   Activity,
   ArrowRight,
+  Droplets,
+  Smile,
+  UserRound,
+  Home,
+  ShoppingBag,
+  Smartphone,
   Bike,
   BriefcaseBusiness,
   Building2,
@@ -23,6 +29,8 @@ import {
   MapPin,
   Package,
   Radio,
+  ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Utensils,
   UsersRound,
@@ -72,6 +80,8 @@ type HudProps = {
   activeInterior: InteriorDefinition | null
   nearInteriorAction: boolean
   canExitInterior: boolean
+  onGoOutside: () => void
+  onApartmentAction: (action: 'rest' | 'shower' | 'toilet' | 'food' | 'cook' | 'tv' | 'study') => void
   rideBooking: RideBooking | null
   waypoint: LocationId | null
   activePanel: GamePanel
@@ -79,6 +89,13 @@ type HudProps = {
   onOpenPanel: (panel: Exclude<GamePanel, 'none'>) => void
   onInteract: () => void
   onMoveKey: (key: string, pressed: boolean) => void
+  joystickRef: MutableRefObject<{ x: number; y: number }>
+  isAdmin: boolean
+  onOpenSettings: () => void
+  rideStatus: string | null
+  canCancelRide: boolean
+  onCancelRide: () => void
+  nearWaitingRide: boolean
 }
 
 const PANEL_ACTIONS: { id: Exclude<GamePanel, 'none'>; label: string; icon: LucideIcon; shortcut: string }[] = [
@@ -131,6 +148,8 @@ export function GameHud({
   activeInterior,
   nearInteriorAction,
   canExitInterior,
+  onGoOutside,
+  onApartmentAction,
   rideBooking,
   waypoint,
   activePanel,
@@ -138,13 +157,24 @@ export function GameHud({
   onOpenPanel,
   onInteract,
   onMoveKey,
+  joystickRef,
+  isAdmin,
+  onOpenSettings,
+  rideStatus,
+  canCancelRide,
+  onCancelRide,
+  nearWaitingRide,
 }: HudProps) {
+  useEffect(() => () => { joystickRef.current.x = 0; joystickRef.current.y = 0 }, [joystickRef])
   const mission = getMissionDetails(player.stage)
   const currentDistrict = activeInterior?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'
   const streets = GRID_LINES
   const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const rideDestination = rideBooking && WORLD_LOCATIONS.find((location) => location.id === rideBooking.destinationId)
   const RideIcon = rideBooking?.mode === 'bike' ? Bike : rideBooking?.mode === 'danfo' ? BusFront : CarFront
+  const knobRef = useRef<HTMLSpanElement>(null)
+  const [radioOn, setRadioOn] = useState(false)
+  const [micOn, setMicOn] = useState(false)
   const interactionLabel = activeInterior
     ? nearInteriorAction ? activeInterior.actionLabel : canExitInterior ? `Exit ${activeInterior.name}` : `Inside ${activeInterior.name}`
     : nearbyInterior && prioritizeInterior
@@ -158,17 +188,19 @@ export function GameHud({
             : 'Wander the city'
   const interactionEyebrow = activeInterior
     ? nearInteriorAction ? 'SERVICE' : canExitInterior ? 'EXIT' : 'INSIDE'
-    : nearbyCharacter ? 'ROLEPLAY' : nearbyInterior ? 'ENTER' : nearbyLocation ? 'LOCATION' : 'EXPLORE'
-  const interactionEnabled = activeInterior ? nearInteriorAction || canExitInterior : Boolean(nearbyCharacter || nearbyInterior || nearbyLocation)
+    : nearbyInterior ? 'BUILDING ENTRY' : nearbyCharacter ? 'ROLEPLAY' : nearbyLocation ? 'LOCATION' : 'EXPLORE'
+  const interactionEnabled = activeInterior
+    ? nearInteriorAction || canExitInterior
+    : Boolean(nearbyCharacter || nearbyInterior || nearbyLocation)
 
   return (
     <div className="game-hud">
       <header className="game-topbar">
-        <div className="brand-lockup" aria-label="Eko After Hours">
-          <div className="brand-emblem">EA</div>
+        <div className="brand-lockup" aria-label="Lagos Life">
+          <div className="brand-emblem">LL</div>
           <div className="brand-copy">
-            <span className="brand-title">EKÓ</span>
-            <span className="brand-subtitle">AFTER HOURS</span>
+            <span className="brand-title">LAGOS</span>
+            <span className="brand-subtitle">LIFE SIMULATOR</span>
           </div>
         </div>
 
@@ -202,6 +234,45 @@ export function GameHud({
           </button>
         </div>
       </header>
+
+      {activeInterior && (
+        <section className="apartment-overlay" aria-label="Apartment controls">
+          <div className="apartment-title-row">
+            <div>
+              <span className="apartment-kicker">PRIVATE INSTANCE · 3-ROOM FLAT</span>
+              <strong>{activeInterior.name}</strong>
+            </div>
+            <span className="apartment-mood" aria-label="Mood: content">● CONTENT</span>
+          </div>
+          <div className="need-strip" aria-label="Player needs">
+            {[
+              ['HUNGER', player.hunger, 'need-hunger'],
+              ['ENERGY', player.energy, 'need-energy'],
+              ['FUN', player.fun, 'need-fun'],
+              ['HYGIENE', player.hygiene, 'need-hygiene'],
+            ].map(([label, value, tone]) => (
+              <div className="need-meter" key={label}>
+                <div><span>{label}</span><b>{Math.round(Number(value))}</b></div>
+                <span className={`need-meter-track ${tone}`}><i style={{ width: `${Number(value)}%` }} /></span>
+              </div>
+            ))}
+          </div>
+          <div className="apartment-actions" role="group" aria-label="Apartment actions">
+            <button type="button" className={micOn ? 'is-active' : ''} onClick={() => setMicOn((value) => !value)} aria-pressed={micOn}>
+              <span>MIC</span><small>{micOn ? 'ON' : 'OFF'}</small>
+            </button>
+            <button type="button" className={radioOn ? 'is-active' : ''} onClick={() => setRadioOn((value) => !value)} aria-pressed={radioOn}>
+              <Radio aria-hidden="true" /><span>RADIO</span><small>{radioOn ? 'PLAYING' : 'OFF'}</small>
+            </button>
+            <button type="button" onClick={onInteract} disabled={!nearInteriorAction}>
+              <Sparkles aria-hidden="true" /><span>INTERACT</span><small>{nearInteriorAction ? activeInterior.actionLabel : 'WALK TO ITEM'}</small>
+            </button>
+            <button type="button" className="go-outside-action" onClick={onInteract} disabled={!canExitInterior}>
+              <ArrowRight aria-hidden="true" /><span>GO OUTSIDE</span><small>{canExitInterior ? 'CITY MAP' : 'AT FRONT DOOR'}</small>
+            </button>
+          </div>
+        </section>
+      )}
 
       {rideBooking && (
         <div className="ride-status-card" role="status" aria-live="polite">
@@ -247,6 +318,10 @@ export function GameHud({
             <kbd>{shortcut}</kbd>
           </button>
         ))}
+        <button className="quick-action" type="button" onClick={onOpenSettings} aria-label={isAdmin ? 'Settings and admin tools' : 'Settings'}>
+          {isAdmin ? <ShieldCheck aria-hidden="true" /> : <SlidersHorizontal aria-hidden="true" />}
+          <span>{isAdmin ? 'Admin' : 'Settings'}</span>
+        </button>
       </div>
 
       <div className="minimap-card" aria-label="Mini map">
@@ -278,20 +353,66 @@ export function GameHud({
         </div>
       </div>
 
-      <div className="bottom-status">
-        <span><Radio aria-hidden="true" /> CITY RADIO</span>
-        <span className="radio-track">Lagos After Dark <i>—</i> 02:14</span>
-        <span className="radio-eq" aria-hidden="true"><i /><i /><i /><i /><i /></span>
-      </div>
+      {rideStatus && (
+        <div className="ride-banner" role="status">
+          <span className="status-live-dot" />
+          <strong>{rideStatus}</strong>
+          {canCancelRide && <button type="button" onClick={onCancelRide}>CANCEL</button>}
+        </div>
+      )}
+      {activeInterior?.id === 'marina-apartments' && (
+        <button className="home-go-outside" type="button" onClick={onGoOutside}>
+          <ArrowRight aria-hidden="true" /> GO OUTSIDE
+        </button>
+      )}
+      {(nearbyLocation || activeInterior) && (
+        <section className="reference-location-card" aria-label="Current location">
+          <div className="reference-location-head">
+            <span className="reference-location-icon"><Building2 aria-hidden="true" /></span>
+            <span><small>{activeInterior ? 'INSIDE' : 'NEARBY'}</small><strong>{activeInterior?.name ?? nearbyLocation?.name}</strong></span>
+            <button type="button" aria-label="Collapse location card"><ChevronUp aria-hidden="true" /></button>
+          </div>
+          <p>{activeInterior?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'} · {activeInterior ? 'Explore the room and interact with objects.' : 'A nearby place to explore.'}</p>
+          <div className="reference-location-actions">
+            {activeInterior && <button type="button" onClick={onGoOutside}><CarFront aria-hidden="true" /> GO OUTSIDE</button>}
+            <button type="button" onClick={() => onOpenPanel('map')}><MapPin aria-hidden="true" /> ROUTE</button>
+          </div>
+        </section>
+      )}
+
+      {activeInterior?.id === 'marina-apartments' && (
+        <div className="home-action-dock" aria-label="Apartment interactions">
+          <button type="button" onClick={() => onApartmentAction('rest')}>🛏 REST</button>
+          <button type="button" onClick={() => onApartmentAction('food')}>🥗 FRIDGE</button>
+          <button type="button" onClick={() => onApartmentAction('shower')}>🚿 SHOWER</button>
+          <button type="button" onClick={() => onApartmentAction('tv')}>📺 TV</button>
+        </div>
+      )}
+
+      <nav className="immersive-game-nav" aria-label="Main game navigation">
+        <button type="button" onClick={() => onOpenPanel('life')} aria-label="Home and city life">
+          <Home aria-hidden="true" /><span>HOME</span>
+        </button>
+        <button type="button" onClick={() => onOpenPanel('inventory')} aria-label="Buy and inventory">
+          <ShoppingBag aria-hidden="true" /><span>BUY</span>
+        </button>
+        <button type="button" onClick={() => onOpenPanel('map')} aria-label="Open city map" aria-pressed={activePanel === 'map'}>
+          <Map aria-hidden="true" /><span>MAP</span>
+        </button>
+        <button type="button" onClick={() => onOpenPanel('phone')} aria-label="Open smartphone">
+          <Smartphone aria-hidden="true" /><span>PHONE</span>
+        </button>
+      </nav>
 
       <div className="interaction-wrap">
         <button
           className="interaction-button"
           type="button"
           onClick={onInteract}
-          disabled={activeInterior ? !nearInteriorAction && !canExitInterior : !nearbyCharacter && !nearbyLocation && !nearbyInterior}
+          aria-label={`${interactionLabel}. Tap to interact.`}
+          disabled={!interactionEnabled}
         >
-          <span className="interaction-key">E</span>
+          <span className="interaction-key" aria-hidden="true"><span className="interaction-touch-label">TAP</span><span className="interaction-key-label">E</span></span>
           <span className="interaction-copy">
             <small>{interactionEyebrow}</small>
             <strong>{interactionLabel}</strong>
@@ -336,13 +457,16 @@ export function GameHud({
         onLostPointerCapture={() => clearJoystick(onMoveKey)}
       >
         <span className="movement-joystick-ring" aria-hidden="true" />
-        <span className="movement-joystick-knob" aria-hidden="true" />
+        <span className="movement-joystick-knob" ref={knobRef} aria-hidden="true" />
       </div>
       <button className="run-button" type="button" onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); onMoveKey('shift', true) }} onPointerUp={() => onMoveKey('shift', false)} onPointerCancel={() => onMoveKey('shift', false)} onLostPointerCapture={() => onMoveKey('shift', false)} aria-label="Run while moving">RUN</button>
 
       <div className="vitals-card" aria-label="Player condition">
-        <div className="vital-row"><Zap aria-hidden="true" /><span>ENERGY</span><div><i style={{ width: `${player.energy}%` }} /></div><b>{player.energy}%</b></div>
-        <div className="vital-row"><Activity aria-hidden="true" /><span>HUNGER</span><div><i style={{ width: `${player.hunger}%` }} /></div><b>{player.hunger}%</b></div>
+        <div className="vital-row"><Zap aria-hidden="true" /><span>ENERGY</span><div><i style={{ width: `${player.energy}%` }} /></div><b>{Math.round(player.energy)}%</b></div>
+        <div className="vital-row"><Activity aria-hidden="true" /><span>HUNGER</span><div><i style={{ width: `${player.hunger}%` }} /></div><b>{Math.round(player.hunger)}%</b></div>
+        <div className="vital-row"><Smile aria-hidden="true" /><span>FUN</span><div><i style={{ width: `${player.fun}%` }} /></div><b>{Math.round(player.fun)}%</b></div>
+        <div className="vital-row"><Sparkles aria-hidden="true" /><span>HYGIENE</span><div><i style={{ width: `${player.hygiene}%` }} /></div><b>{Math.round(player.hygiene)}%</b></div>
+        <div className="vital-row"><Droplets aria-hidden="true" /><span>BLADDER</span><div><i style={{ width: `${player.bladder}%` }} /></div><b>{Math.round(player.bladder)}%</b></div>
       </div>
 
       {toast && <div className="game-toast" role="status" aria-live="polite" key={toast.id}><Check aria-hidden="true" />{toast.text}</div>}
@@ -382,12 +506,12 @@ function releaseMove(
 }
 
 type GamePanelsProps = {
-  panel: Exclude<GamePanel, 'none'>
+  panel: Exclude<GamePanel, 'none' | 'admin'>
   player: PlayerState
   waypoint: LocationId | null
   playerPosition: { x: number; z: number }
   onClose: () => void
-  onChangePanel: (panel: Exclude<GamePanel, 'none'>) => void
+  onChangePanel: (panel: Exclude<GamePanel, 'none' | 'admin'>) => void
   onAcceptDelivery: () => void
   onBuyFood: () => void
   onEatFood: () => void
@@ -408,13 +532,13 @@ type GamePanelsProps = {
   onSignOut: () => Promise<void>
 }
 
-const PANEL_META: Record<Exclude<GamePanel, 'none'>, { title: string; eyebrow: string; icon: LucideIcon }> = {
+const PANEL_META: Record<Exclude<GamePanel, 'none' | 'admin'>, { title: string; eyebrow: string; icon: LucideIcon }> = {
   map: { title: 'City map', eyebrow: 'LAGOS / WAYFINDING', icon: Map },
   jobs: { title: 'Work board', eyebrow: 'CAREERS / AVAILABLE SHIFTS', icon: BriefcaseBusiness },
   life: { title: 'City life', eyebrow: 'CITIZEN / COMMUNITY / HOME', icon: Landmark },
-  admin: { title: 'Admin', eyebrow: 'CITY / CONTROL ROOM', icon: Landmark },
   inventory: { title: 'Your bag', eyebrow: 'PLAYER / LOADOUT', icon: Package },
   online: { title: 'Shared world', eyebrow: 'LIVE ROOM / EKO MAINLAND', icon: UsersRound },
+  phone: { title: 'VibeOS', eyebrow: 'PERSONAL SMARTPHONE', icon: Smartphone },
 }
 
 export function GamePanels({
@@ -471,7 +595,7 @@ export function GamePanels({
               key={id}
               className={panel === id ? 'is-active' : ''}
               aria-current={panel === id ? 'page' : undefined}
-              onClick={() => onChangePanel(id)}
+              onClick={() => onChangePanel(id as Exclude<GamePanel, 'none' | 'admin'>)}
             >
               <TabIcon aria-hidden="true" />{label}
             </button>
@@ -483,6 +607,7 @@ export function GamePanels({
           {panel === 'jobs' && <JobsPanel player={player} playerPosition={playerPosition} onAcceptDelivery={onAcceptDelivery} onSetWaypoint={onSetWaypoint} onApplyJob={onApplyJob} onCompleteShift={onCompleteShift} />}
           {panel === 'life' && <LifePanel player={player} onJoinFaction={onJoinFaction} onLeaseHome={onLeaseHome} onSetWaypoint={onSetWaypoint} onRegisterVoter={onRegisterVoter} onResolveCourt={onResolveCourt} />}
           {panel === 'inventory' && <InventoryPanel player={player} onBuyFood={onBuyFood} onEatFood={onEatFood} />}
+          {panel === 'phone' && <PhoneHome player={player} onOpenApp={onChangePanel} />}
           {panel === 'online' && (
             <OnlinePanel
               user={user}
@@ -500,6 +625,53 @@ export function GamePanels({
   )
 }
 
+
+function PhoneHome({
+  player,
+  onOpenApp,
+}: {
+  player: PlayerState
+  onOpenApp: (panel: Exclude<GamePanel, 'none' | 'admin'>) => void
+}) {
+  const apps = [
+    { label: 'LIFE', detail: 'Needs, home & civic', icon: UserRound, panel: 'life' as const, tone: 'gold' },
+    { label: 'WORK', detail: 'Jobs and shifts', icon: BriefcaseBusiness, panel: 'jobs' as const, tone: 'blue' },
+    { label: 'HOUSES', detail: 'Rent across Lagos', icon: Home, panel: 'life' as const, tone: 'green' },
+    { label: 'CHOWDECK', detail: 'Food for your needs', icon: Utensils, panel: 'inventory' as const, tone: 'amber' },
+    { label: 'BANK', detail: 'Wallet and net worth', icon: Wallet, panel: 'life' as const, tone: 'gold' },
+    { label: 'TRANSPORT', detail: 'Danfo, okada & rides', icon: BusFront, panel: 'map' as const, tone: 'blue' },
+    { label: 'CITY MAP', detail: 'Districts and routes', icon: Map, panel: 'map' as const, tone: 'green' },
+    { label: 'CIVIC', detail: 'Polling and records', icon: Landmark, panel: 'life' as const, tone: 'violet' },
+    { label: 'BAG', detail: 'Items and purchases', icon: Package, panel: 'inventory' as const, tone: 'amber' },
+    { label: 'SOCIAL', detail: 'Players and account', icon: UsersRound, panel: 'online' as const, tone: 'violet' },
+  ]
+  return (
+    <div className="phone-home">
+      <div className="phone-device-top" aria-label="Phone status and Dynamic Island">
+        <span className="phone-device-time">09:41</span>
+        <span className="phone-dynamic-island"><i /><b>VIBE</b><em>●</em></span>
+        <span className="phone-device-status"><i>▮▮▮</i><i>◉</i><i>▰</i></span>
+      </div>
+      <div className="phone-status"><span>VIBEOS</span><span>● LAGOS LIFE NETWORK · ONLINE</span></div>
+      <div className="phone-greeting">
+        <span>WELCOME BACK</span>
+        <strong>{player.name}</strong>
+        <small>Level {player.level} · {formatNaira(player.cash)} cash</small>
+      </div>
+      <div className="phone-app-grid">
+        {apps.map(({ label, detail, icon: AppIcon, panel: targetPanel, tone }) => (
+          <button className={`phone-app phone-app-${tone}`} type="button" key={label} onClick={() => onOpenApp(targetPanel)}>
+            <span className="phone-app-icon"><AppIcon aria-hidden="true" /></span>
+            <strong>{label}</strong>
+            <small>{detail}</small>
+          </button>
+        ))}
+      </div>
+      <div className="phone-home-footer"><span>LIVE THE CITY</span><span>YOUR LIFE. YOUR LAGOS.</span></div>
+    </div>
+  )
+}
+
 function MapPanel({
   waypoint,
   playerPosition,
@@ -509,7 +681,28 @@ function MapPanel({
   onTravel,
 }: Pick<GamePanelsProps, 'waypoint' | 'playerPosition' | 'onSetWaypoint' | 'onTravel'> & { playerCash: number; ownsScooter: boolean }) {
   const [selectedLocationId, setSelectedLocationId] = useState<LocationId | null>(waypoint)
+  const [mapView, setMapView] = useState({ x: 0, y: 0, zoom: 1 })
+  const mapDrag = useRef<{ pointerId: number; x: number; y: number; startX: number; startY: number } | null>(null)
   useEffect(() => { if (waypoint) setSelectedLocationId(waypoint) }, [waypoint])
+  const beginMapPan = (event: PointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest('button')) return
+    mapDrag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, startX: mapView.x, startY: mapView.y }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  const moveMapPan = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = mapDrag.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    setMapView(view => ({ ...view, x: Math.max(-220, Math.min(220, drag.startX + event.clientX - drag.x)), y: Math.max(-180, Math.min(180, drag.startY + event.clientY - drag.y)) }))
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  const endMapPan = (event: PointerEvent<HTMLDivElement>) => {
+    if (mapDrag.current?.pointerId !== event.pointerId) return
+    mapDrag.current = null
+    event.stopPropagation()
+  }
   const selectedLocation = WORLD_LOCATIONS.find((location) => location.id === selectedLocationId) ?? null
   const target = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const playerPoint = mapCoordinates(playerPosition)
@@ -520,7 +713,8 @@ function MapPanel({
   return (
     <div className="map-panel-content">
       <div className="map-world-summary"><span>METROPOLITAN DISTRICT</span><strong>{WORLD_LOCATIONS.length} places · island, mainland & beyond</strong></div>
-      <div className="full-map" aria-label="Lagos metropolitan district map">
+      <div className="full-map" aria-label="Lagos metropolitan district map" onPointerDown={beginMapPan} onPointerMove={moveMapPan} onPointerUp={endMapPan} onPointerCancel={endMapPan} onWheel={(event) => { event.stopPropagation(); setMapView(view => ({ ...view, zoom: Math.max(0.85, Math.min(1.8, view.zoom + (event.deltaY < 0 ? 0.08 : -0.08))) })) }}>
+        <div className="full-map-layer" style={{ transform: `translate(${mapView.x}px, ${mapView.y}px) scale(${mapView.zoom})` }}>
         <span className="full-map-water" aria-hidden="true" />
         {streets.map((street) => (
           <span className="full-map-road full-map-road-horizontal" key={`h-${street}`} style={{ top: `${worldToMapPercent({ x: 0, z: street }).y}%` }} />
@@ -557,6 +751,7 @@ function MapPanel({
         <div className="map-label map-label-ikeja">IKEJA</div>
         <div className="map-label map-label-mainland">MAINLAND</div>
         <div className="map-label map-label-lagoon">LAGOS LAGOON</div>
+        </div>
       </div>
       <div className="map-section-heading">
         <div><span>YOUR CITY</span><small>Tap a place to set a route · {target ? `Heading to ${target.name}` : 'Free roam'}</small></div>

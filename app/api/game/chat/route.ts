@@ -2,6 +2,7 @@ import { and, desc, eq, gt } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { roomMessages } from '@/lib/db/schema'
+import { getPlayerFlags } from '@/lib/game/admin'
 import { getAuthenticatedGameUser } from '@/lib/game/auth'
 import { PRIVATE_NO_STORE_HEADERS, readJsonBody } from '@/lib/game/http'
 import { isRecord } from '@/lib/game/validation'
@@ -56,6 +57,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Sign in to send a message.' }, { status: 401, headers: PRIVATE_NO_STORE_HEADERS })
     }
 
+    const flags = await getPlayerFlags(user.id)
+    if (flags.banned || flags.muted) {
+      return NextResponse.json(
+        { error: flags.banned ? 'You are banned from the city.' : 'An admin has muted you for now.' },
+        { status: 403, headers: PRIVATE_NO_STORE_HEADERS },
+      )
+    }
+
     const body = await readJsonBody(request)
     const message = isRecord(body) && typeof body.message === 'string'
       ? body.message.replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
@@ -86,7 +95,7 @@ export async function POST(request: Request) {
       .values({
         userId: user.id,
         roomId: ROOM_ID,
-        displayName: user.name,
+        displayName: user.isAdmin ? `[ADMIN] ${user.name}` : user.name,
         message,
       })
       .returning({

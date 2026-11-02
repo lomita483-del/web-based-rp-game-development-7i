@@ -21,8 +21,8 @@ export const WORLD_LOCATIONS = [
     id: 'market',
     name: 'Balogun Night Market',
     district: 'Lagos Island',
-    x: -30,
-    z: 30,
+    x: 30,
+    z: -30,
     kind: 'market',
     description: 'A crowded trading street where couriers and stall owners find work.',
   },
@@ -30,8 +30,8 @@ export const WORLD_LOCATIONS = [
     id: 'club',
     name: 'Afterglow Social Club',
     district: 'Yaba',
-    x: -78,
-    z: 0,
+    x: -30,
+    z: 30,
     kind: 'club',
     description: 'A live-music room and neighborhood clubhouse with a late crowd.',
   },
@@ -46,19 +46,19 @@ export const WORLD_LOCATIONS = [
   },
   {
     id: 'hotel',
-    name: 'Marina House',
+    name: 'Marina Grand Hotel',
     district: 'Victoria Island',
-    x: -78,
-    z: -42,
+    x: -30,
+    z: -30,
     kind: 'hotel',
-    description: 'A modest city hotel with rooms above a busy waterfront road.',
+    description: 'A rentable waterfront hotel with short-stay rooms and a staffed reception desk.',
   },
   {
     id: 'cafe',
     name: 'Palm & Pepper',
     district: 'Surulere',
     x: 0,
-    z: 78,
+    z: 30,
     kind: 'cafe',
     description: 'Suya, cold drinks, and a familiar place to catch your breath.',
   },
@@ -66,8 +66,8 @@ export const WORLD_LOCATIONS = [
     id: 'waterfront',
     name: 'Third Mainland Bridge',
     district: 'The Lagoon',
-    x: 18,
-    z: 86,
+    x: 12,
+    z: 73,
     kind: 'bridge',
     description: 'A long causeway over the lagoon, with the city lights behind you.',
   },
@@ -102,8 +102,9 @@ export const WORLD_LOCATIONS = [
     id: 'university',
     name: 'University of Lagos',
     district: 'Akoka',
-    x: -78,
-    z: -54,
+    // Campus grounds are west of the main street grid; place the university pin on its real campus footprint.
+    x: -120,
+    z: 2,
     kind: 'university',
     description: 'A dedicated Akoka campus with lecture halls, a library, student housing, and open courtyards.'
   },
@@ -120,8 +121,8 @@ export const WORLD_LOCATIONS = [
     id: 'stadium',
     name: 'National City Stadium',
     district: 'Surulere',
-    x: 78,
-    z: -42,
+    x: 54,
+    z: -30,
     kind: 'stadium',
     description: 'A floodlit football ground with match-day and grounds-crew shifts.',
   },
@@ -129,8 +130,8 @@ export const WORLD_LOCATIONS = [
     id: 'government',
     name: 'State Government House',
     district: 'Alausa',
-    x: -42,
-    z: 18,
+    x: -54,
+    z: 30,
     kind: 'government',
     description: 'The seat of state administration and the district’s civic offices.',
   },
@@ -138,8 +139,8 @@ export const WORLD_LOCATIONS = [
     id: 'polling',
     name: 'Ward 08 Polling Unit',
     district: 'Alausa',
-    x: -42,
-    z: 42,
+    x: -30,
+    z: 54,
     kind: 'polling',
     description: 'Register as a voter and take part in the city’s local elections.',
   },
@@ -156,7 +157,7 @@ export const WORLD_LOCATIONS = [
     id: 'estate',
     name: 'Lekki Garden Estate',
     district: 'Lekki',
-    x: 78,
+    x: 54,
     z: 54,
     kind: 'estate',
     description: 'A gated residential estate with townhouses and a shared clubhouse.',
@@ -165,8 +166,8 @@ export const WORLD_LOCATIONS = [
     id: 'village',
     name: 'Ibeju Farm Village',
     district: 'Ibeju-Lekki',
-    x: -78,
-    z: 42,
+    x: -54,
+    z: 54,
     kind: 'village',
     description: 'A close-knit village at the edge of the city’s agricultural belt.',
   },
@@ -184,7 +185,7 @@ export const WORLD_LOCATIONS = [
     name: 'Murtala Muhammed Airport',
     district: 'Ikeja',
     x: 54,
-    z: -78,
+    z: -54,
     kind: 'airport',
     description: 'The international terminal and ground crew hiring office.',
   },
@@ -192,7 +193,7 @@ export const WORLD_LOCATIONS = [
     id: 'port',
     name: 'Apapa Shipping Port',
     district: 'Apapa',
-    x: 78,
+    x: 54,
     z: 30,
     kind: 'port',
     description: 'A working container port with logistics and dockside shifts.',
@@ -350,7 +351,7 @@ export const LOCATION_ENTRY_OFFSETS: Partial<Record<LocationId, { x: number; z: 
   police: { x: 0, z: 5.3 },
   court: { x: 0, z: 5.8 },
   hospital: { x: 0, z: 5.8 },
-  university: { x: 0, z: 5.8 },
+  university: { x: 0, z: 7.6 },
   school: { x: 0, z: 5.3 },
   stadium: { x: 0, z: 7.6 },
   government: { x: 0, z: 5.8 },
@@ -767,13 +768,13 @@ export type FactionId = (typeof CITY_FACTIONS)[number]['id']
 
 export const CITY_HOMES = [
   {
-    id: 'marina-room',
-    name: 'Marina room & parlour',
-    district: 'Victoria Island',
-    locationId: 'hotel',
-    price: 650,
-    tenure: 'Weekly room lease',
-    description: 'A small furnished room above the Marina road.',
+id: 'marina-room',
+  name: 'Abule Egba starter house',
+  district: 'Mainland Estates',
+  locationId: 'bungalow',
+  price: 650,
+  tenure: 'Weekly house lease',
+  description: 'A private starter house with a small yard, separate from the hotel.'
   },
   {
     id: 'mainland-bungalow',
@@ -807,7 +808,7 @@ export const CITY_HOMES = [
 export type HomeId = (typeof CITY_HOMES)[number]['id']
 
 export type MissionStage = 'meet-bisi' | 'find-tunde' | 'delivery' | 'free-roam'
-export type GamePanel = 'none' | 'map' | 'jobs' | 'life' | 'inventory' | 'online' | 'admin'
+export type GamePanel = 'none' | 'map' | 'jobs' | 'life' | 'inventory' | 'online' | 'phone' | 'admin'
 export type Gender = 'male' | 'female'
 export type RideVehicleType = 'cab' | 'bike' | 'danfo' | 'driver'
 export type RideBookingStatus = 'dispatching' | 'approaching' | 'boarding' | 'en-route' | 'arrived'
@@ -848,6 +849,9 @@ export type PlayerState = {
   level: number
   energy: number
   hunger: number
+  fun: number
+  hygiene: number
+  bladder: number
   educationCredits: number
   stage: MissionStage
   inventory: InventoryItem[]
@@ -873,17 +877,21 @@ export type RemotePlayer = {
   x: number
   z: number
   inVehicle: boolean
+  isAdmin?: boolean
 }
 
 export const STARTING_PLAYER: PlayerState = {
   name: 'Kola',
   gender: 'male',
-  cash: 1850,
+  cash: 1_000_000,
   bankBalance: 0,
   reputation: 46,
   level: 1,
   energy: 83,
   hunger: 64,
+  fun: 76,
+  hygiene: 88,
+  bladder: 18,
   educationCredits: 0,
   stage: 'meet-bisi',
   inventory: [
@@ -906,8 +914,8 @@ export const STARTING_PLAYER: PlayerState = {
   completedShifts: 0,
   shiftStarted: false,
   completedShiftTasks: [],
-  currentInteriorId: null,
-  returnPosition: null,
+  currentInteriorId: 'marina-apartments',
+  returnPosition: { x: -76, z: -48.9 },
   job: null,
   faction: null,
   home: null,
@@ -926,12 +934,17 @@ export type PlayerAction =
   | { type: 'attend-lecture' }
   | { type: 'enter-interior'; interiorId: InteriorId; returnPosition: { x: number; z: number } }
   | { type: 'exit-interior' }
+  | { type: 'admin-adjust'; cash?: number; restore?: boolean; reputation?: number }
   | { type: 'meet-bisi' }
   | { type: 'accept-delivery' }
   | { type: 'complete-delivery' }
   | { type: 'rent-scooter' }
   | { type: 'toggle-vehicle' }
   | { type: 'rest' }
+  | { type: 'decay-needs'; ticks?: number }
+  | { type: 'shower' }
+  | { type: 'use-toilet' }
+  | { type: 'socialize' }
   | { type: 'buy-food' }
   | { type: 'eat-food' }
   | { type: 'apply-job'; jobId: JobId }
@@ -1004,8 +1017,19 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
     case 'enter-interior':
       if (state.currentInteriorId) return state
       return { ...state, currentInteriorId: action.interiorId, returnPosition: action.returnPosition, inVehicle: false }
+    case 'admin-adjust': {
+      const cash = Math.max(0, Math.min(1_000_000, state.cash + Math.round(action.cash ?? 0)))
+      const reputation = Math.max(0, state.reputation + Math.round(action.reputation ?? 0))
+      return {
+        ...state,
+        cash,
+        energy: action.restore ? 100 : state.energy,
+        hunger: action.restore ? 100 : state.hunger,
+        ...updateReputation(state, reputation),
+      }
+    }
     case 'exit-interior':
-      return state.currentInteriorId ? { ...state, currentInteriorId: null, returnPosition: null } : state
+      return state.currentInteriorId ? { ...state, currentInteriorId: null } : state
     case 'meet-bisi': {
       if (state.stage !== 'meet-bisi') return state
       const reputation = state.reputation + 12
@@ -1057,7 +1081,24 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       if (!state.ownsScooter) return state
       return { ...state, inVehicle: !state.inVehicle }
     case 'rest':
-      return { ...state, energy: 100, hunger: Math.max(state.hunger, 78), inVehicle: false }
+      return { ...state, energy: 100, hunger: Math.max(state.hunger, 78), fun: Math.min(100, state.fun + 12), inVehicle: false }
+    case 'decay-needs': {
+      const ticks = Math.max(1, Math.min(10, action.ticks ?? 1))
+      return {
+        ...state,
+        hunger: Math.max(0, Math.floor(state.hunger - 0.075 * ticks)),
+        energy: Math.max(0, Math.floor(state.energy - 0.035 * ticks)),
+        fun: Math.max(0, Math.floor(state.fun - 0.055 * ticks)),
+        hygiene: Math.max(0, Math.floor(state.hygiene - 0.012 * ticks)),
+        bladder: Math.min(100, Math.floor(state.bladder + 0.045 * ticks)),
+      }
+    }
+    case 'shower':
+      return { ...state, hygiene: 100, fun: Math.min(100, state.fun + 3) }
+    case 'use-toilet':
+      return { ...state, bladder: 0 }
+    case 'socialize':
+      return { ...state, fun: Math.min(100, state.fun + 18), energy: Math.max(0, state.energy - 2) }
     case 'buy-food': {
       if (state.cash < 90) return state
       return {
@@ -1077,6 +1118,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         ...state,
         energy: Math.min(100, state.energy + 12),
         hunger: Math.min(100, state.hunger + 28),
+        fun: Math.min(100, state.fun + 3),
         inventory: updateInventory(state.inventory, 'suya', -1, {
           id: 'suya',
           name: 'Suya wrap',

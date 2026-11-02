@@ -3,9 +3,9 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Ekó After Hours — Open-world roleplay',
-  description: 'Explore a living Lagos-inspired city. Meet local characters, take workplace shifts, join a faction, find a home, and shape your own roleplay story.',
-  applicationName: 'Ekó After Hours',
+  title: 'Lagos Life — 3D City Simulator',
+  description: 'Live a Lagos-inspired life simulation: build your career, manage your needs, find a home, commute across the city, and shape your civic story.',
+  applicationName: 'Lagos Life',
   generator: 'v0.app',
   icons: {
     icon: [
