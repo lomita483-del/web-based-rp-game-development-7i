@@ -112,6 +112,7 @@ function createGameSavePayload(player: PlayerState, position: Position, gameMinu
       home: player.home,
       voterRegistered: player.voterRegistered,
       wantedLevel: player.wantedLevel,
+      adminMode: player.adminMode,
     },
     position,
     gameMinutes,

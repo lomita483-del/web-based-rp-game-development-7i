@@ -182,6 +182,7 @@ export function parseGameSavePayload(value: unknown): GameSavePayload | null {
     job: job as JobId | null,
     faction: faction as FactionId | null,
     home: home as HomeId | null,
+    adminMode: false,
   }
 
   return { playerState, position, gameMinutes }
