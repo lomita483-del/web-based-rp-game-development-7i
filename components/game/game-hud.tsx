@@ -54,7 +54,6 @@ import {
   type RideVehicleType,
 } from './game-data'
 import { CAMPUS_BOUNDS, GRID_LINES, worldToMapPercent } from '@/lib/game/world'
-import type { EntranceTarget, InteriorDefinition } from './game-data'
 import { LifePanel } from './life-panel'
 import { OnlinePanel } from './online-panel'
 import type { GameUser, OnlinePlayer, SaveStatus } from '@/lib/game/types'
@@ -74,10 +73,6 @@ type HudProps = {
   nearInteriorAction: boolean
   canExitInterior: boolean
   rideBooking: RideBooking | null
-  nearbyEntrance: EntranceTarget | null
-  interior: InteriorDefinition | null
-  nearInteriorAction: boolean
-  nearInteriorExit: boolean
   waypoint: LocationId | null
   activePanel: GamePanel
   toast: { id: number; text: string } | null
@@ -137,10 +132,6 @@ export function GameHud({
   nearInteriorAction,
   canExitInterior,
   rideBooking,
-  nearbyEntrance,
-  interior,
-  nearInteriorAction,
-  nearInteriorExit,
   waypoint,
   activePanel,
   toast,
@@ -150,7 +141,7 @@ export function GameHud({
 }: HudProps) {
   const mission = getMissionDetails(player.stage)
   const currentDistrict = activeInterior?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'
-  const streets = [-66, -42, -18, 18, 42, 66]
+  const streets = GRID_LINES
   const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
   const rideDestination = rideBooking && WORLD_LOCATIONS.find((location) => location.id === rideBooking.destinationId)
   const RideIcon = rideBooking?.mode === 'bike' ? Bike : rideBooking?.mode === 'danfo' ? BusFront : CarFront
@@ -165,26 +156,10 @@ export function GameHud({
           : nearbyLocation
             ? `Explore ${nearbyLocation.name}`
             : 'Wander the city'
-  const currentDistrict = interior?.district ?? nearbyEntrance?.district ?? nearbyLocation?.district ?? 'Lagos Mainland'
-  const streets = GRID_LINES
-  const targetLocation = WORLD_LOCATIONS.find((location) => location.id === waypoint)
-  const interactionLabel = interior
-    ? nearInteriorAction
-      ? interior.actionLabel
-      : nearInteriorExit
-        ? 'Leave the building'
-        : `Inside ${interior.name}`
-    : nearbyCharacter
-      ? `Talk to ${nearbyCharacter.name}`
-      : nearbyEntrance
-        ? `Enter ${nearbyEntrance.name}`
-        : nearbyLocation
-          ? `Explore ${nearbyLocation.name}`
-          : 'Wander the city'
-  const interactionEyebrow = interior
-    ? nearInteriorAction ? 'SERVICE' : nearInteriorExit ? 'EXIT' : 'INSIDE'
-    : nearbyCharacter ? 'ROLEPLAY' : nearbyEntrance ? 'ENTER' : nearbyLocation ? 'LOCATION' : 'EXPLORE'
-  const interactionEnabled = interior ? nearInteriorAction || nearInteriorExit : Boolean(nearbyCharacter || nearbyEntrance || nearbyLocation)
+  const interactionEyebrow = activeInterior
+    ? nearInteriorAction ? 'SERVICE' : canExitInterior ? 'EXIT' : 'INSIDE'
+    : nearbyCharacter ? 'ROLEPLAY' : nearbyInterior ? 'ENTER' : nearbyLocation ? 'LOCATION' : 'EXPLORE'
+  const interactionEnabled = activeInterior ? nearInteriorAction || canExitInterior : Boolean(nearbyCharacter || nearbyInterior || nearbyLocation)
 
   return (
     <div className="game-hud">
@@ -318,11 +293,6 @@ export function GameHud({
         >
           <span className="interaction-key">E</span>
           <span className="interaction-copy">
-            <small>{activeInterior ? nearInteriorAction ? 'SERVICE' : canExitInterior ? 'EXIT' : 'INSIDE' : nearbyInterior && prioritizeInterior ? 'BUILDING ENTRY' : nearbyCharacter ? 'ROLEPLAY' : nearbyInterior ? 'BUILDING ENTRY' : nearbyLocation ? 'LOCATION' : 'EXPLORE'}</small>
-          disabled={!interactionEnabled}
-        >
-          <span className="interaction-key">E</span>
-          <span className="interaction-copy">
             <small>{interactionEyebrow}</small>
             <strong>{interactionLabel}</strong>
           </span>
@@ -442,6 +412,7 @@ const PANEL_META: Record<Exclude<GamePanel, 'none'>, { title: string; eyebrow: s
   map: { title: 'City map', eyebrow: 'LAGOS / WAYFINDING', icon: Map },
   jobs: { title: 'Work board', eyebrow: 'CAREERS / AVAILABLE SHIFTS', icon: BriefcaseBusiness },
   life: { title: 'City life', eyebrow: 'CITIZEN / COMMUNITY / HOME', icon: Landmark },
+  admin: { title: 'Admin', eyebrow: 'CITY / CONTROL ROOM', icon: Landmark },
   inventory: { title: 'Your bag', eyebrow: 'PLAYER / LOADOUT', icon: Package },
   online: { title: 'Shared world', eyebrow: 'LIVE ROOM / EKO MAINLAND', icon: UsersRound },
 }
@@ -544,7 +515,6 @@ function MapPanel({
   const playerPoint = mapCoordinates(playerPosition)
   const targetPoint = target ? mapCoordinates(target) : null
   const travelDistance = selectedLocation ? distanceBetween(playerPosition, selectedLocation) : 0
-  const streets = [-66, -42, -18, 18, 42, 66]
   const streets = GRID_LINES
 
   return (
@@ -687,8 +657,6 @@ function JobsPanel({
                 onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}
               >
                 {actionLabel}
-              <button className={isAssigned ? 'secondary-action' : 'primary-action'} type="button" onClick={() => isAssigned ? (atWork ? onCompleteShift(job.id) : onSetWaypoint(job.locationId)) : onApplyJob(job.id)}>
-                {isAssigned ? atWork ? 'GO INSIDE TO WORK' : 'ROUTE TO WORKPLACE' : player.job ? 'SWITCH TO THIS JOB' : 'TAKE THIS SHIFT'}
                 <ArrowRight aria-hidden="true" />
               </button>
               {isAssigned && <small className="job-active-note"><span className="status-live-dot" /> ACTIVE ROLE · {activeRoleStatus}</small>}
