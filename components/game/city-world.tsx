@@ -1552,11 +1552,13 @@ useGLTF.preload('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FR
 function ImportedCityCar({ position, rotation = 0, color = '#d9b56e' }: { position: [number, number, number]; rotation?: number; color?: string }) {
   const { scene } = useGLTF('/assets/packs/city-builder-bits/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/car_taxi.gltf')
   const car = useMemo(() => {
-    const clone = scene.clone(true)
+    const clone = (scene as import('three').Object3D).clone(true)
     clone.traverse((child) => {
-      if ('material' in child && child.material && !Array.isArray(child.material)) {
-        child.material = child.material.clone()
-        child.material.color.set(color)
+      const material = (child as import('three').Mesh).material
+      if (material && !Array.isArray(material) && 'color' in material) {
+        const paintedMaterial = material.clone() as import('three').MeshStandardMaterial
+        paintedMaterial.color.set(color)
+        ;(child as import('three').Mesh).material = paintedMaterial
       }
     })
     return clone
