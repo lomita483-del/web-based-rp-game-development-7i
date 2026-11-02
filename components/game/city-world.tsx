@@ -1,6 +1,6 @@
 'use client'
 
-import { Stars, useTexture } from '@react-three/drei'
+import { Stars, useGLTF, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { CanvasTexture, MathUtils, RepeatWrapping, SRGBColorSpace, type Group, type MeshStandardMaterial, type PerspectiveCamera, type Texture, Vector3 } from 'three'
@@ -1077,6 +1077,22 @@ function CharacterActor({ character }: { character: (typeof CITY_CHARACTERS)[num
   )
 }
 
+function ImportedPlayerModel() {
+  const { scene } = useGLTF('/assets/player.glb')
+  const model = useMemo(() => {
+    const clone = scene.clone(true)
+    clone.traverse((object) => {
+      object.castShadow = true
+      object.receiveShadow = true
+    })
+    return clone
+  }, [scene])
+
+  return <primitive object={model} scale={1.35} position={[0, 0, 0]} />
+}
+
+useGLTF.preload('/assets/player.glb')
+
 function AvatarModel({ keysRef, paused, gender }: { keysRef: MutableRefObject<Set<string>>; paused: boolean; gender: Gender }) {
   return <HumanoidModel skinTone="#80543e" hairColor="#201a17" clothing="#52606a" accentColor="#cf9e62" keysRef={keysRef} paused={paused} walking gender={gender} />
 }
@@ -1444,7 +1460,7 @@ function PlayerController({
           color={rideVehicle === 'danfo' ? '#e1bd38' : rideVehicle === 'bike' ? '#31464d' : '#ddd7c9'}
           night
         />
-      ) : inVehicle ? <ScooterModel /> : <AvatarModel keysRef={keysRef} paused={paused} gender={gender} />}
+        ) : inVehicle ? <ScooterModel /> : <ImportedPlayerModel />}
     </group>
   )
 }
